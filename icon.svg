@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Hexagon Background - Flat Hive Red -->
+  <path d="M64 8 L114 36 V92 L64 120 L14 92 V36 Z" fill="#E31337" stroke="none"/>
+  
+  <!-- Cycling Arrows - White -->
+  <g fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M48 56 A 18 18 0 0 1 80 56" />
+    <path d="M80 56 L 74 50 M 80 56 L 86 50" />
+    <path d="M80 72 A 18 18 0 0 1 48 72" />
+    <path d="M48 72 L 54 78 M 48 72 L 42 78" />
+  </g>
+</svg>

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Hive Frontend Switcher",
+  "version": "1.0.0",
+  "description": "Switch between Hive frontends easily.",
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Switch Hive Frontend",
+    "default_icon": "icon.svg"
+  },
+  "permissions": [
+    "activeTab",
+    "tabs"
+  ]
+}

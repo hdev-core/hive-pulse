@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    @apply h-auto w-[350px] overflow-x-hidden bg-slate-50 font-sans;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  
+  /* Ensure the popup has a minimum height to avoid jumping */
+  body {
+    min-height: 450px;
+  }
+}

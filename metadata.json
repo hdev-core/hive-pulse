@@ -1,0 +1,5 @@
+{
+  "name": "Hive Frontend Switcher",
+  "description": "A Chrome Extension to seamlessly switch between Hive blockchain interfaces (PeakD, Ecency, Hive.blog, InLeo, Actifit) while preserving your current navigation context.",
+  "requestFramePermissions": []
+}

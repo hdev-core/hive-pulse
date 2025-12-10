@@ -1,4 +1,5 @@
-import { FrontendConfig, FrontendId } from './types';
+
+import { FrontendConfig, FrontendId, DAppConfig } from './types';
 
 export const FRONTENDS: FrontendConfig[] = [
   {
@@ -91,6 +92,93 @@ export const FRONTENDS: FrontendConfig[] = [
       compose: '/submit',
       wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
     }
+  }
+];
+
+export const DAPPS: DAppConfig[] = [
+  {
+    name: 'Dbuzz',
+    url: 'https://d.buzz',
+    description: 'Micro-blogging on Hive.',
+    icon: 'MessageCircle',
+    category: 'Social'
+  },
+  {
+    name: 'Actifit',
+    url: 'https://actifit.io',
+    description: 'Move-to-earn fitness tracking.',
+    icon: 'Activity',
+    category: 'Social'
+  },
+  {
+    name: 'Splinterlands',
+    url: 'https://splinterlands.com',
+    description: 'The #1 Play2Earn card game.',
+    icon: 'Sword',
+    category: 'Game'
+  },
+  {
+    name: 'Rising Star',
+    url: 'https://www.risingstargame.com',
+    description: 'Play to earn music career game.',
+    icon: 'Music',
+    category: 'Game'
+  },
+  {
+    name: 'Hive-Engine',
+    url: 'https://hive-engine.com',
+    description: 'Smart contracts & sidechain tokens.',
+    icon: 'Coins',
+    category: 'DeFi'
+  },
+  {
+    name: 'PeakMonsters',
+    url: 'https://peakmonsters.com',
+    description: 'Advanced Splinterlands market.',
+    icon: 'ShoppingCart',
+    category: 'Tool'
+  },
+  {
+    name: '3Speak',
+    url: 'https://3speak.tv',
+    description: 'Censorship-resistant video platform.',
+    icon: 'Video',
+    category: 'Video'
+  },
+  {
+    name: 'Vimm',
+    url: 'https://vimm.tv',
+    description: 'Web3 Live Streaming.',
+    icon: 'MonitorPlay',
+    category: 'Video'
+  },
+  {
+    name: 'TravelFeed',
+    url: 'https://travelfeed.io',
+    description: 'Travel community & blogs.',
+    icon: 'Plane',
+    category: 'Social'
+  },
+  {
+    name: 'HoloZing',
+    url: 'https://holozing.com',
+    description: 'Upcoming creature capture game.',
+    icon: 'Gamepad2',
+    category: 'Game'
+  },
+  {
+    name: 'NFTShowroom',
+    url: 'https://nftshowroom.com',
+    description: 'Digital Art Marketplace.',
+    icon: 'Palette',
+    category: 'Tool'
+  },
+  {
+    name: 'HiveDAO',
+    url: 'https://hive.blog/proposals',
+    description: 'Vote on ecosystem proposals.',
+    icon: 'Vote',
+    category: 'Tool'
   }
 ];
 

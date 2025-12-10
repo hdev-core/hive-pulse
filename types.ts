@@ -1,3 +1,4 @@
+
 export enum FrontendId {
   PEAKD = 'PEAKD',
   ECENCY = 'ECENCY',
@@ -36,4 +37,18 @@ export interface CurrentTabState {
   detectedFrontendId: FrontendId | null;
   path: string;
   username: string | null;
+}
+
+export interface DAppConfig {
+  name: string;
+  url: string;
+  description: string;
+  icon: string; // Lucide icon name or emoji
+  category: 'Game' | 'DeFi' | 'Video' | 'Tool';
+}
+
+export interface AppSettings {
+  autoRedirect: boolean;
+  preferredFrontendId: FrontendId;
+  openInNewTab: boolean;
 }

@@ -16,6 +16,14 @@ export enum ActionMode {
   COMPOSE = 'COMPOSE'
 }
 
+export enum AppView {
+  SWITCHER = 'SWITCHER',
+  SHARE = 'SHARE',
+  RC = 'RC',
+  APPS = 'APPS',
+  SETTINGS = 'SETTINGS'
+}
+
 export interface PathConfig {
   compose: string;
   wallet: (username?: string) => string;
@@ -52,4 +60,12 @@ export interface AppSettings {
   autoRedirect: boolean;
   preferredFrontendId: FrontendId;
   openInNewTab: boolean;
+}
+
+export interface RCData {
+  username: string;
+  percentage: number;
+  current: number;
+  max: number;
+  isLow: boolean;
 }

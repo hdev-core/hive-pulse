@@ -6,7 +6,8 @@ export enum FrontendId {
   INLEO = 'INLEO',
   ACTIFIT = 'ACTIFIT',
   WAIVIO = 'WAIVIO',
-  LIKETU = 'LIKETU'
+  LIKETU = 'LIKETU',
+  HIVESCAN = 'HIVESCAN'
 }
 
 export enum ActionMode {
@@ -44,7 +45,7 @@ export interface DAppConfig {
   url: string;
   description: string;
   icon: string; // Lucide icon name or emoji
-  category: 'Game' | 'DeFi' | 'Video' | 'Tool';
+  category: 'Game' | 'DeFi' | 'Video' | 'Tool' | 'Social';
 }
 
 export interface AppSettings {

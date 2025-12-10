@@ -92,6 +92,19 @@ export const FRONTENDS: FrontendConfig[] = [
       compose: '/submit',
       wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
     }
+  },
+  {
+    id: FrontendId.HIVESCAN,
+    name: 'HiveScan',
+    domain: 'hivescan.info',
+    aliases: [],
+    color: '#E31337',
+    textColor: '#ffffff',
+    description: 'Modern Hive block explorer.',
+    paths: {
+      compose: '/', // Explorers don't support composing
+      wallet: (user) => user ? `/@${user}` : '/'
+    }
   }
 ];
 

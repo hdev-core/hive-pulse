@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { FRONTENDS, DAPPS } from './constants';
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
@@ -10,7 +11,7 @@ import {
   ExternalLink, Settings, Share2, Grid, Check, Copy, Info, 
   Sword, Coins, ShoppingCart, Video, Gamepad2, Vote,
   MessageCircle, MonitorPlay, Plane, Palette, Music, Zap, Search,
-  Gauge, ThumbsUp
+  ThumbsUp
 } from 'lucide-react';
 
 // Declare chrome to avoid TypeScript errors
@@ -255,9 +256,17 @@ const App: React.FC = () => {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between sticky top-0 z-20 shadow-sm">
         <div className="flex items-center gap-2.5">
-          <div className="bg-gradient-to-br from-red-500 to-red-600 text-white p-1.5 rounded-lg shadow-sm">
-             <ArrowLeftRight size={18} strokeWidth={2.5} />
-          </div>
+          {/* Replaced Icon: uses icon.png, falls back to icon.svg */}
+          <img 
+            src="/icon.png" 
+            alt="HiveKit" 
+            className="w-8 h-8 object-contain"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/icon.svg';
+              target.onerror = null;
+            }}
+          />
           <h1 className="text-lg font-bold tracking-tight text-slate-900">HiveKit</h1>
         </div>
       </header>
@@ -275,29 +284,7 @@ const App: React.FC = () => {
             {currentView === AppView.SWITCHER && (
               <div className="flex flex-col gap-4">
                  
-                 {/* Mini Stats View */}
-                 {accountStats && (
-                    <div className="grid grid-cols-2 gap-2">
-                       {/* VP Mini */}
-                       <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
-                           <ThumbsUp size={16} className={accountStats.vp.isLow ? "text-red-500" : "text-slate-600"} />
-                           <div className="flex flex-col leading-none">
-                              <span className="text-xs font-bold text-slate-800">{accountStats.vp.percentage.toFixed(0)}%</span>
-                              <span className="text-[10px] text-slate-400 font-medium">Voting Power</span>
-                           </div>
-                       </div>
-                       {/* RC Mini */}
-                       <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
-                           <Zap size={16} className={accountStats.rc.isLow ? "text-red-500" : "text-slate-600"} fill="currentColor" />
-                           <div className="flex flex-col leading-none">
-                              <span className="text-xs font-bold text-slate-800">{accountStats.rc.percentage.toFixed(0)}%</span>
-                              <span className="text-[10px] text-slate-400 font-medium">Resource Credits</span>
-                           </div>
-                       </div>
-                    </div>
-                 )}
-
-                 {/* Context Status */}
+                {/* Context Status */}
                 <div className={`
                   text-sm px-3 py-2 rounded-lg border flex items-center justify-between shadow-sm
                   ${tabState.isHiveUrl 

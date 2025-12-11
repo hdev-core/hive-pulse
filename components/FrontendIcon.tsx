@@ -10,14 +10,13 @@ interface FrontendIconProps {
 }
 
 export const FrontendIcon: React.FC<FrontendIconProps> = ({ id, color, size = 24, className = '' }) => {
-  const [error, setError] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
-  // Map FrontendId to filename
-  const getIconFilename = (fid: FrontendId) => {
+  const getLogoName = (fid: FrontendId) => {
     switch (fid) {
-      case FrontendId.HIVEBLOG: return 'hiveblog.png';
       case FrontendId.PEAKD: return 'peakd.png';
       case FrontendId.ECENCY: return 'ecency.png';
+      case FrontendId.HIVEBLOG: return 'hiveblog.png';
       case FrontendId.INLEO: return 'inleo.png';
       case FrontendId.ACTIFIT: return 'actifit.png';
       case FrontendId.WAIVIO: return 'waivio.png';
@@ -27,23 +26,22 @@ export const FrontendIcon: React.FC<FrontendIconProps> = ({ id, color, size = 24
     }
   };
 
-  const filename = getIconFilename(id);
+  const filename = getLogoName(id);
 
   // If we have a filename and haven't encountered an error loading it, show the image
-  if (filename && !error) {
+  if (filename && !imgError) {
     return (
       <img 
         src={`/logos/${filename}`} 
         alt={id}
         style={{ width: size, height: size, objectFit: 'contain' }}
         className={className}
-        onError={() => setError(true)}
+        onError={() => setImgError(true)}
       />
     );
   }
 
-  // FALLBACK: If image fails or ID is unknown, show generic generic placeholder
-  // This ensures the UI doesn't break if a user forgets to add a specific PNG
+  // FALLBACK: Generic SVG placeholder
   return (
     <svg 
       viewBox="0 0 24 24" 
@@ -52,6 +50,8 @@ export const FrontendIcon: React.FC<FrontendIconProps> = ({ id, color, size = 24
       fill="none" 
       stroke="currentColor" 
       strokeWidth="2"
+      strokeLinecap="round" 
+      strokeLinejoin="round"
     >
       <circle cx="12" cy="12" r="10" />
       <path d="M12 8v8M8 12h8" />

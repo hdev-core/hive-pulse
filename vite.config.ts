@@ -12,8 +12,13 @@ export default defineConfig({
         try {
           // Copy manifest and main icon
           copyFileSync('manifest.json', 'dist/manifest.json');
-          copyFileSync('icon.png', 'dist/icon.png');
+          copyFileSync('icon.svg', 'dist/icon.svg');
           
+          // Copy PNG icon if it exists (for header usage)
+          if (existsSync('icon.png')) {
+            copyFileSync('icon.png', 'dist/icon.png');
+          }
+
           // Copy Logos folder if it exists
           if (existsSync('logos')) {
             cpSync('logos', 'dist/logos', { recursive: true });

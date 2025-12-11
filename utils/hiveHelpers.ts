@@ -1,65 +1,102 @@
 
-import { RCData } from '../types';
+import { AccountStats } from '../types';
 
 const HIVE_RPC_NODE = 'https://api.hive.blog';
 
-interface RCResponse {
-  rc_accounts: Array<{
-    account: string;
-    rc_manabar: {
-      current_mana: string;
-      last_update_time: number;
-    };
-    max_rc: string;
-  }>;
+interface RCAccountResponse {
+  account: string;
+  rc_manabar: {
+    current_mana: string;
+    last_update_time: number;
+  };
+  max_rc: string;
+}
+
+interface AccountResponse {
+  name: string;
+  voting_power: number;
+  last_vote_time: string; // "2023-10-27T10:00:00"
 }
 
 /**
- * Fetches RC data for a username and calculates current level based on regeneration.
+ * Fetches both RC and VP data for a username.
  */
-export const fetchRC = async (username: string): Promise<RCData | null> => {
+export const fetchAccountStats = async (username: string): Promise<AccountStats | null> => {
   try {
-    const response = await fetch(HIVE_RPC_NODE, {
-      method: 'POST',
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'rc_api.find_rc_accounts',
-        params: { accounts: [username] },
-        id: 1,
+    // Parallel fetch for RC and standard Account data
+    const [rcResponse, accountResponse] = await Promise.all([
+      fetch(HIVE_RPC_NODE, {
+        method: 'POST',
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'rc_api.find_rc_accounts',
+          params: { accounts: [username] },
+          id: 1,
+        }),
+        headers: { 'Content-Type': 'application/json' },
       }),
-      headers: { 'Content-Type': 'application/json' },
-    });
+      fetch(HIVE_RPC_NODE, {
+        method: 'POST',
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'condenser_api.get_accounts',
+          params: [[username]],
+          id: 2,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      })
+    ]);
 
-    const data = await response.json();
-    const account = data.result?.rc_accounts?.[0];
+    const rcData = await rcResponse.json();
+    const acctData = await accountResponse.json();
 
-    if (!account) return null;
+    const rcAccount = rcData.result?.rc_accounts?.[0] as RCAccountResponse | undefined;
+    const account = acctData.result?.[0] as AccountResponse | undefined;
 
-    const maxRc = Number(account.max_rc);
-    const currentMana = Number(account.rc_manabar.current_mana);
-    const lastUpdate = account.rc_manabar.last_update_time;
+    if (!rcAccount || !account) return null;
+
     const now = Math.floor(Date.now() / 1000);
+    const REGEN_TIME = 432000; // 5 days in seconds
 
-    // Calculate regeneration
-    // Full regen is 5 days (432,000 seconds)
-    const REGEN_TIME = 432000;
-    const elapsed = now - lastUpdate;
-    const regenerated = (elapsed * maxRc) / REGEN_TIME;
+    // --- CALCULATE RC ---
+    const maxRc = Number(rcAccount.max_rc);
+    const currentRcMana = Number(rcAccount.rc_manabar.current_mana);
+    const lastRcUpdate = rcAccount.rc_manabar.last_update_time;
     
-    let actualCurrent = currentMana + regenerated;
-    if (actualCurrent > maxRc) actualCurrent = maxRc;
+    const rcElapsed = now - lastRcUpdate;
+    const rcRegenerated = (rcElapsed * maxRc) / REGEN_TIME;
+    let actualCurrentRc = currentRcMana + rcRegenerated;
+    if (actualCurrentRc > maxRc) actualCurrentRc = maxRc;
+    
+    const rcPercentage = (actualCurrentRc / maxRc) * 100;
 
-    const percentage = (actualCurrent / maxRc) * 100;
+    // --- CALCULATE VP ---
+    // voting_power is 0-10000
+    const lastVoteTime = new Date(account.last_vote_time + 'Z').getTime() / 1000;
+    const vpElapsed = now - lastVoteTime;
+    const vpRegenerated = (vpElapsed * 10000) / REGEN_TIME;
+    
+    let actualCurrentVp = account.voting_power + vpRegenerated;
+    if (actualCurrentVp > 10000) actualCurrentVp = 10000;
+    
+    const vpPercentage = actualCurrentVp / 100;
 
     return {
-      username: account.account,
-      percentage: Math.min(Math.max(percentage, 0), 100),
-      current: actualCurrent,
-      max: maxRc,
-      isLow: percentage < 20
+      username: rcAccount.account,
+      rc: {
+        percentage: Math.min(Math.max(rcPercentage, 0), 100),
+        current: actualCurrentRc,
+        max: maxRc,
+        isLow: rcPercentage < 20
+      },
+      vp: {
+        percentage: Math.min(Math.max(vpPercentage, 0), 100),
+        value: Math.floor(actualCurrentVp),
+        isLow: vpPercentage < 20
+      }
     };
   } catch (e) {
-    console.error("Failed to fetch RC:", e);
+    console.error("Failed to fetch stats:", e);
     return null;
   }
 };

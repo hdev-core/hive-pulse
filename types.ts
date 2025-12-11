@@ -19,7 +19,7 @@ export enum ActionMode {
 export enum AppView {
   SWITCHER = 'SWITCHER',
   SHARE = 'SHARE',
-  RC = 'RC',
+  STATS = 'STATS',
   APPS = 'APPS',
   SETTINGS = 'SETTINGS'
 }
@@ -61,12 +61,20 @@ export interface AppSettings {
   preferredFrontendId: FrontendId;
   openInNewTab: boolean;
   rcUser?: string;
+  badgeMetric: 'RC' | 'VP';
 }
 
-export interface RCData {
+export interface AccountStats {
   username: string;
-  percentage: number;
-  current: number;
-  max: number;
-  isLow: boolean;
+  rc: {
+    percentage: number;
+    current: number;
+    max: number;
+    isLow: boolean;
+  };
+  vp: {
+    percentage: number;
+    value: number; // 0-10000 basis points
+    isLow: boolean;
+  };
 }

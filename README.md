@@ -1,17 +1,23 @@
 # Hive Frontend Switcher - Chrome Extension
 
-This is a Chrome Extension built with React, TypeScript, and Tailwind CSS that allows users to seamlessly switch between different Hive blockchain interfaces (PeakD, Ecency, Hive.blog, InLeo, Actifit) while preserving your current navigation context.
+This is a Chrome Extension built with React, TypeScript, and Tailwind CSS that allows users to seamlessly switch between different Hive blockchain interfaces (PeakD, Ecency, Hive.blog, InLeo, Actifit) while preserving your current navigation context. It also serves as a utility tool to monitor your **Voting Power (VP)** and **Resource Credits (RC)** in real-time.
 
 ## Features
 
 *   **Context Preservation:** Detects the current post, profile, or feed you are viewing and redirects you to the exact same page on the target frontend.
+*   **Account Stats Monitoring:**
+    *   **Voting Power (VP):** Monitor your current voting power percentage to optimize curation rewards.
+    *   **Resource Credits (RC):** Track your mana to ensure you have enough credits for transactions.
+    *   **Extension Badge:** Display your current VP (default) or RC % directly on the browser extension icon. Background monitoring updates this every 15 minutes.
+    *   **Mini Dashboard:** Quickly view stats on the main screen without navigating away.
 *   **Action Modes:**
     *   **Link (Default):** Switches the current view to another frontend.
     *   **Wallet:** Takes you directly to the wallet page on the selected frontend (context-aware: if you are viewing a user's profile, it opens *their* wallet).
     *   **Post:** Opens the "Compose/Publish" editor on the selected frontend.
 *   **Navigation Control:** Toggle between opening links in the **Same Tab** (default) or a **New Tab**.
 *   **Username Detection:** Automatically extracts usernames from URLs (e.g., `/@alice`) to provide smarter navigation.
-*   **Supported Frontends:** PeakD, Ecency, Hive.blog, InLeo, Actifit.
+*   **Supported Frontends:** PeakD, Ecency, Hive.blog, InLeo, Actifit, Waivio, Liketu, HiveScan.
+*   **DApp Launcher:** Quick access to popular Hive DApps (Splinterlands, 3Speak, Hive-Engine, etc.).
 
 ## Prerequisites
 
@@ -64,11 +70,16 @@ This is a Chrome Extension built with React, TypeScript, and Tailwind CSS that a
 
 ## Usage
 
+### Switching Frontends
 1.  **Navigate** to any Hive frontend page (e.g., `https://peakd.com/@alice/test-post`).
-2.  **Click** the extension icon in your toolbar.
-3.  **Choose an Action Mode:**
-    *   *Link:* To simply view this post on Ecency/Hive.blog.
-    *   *Wallet:* To check @alice's wallet on another interface.
-    *   *Post:* To write a new post using a specific frontend's editor.
-4.  **Select** the target frontend from the list.
-5.  (Optional) Click the "Same Tab / New Tab" toggle in the top right to change how the link opens.
+2.  **Click** the extension icon.
+3.  **Select** the target frontend.
+4.  Use the top toggle buttons to switch between **Link**, **Wallet**, or **Post** modes.
+
+### Monitoring Stats
+1.  Open the extension and navigate to the **Stats** tab (Activity icon).
+2.  Enter your Hive username (e.g., `alice`) and click search.
+3.  Your Voting Power (VP) and Resource Credits (RC) will be displayed.
+4.  This user is now saved as your "Monitored User".
+5.  **Badge:** You can toggle whether the extension icon displays your VP or RC percentage in the Stats view.
+6.  **Mini View:** Your stats will also appear on the main "Switcher" screen for quick reference.

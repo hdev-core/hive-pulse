@@ -1,6 +1,6 @@
 
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
-import { fetchRC } from './utils/hiveHelpers';
+import { fetchAccountStats } from './utils/hiveHelpers';
 import { ActionMode, AppSettings, FrontendId } from './types';
 
 declare const chrome: any;
@@ -11,44 +11,48 @@ const ALARM_NAME = 'checkRC';
 const DEFAULT_SETTINGS: AppSettings = {
   autoRedirect: false,
   preferredFrontendId: FrontendId.PEAKD,
-  openInNewTab: false
+  openInNewTab: false,
+  badgeMetric: 'VP'
 };
 
 // --- INITIALIZATION ---
 
 chrome.runtime.onInstalled.addListener(() => {
-  // Create alarm for periodic RC checks (every 15 minutes)
+  // Create alarm for periodic RC/VP checks (every 15 minutes)
   chrome.alarms.create(ALARM_NAME, {
     periodInMinutes: 15
   });
   // Check immediately on install/reload
-  updateRCBadge();
+  updateStatsBadge();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   // Check immediately on browser startup
-  updateRCBadge();
+  updateStatsBadge();
 });
 
-// --- RC MONITORING ---
+// --- STATS MONITORING ---
 
-const updateRCBadge = async () => {
+const updateStatsBadge = async () => {
   try {
     const stored = await chrome.storage.local.get(['settings']);
-    const settings: AppSettings = stored.settings;
+    const settings: AppSettings = stored.settings || DEFAULT_SETTINGS;
     
     if (settings && settings.rcUser) {
-      const data = await fetchRC(settings.rcUser);
+      const data = await fetchAccountStats(settings.rcUser);
       if (data) {
-        const percent = Math.round(data.percentage);
+        // Determine which metric to show
+        const metric = settings.badgeMetric || 'VP';
+        const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
+        const rounded = Math.round(percent);
         
         // Set text
-        chrome.action.setBadgeText({ text: `${percent}%` });
+        chrome.action.setBadgeText({ text: `${rounded}%` });
         
         // Set color based on level
         let color = '#22c55e'; // Green
-        if (percent < 20) color = '#ef4444'; // Red
-        else if (percent < 50) color = '#f97316'; // Orange
+        if (rounded < 20) color = '#ef4444'; // Red
+        else if (rounded < 50) color = '#f97316'; // Orange
         
         chrome.action.setBadgeBackgroundColor({ color });
       }
@@ -56,21 +60,21 @@ const updateRCBadge = async () => {
       chrome.action.setBadgeText({ text: '' });
     }
   } catch (e) {
-    console.error('Failed to update RC badge', e);
+    console.error('Failed to update stats badge', e);
   }
 };
 
 // Check on alarm
 chrome.alarms.onAlarm.addListener((alarm: any) => {
   if (alarm.name === ALARM_NAME) {
-    updateRCBadge();
+    updateStatsBadge();
   }
 });
 
-// Check when settings change (e.g. user sets a new RC user)
+// Check when settings change (e.g. user sets a new user or changes badge preference)
 chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
   if (areaName === 'local' && changes.settings) {
-    updateRCBadge();
+    updateStatsBadge();
   }
 });
 

@@ -58,7 +58,7 @@ This is a Chrome Extension built with React, TypeScript, and Tailwind CSS that a
     npm run build
     ```
 
-    *Note: The build process automatically copies `manifest.json` and `icon.svg` to the `dist` folder.*
+    *Note: The build process automatically copies `manifest.json` and `icon.png` to the `dist` folder.*
 
 ## Loading into Chrome
 

@@ -32,13 +32,13 @@ export const FRONTENDS: FrontendConfig[] = [
     id: FrontendId.HIVEBLOG,
     name: 'Hive.blog',
     domain: 'hive.blog',
-    aliases: [],
+    aliases: ['wallet.hive.blog'],
     color: '#c51d24',
     textColor: '#ffffff',
     description: 'The classic reference implementation.',
     paths: {
       compose: '/submit.html',
-      wallet: (user) => user ? `/@${user}/transfers` : '/wallet'
+      wallet: (user) => user ? `/@${user}/transfers` : '/transfers'
     }
   },
   {
@@ -63,8 +63,8 @@ export const FRONTENDS: FrontendConfig[] = [
     textColor: '#ffffff',
     description: 'Move-to-earn fitness tracking.',
     paths: {
-      compose: '/submit',
-      wallet: (user) => user ? `/${user}/wallet` : '/wallet'
+      compose: '/blog/new',
+      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
     }
   },
   {

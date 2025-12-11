@@ -60,6 +60,7 @@ export interface AppSettings {
   autoRedirect: boolean;
   preferredFrontendId: FrontendId;
   openInNewTab: boolean;
+  rcUser?: string;
 }
 
 export interface RCData {

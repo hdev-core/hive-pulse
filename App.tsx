@@ -19,7 +19,8 @@ declare const chrome: any;
 const DEFAULT_SETTINGS: AppSettings = {
   autoRedirect: false,
   preferredFrontendId: FrontendId.PEAKD,
-  openInNewTab: false
+  openInNewTab: false,
+  rcUser: ''
 };
 
 const App: React.FC = () => {
@@ -58,6 +59,10 @@ const App: React.FC = () => {
           const stored = await chrome.storage.local.get(['settings']);
           if (stored.settings) {
             setSettings(stored.settings);
+            // Pre-fill RC username from settings if available
+            if (stored.settings.rcUser) {
+              setRcUsername(stored.settings.rcUser);
+            }
           }
         }
 
@@ -67,7 +72,8 @@ const App: React.FC = () => {
           const dummyUrl = 'https://peakd.com/@alice/hive-is-awesome';
           const parsed = parseUrl(dummyUrl);
           setTabState(parsed);
-          setRcUsername(parsed.username || 'alice');
+          // If no saved user, default to tab user in dev mode
+          setRcUsername(prev => prev || parsed.username || 'alice');
           setLoading(false);
           return;
         }
@@ -76,9 +82,12 @@ const App: React.FC = () => {
         if (tab && tab.url) {
           const parsed = parseUrl(tab.url);
           setTabState(parsed);
-          if (parsed.username) {
-             setRcUsername(parsed.username);
-          }
+          
+          // If no saved user in settings, but we are on a user profile, suggest that user
+          setRcUsername(prev => {
+            if (prev) return prev; // Keep saved user if exists
+            return parsed.username || '';
+          });
         }
       } catch (error) {
         console.error("Error initializing:", error);
@@ -108,9 +117,22 @@ const App: React.FC = () => {
     setLoadingRC(true);
     setRcError(null);
     try {
-      const data = await fetchRC(rcUsername.replace('@', '').trim());
+      const cleanUsername = rcUsername.replace('@', '').trim();
+      const data = await fetchRC(cleanUsername);
       if (data) {
         setRcData(data);
+        // Save the successfully fetched user as the default for next time
+        updateSettings({ rcUser: data.username });
+
+        // Update badge immediately (whole number)
+        if (typeof chrome !== 'undefined' && chrome.action) {
+           const percent = Math.round(data.percentage);
+           chrome.action.setBadgeText({ text: `${percent}%` });
+           let color = '#22c55e';
+           if (percent < 20) color = '#ef4444'; 
+           else if (percent < 50) color = '#f97316';
+           chrome.action.setBadgeBackgroundColor({ color });
+        }
       } else {
         setRcError('Account not found');
       }
@@ -121,7 +143,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Auto-fetch RC when switching to tab if username exists and no data loaded yet
+  // Auto-fetch RC when switching to view if username exists and no data loaded yet
   useEffect(() => {
     if (currentView === AppView.RC && rcUsername && !rcData && !loadingRC && !rcError) {
       handleCheckRC();
@@ -368,7 +390,7 @@ const App: React.FC = () => {
                         </svg>
                         <div className="absolute flex flex-col items-center">
                           <Zap size={24} className={rcData.isLow ? 'text-red-500' : 'text-slate-400'} fill="currentColor" />
-                          <span className="text-3xl font-bold text-slate-800 mt-1">{rcData.percentage.toFixed(0)}%</span>
+                          <span className="text-3xl font-bold text-slate-800 mt-1">{rcData.percentage.toFixed(2)}%</span>
                         </div>
                       </div>
 
@@ -397,7 +419,7 @@ const App: React.FC = () => {
 
                   {!loadingRC && !rcData && !rcError && (
                     <div className="text-center py-6 text-slate-400 text-sm">
-                      Enter a Hive username to check Resource Credits.
+                      {settings.rcUser ? 'Loading saved user...' : 'Enter a Hive username to monitor RC.'}
                     </div>
                   )}
 
@@ -482,7 +504,7 @@ const App: React.FC = () => {
                 {/* General Behavior */}
                 <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
                   <span className="font-semibold text-sm text-slate-800 block mb-3">General Behavior</span>
-                  <label className="flex items-center justify-between cursor-pointer">
+                  <label className="flex items-center justify-between cursor-pointer mb-3">
                     <span className="text-sm text-slate-600">Open links in new tab</span>
                     <input 
                       type="checkbox" 
@@ -491,6 +513,14 @@ const App: React.FC = () => {
                       className="accent-emerald-500 w-4 h-4"
                     />
                   </label>
+                  
+                  {/* Show saved RC user in settings */}
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                     <span className="text-sm text-slate-600">Monitored User (RC)</span>
+                     <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                       {settings.rcUser || 'None'}
+                     </span>
+                  </div>
                 </section>
 
               </div>

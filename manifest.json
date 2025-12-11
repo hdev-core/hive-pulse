@@ -40,7 +40,8 @@
     "storage",
     "alarms",
     "scripting",
-    "sidePanel"
+    "sidePanel",
+    "cookies"
   ],
   "host_permissions": [
     "https://ecency.com/*",

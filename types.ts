@@ -64,7 +64,8 @@ export interface AppSettings {
   rcUser?: string;
   badgeMetric: 'RC' | 'VP';
   ecencyUsername?: string;
-  ecencyAccessToken?: string;
+  ecencyAccessToken?: string; // Hive token (for bootstrap)
+  ecencyChatToken?: string;   // Mattermost token (for chat)
   ecencyRefreshToken?: string;
 }
 
@@ -106,4 +107,33 @@ export interface Channel {
     id: string;
     username: string;
   }
+}
+
+export interface Message {
+  id: string;
+  create_at: number;
+  update_at: number;
+  delete_at: number;
+  user_id: string;
+  channel_id: string;
+  root_id: string;
+  original_id: string;
+  message: string;
+  type: string;
+  props: any;
+  hashtag: string;
+  file_ids: any[];
+  pending_post_id: string;
+  metadata: {
+    embeds: any[];
+    emojis: any[];
+    files: any[];
+    images: any[];
+    reactions: any[];
+  };
+}
+
+export interface PostResponse {
+  order: string[]; // array of post ids
+  posts: Record<string, Message>; // map of id -> Message
 }

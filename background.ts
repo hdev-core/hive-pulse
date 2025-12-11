@@ -1,3 +1,4 @@
+
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
 import { fetchAccountStats } from './utils/hiveHelpers';
 import { fetchUnreadChatCount, bootstrapEcencyChat } from './utils/ecencyHelpers';
@@ -15,6 +16,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   badgeMetric: 'VP',
   ecencyUsername: '',
   ecencyAccessToken: '',
+  ecencyChatToken: '',
   ecencyRefreshToken: ''
 };
 
@@ -43,18 +45,23 @@ const updateGlobalBadge = async () => {
 
     // 1. Priority: Check Chat Unread Count
     if (settings.ecencyUsername && settings.ecencyAccessToken) {
-       let unreadCount = await fetchUnreadChatCount();
+       // Pass the stored chat token if available
+       let unreadCount = await fetchUnreadChatCount(settings.ecencyChatToken);
        
-       // If null, it might mean we are unauthorized (cookie expired/missing)
-       // Try bootstrapping if we have tokens
+       // If null, it might mean we are unauthorized (token expired or missing)
+       // Try bootstrapping if we have the Hive access token
        if (unreadCount === null) {
-          const success = await bootstrapEcencyChat(
+          const chatToken = await bootstrapEcencyChat(
              settings.ecencyUsername,
-             settings.ecencyAccessToken,
-             settings.ecencyRefreshToken
+             settings.ecencyAccessToken
           );
-          if (success) {
-            unreadCount = await fetchUnreadChatCount();
+          if (chatToken) {
+            // Save the new token for future use to avoid constant bootstrapping
+            const newSettings = { ...settings, ecencyChatToken: chatToken === 'cookie-session' ? '' : chatToken };
+            await chrome.storage.local.set({ settings: newSettings });
+            
+            // Retry fetch
+            unreadCount = await fetchUnreadChatCount(chatToken === 'cookie-session' ? undefined : chatToken);
           }
        }
        

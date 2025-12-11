@@ -1,5 +1,5 @@
 {
-  "name": "Hive Frontend Switcher",
-  "description": "A Chrome Extension to seamlessly switch between Hive blockchain interfaces (PeakD, Ecency, Hive.blog, InLeo, Actifit) while preserving your current navigation context.",
+  "name": "HiveKit",
+  "description": "A comprehensive toolkit for the Hive blockchain. Seamlessly switch between interfaces (PeakD, Ecency, InLeo, etc) with context preservation, launch DApps, and monitor account statistics like Voting Power (VP) and Resource Credits (RC) in real-time.",
   "requestFramePermissions": []
 }

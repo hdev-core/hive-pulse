@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { FRONTENDS, DAPPS } from './constants';
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
@@ -259,7 +258,7 @@ const App: React.FC = () => {
           <div className="bg-gradient-to-br from-red-500 to-red-600 text-white p-1.5 rounded-lg shadow-sm">
              <ArrowLeftRight size={18} strokeWidth={2.5} />
           </div>
-          <h1 className="text-lg font-bold tracking-tight text-slate-900">Hive Switcher</h1>
+          <h1 className="text-lg font-bold tracking-tight text-slate-900">HiveKit</h1>
         </div>
       </header>
 

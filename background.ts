@@ -1,44 +1,74 @@
-
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
 import { fetchAccountStats } from './utils/hiveHelpers';
+import { fetchUnreadChatCount, bootstrapEcencyChat } from './utils/ecencyHelpers';
 import { ActionMode, AppSettings, FrontendId } from './types';
 
 declare const chrome: any;
 
-const ALARM_NAME = 'checkRC';
+const ALARM_NAME = 'checkStatus';
 
 // Default settings
 const DEFAULT_SETTINGS: AppSettings = {
   autoRedirect: false,
   preferredFrontendId: FrontendId.PEAKD,
   openInNewTab: false,
-  badgeMetric: 'VP'
+  badgeMetric: 'VP',
+  ecencyUsername: '',
+  ecencyAccessToken: '',
+  ecencyRefreshToken: ''
 };
 
 // --- INITIALIZATION ---
 
 chrome.runtime.onInstalled.addListener(() => {
-  // Create alarm for periodic RC/VP checks (every 15 minutes)
+  // Create alarm for periodic checks (every 15 minutes)
   chrome.alarms.create(ALARM_NAME, {
     periodInMinutes: 15
   });
   // Check immediately on install/reload
-  updateStatsBadge();
+  updateGlobalBadge();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   // Check immediately on browser startup
-  updateStatsBadge();
+  updateGlobalBadge();
 });
 
-// --- STATS MONITORING ---
+// --- UNIFIED BADGE MANAGER ---
 
-const updateStatsBadge = async () => {
+const updateGlobalBadge = async () => {
   try {
     const stored = await chrome.storage.local.get(['settings']);
     const settings: AppSettings = stored.settings || DEFAULT_SETTINGS;
-    
-    if (settings && settings.rcUser) {
+
+    // 1. Priority: Check Chat Unread Count
+    if (settings.ecencyUsername && settings.ecencyAccessToken) {
+       let unreadCount = await fetchUnreadChatCount();
+       
+       // If null, it might mean we are unauthorized (cookie expired/missing)
+       // Try bootstrapping if we have tokens
+       if (unreadCount === null) {
+          const success = await bootstrapEcencyChat(
+             settings.ecencyUsername,
+             settings.ecencyAccessToken,
+             settings.ecencyRefreshToken
+          );
+          if (success) {
+            unreadCount = await fetchUnreadChatCount();
+          }
+       }
+       
+       if (unreadCount !== null && unreadCount > 0) {
+         // Show Message Badge (Blue)
+         const text = unreadCount > 99 ? '99+' : unreadCount.toString();
+         chrome.action.setBadgeText({ text });
+         chrome.action.setBadgeBackgroundColor({ color: '#3b82f6' }); // Ecency Blue
+         return; // Stop here, messages take priority
+       }
+    }
+
+    // 2. Secondary: Check RC/VP Stats
+    if (settings.rcUser) {
       const data = await fetchAccountStats(settings.rcUser);
       if (data) {
         // Determine which metric to show
@@ -55,26 +85,29 @@ const updateStatsBadge = async () => {
         else if (rounded < 50) color = '#f97316'; // Orange
         
         chrome.action.setBadgeBackgroundColor({ color });
+        return;
       }
-    } else {
-      chrome.action.setBadgeText({ text: '' });
     }
+
+    // 3. Fallback: Clear Badge
+    chrome.action.setBadgeText({ text: '' });
+
   } catch (e) {
-    console.error('Failed to update stats badge', e);
+    console.error('Failed to update badge', e);
   }
 };
 
 // Check on alarm
 chrome.alarms.onAlarm.addListener((alarm: any) => {
   if (alarm.name === ALARM_NAME) {
-    updateStatsBadge();
+    updateGlobalBadge();
   }
 });
 
 // Check when settings change (e.g. user sets a new user or changes badge preference)
 chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
   if (areaName === 'local' && changes.settings) {
-    updateStatsBadge();
+    updateGlobalBadge();
   }
 });
 

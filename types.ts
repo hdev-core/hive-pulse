@@ -20,6 +20,7 @@ export enum AppView {
   SWITCHER = 'SWITCHER',
   SHARE = 'SHARE',
   STATS = 'STATS',
+  CHAT = 'CHAT',
   APPS = 'APPS',
   SETTINGS = 'SETTINGS'
 }
@@ -62,6 +63,9 @@ export interface AppSettings {
   openInNewTab: boolean;
   rcUser?: string;
   badgeMetric: 'RC' | 'VP';
+  ecencyUsername?: string;
+  ecencyAccessToken?: string;
+  ecencyRefreshToken?: string;
 }
 
 export interface AccountStats {
@@ -77,4 +81,29 @@ export interface AccountStats {
     value: number; // 0-10000 basis points
     isLow: boolean;
   };
+}
+
+export interface Channel {
+  id: string;
+  create_at: number;
+  update_at: number;
+  delete_at: number;
+  team_id: string;
+  type: 'O' | 'P' | 'D' | 'G'; // Open, Private, Direct, Group
+  display_name: string;
+  name: string;
+  header: string;
+  purpose: string;
+  last_post_at: number;
+  total_msg_count: number;
+  extra_update_at: number;
+  creator_id: string;
+  // Enriched fields from Ecency Proxy
+  unread_count?: number; 
+  mention_count?: number;
+  is_favorite?: boolean;
+  teammate?: {
+    id: string;
+    username: string;
+  }
 }

@@ -1,9 +1,8 @@
-
 {
   "manifest_version": 3,
-  "name": "HiveKit",
+  "name": "HivePulse",
   "version": "1.2.0",
-  "description": "Switch between Hive frontends, share links, and launch DApps.",
+  "description": "The heartbeat of your Hive experience. Chat, Stats, and seamless Frontend Switching.",
   "icons": {
     "16": "icon.png",
     "32": "icon.png",
@@ -12,7 +11,7 @@
   },
   "action": {
     "default_popup": "index.html",
-    "default_title": "HiveKit",
+    "default_title": "HivePulse",
     "default_icon": {
       "16": "icon.png",
       "32": "icon.png",

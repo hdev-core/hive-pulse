@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Channel, AppSettings, Message } from '../../types';
 import { getAvatarUrl } from '../../utils/ecencyHelpers';
 import { 
-  MessageCircle, RefreshCw, User, Send, Activity, ChevronLeft, MessageSquarePlus
+  MessageCircle, RefreshCw, User, Send, Activity, ChevronLeft, MessageSquarePlus,
+  Pencil, Trash2, X, Check
 } from 'lucide-react';
 
 interface ChatViewProps {
@@ -26,7 +27,9 @@ interface ChatViewProps {
   onSendMessage: (text: string) => void;
   sendingMessage: boolean;
   userMap: Record<string, string>;
-  onResolveUsers: (ids: string[]) => void; // New Callback
+  onResolveUsers: (ids: string[]) => void;
+  onEditMessage: (id: string, text: string) => void;
+  onDeleteMessage: (id: string) => void;
 }
 
 export const ChatView: React.FC<ChatViewProps> = ({
@@ -50,19 +53,25 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onSendMessage,
   sendingMessage,
   userMap,
-  onResolveUsers
+  onResolveUsers,
+  onEditMessage,
+  onDeleteMessage
 }) => {
   const currentUsername = settings.ecencyUsername;
   const currentUserId = settings.ecencyUserId;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [inputText, setInputText] = useState('');
+  
+  // Edit State
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
 
   // Auto-scroll
   useEffect(() => {
-    if (activeChannel && messagesEndRef.current) {
+    if (activeChannel && messagesEndRef.current && !editingId) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [activeMessages, activeChannel, loadingMessages]);
+  }, [activeMessages, activeChannel, loadingMessages]); // Removing editingId dep avoids jumping during edit
 
   const handleSendSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,33 +80,46 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setInputText('');
   };
 
+  const startEditing = (msg: Message) => {
+    setEditingId(msg.id);
+    setEditText(msg.message);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditText('');
+  };
+
+  const saveEditing = () => {
+    if (editingId && editText.trim()) {
+        onEditMessage(editingId, editText.trim());
+        setEditingId(null);
+        setEditText('');
+    }
+  };
+
   // JIT User Resolution logic
-  // We track IDs that we tried to resolve to avoid infinite loops
   const [attemptedResolutions, setAttemptedResolutions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-     // Reset attempts when switching channels
      setAttemptedResolutions(new Set());
+     setEditingId(null); // Clear edit on channel change
   }, [activeChannel?.id]);
 
-  // Collect missing users during this render
   const missingUsersRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (missingUsersRef.current.size > 0) {
       const idsToFetch = Array.from(missingUsersRef.current);
-      // Mark as attempted
       setAttemptedResolutions(prev => {
          const next = new Set(prev);
          idsToFetch.forEach(id => next.add(id));
          return next;
       });
-      // Trigger resolution
       onResolveUsers(idsToFetch);
-      // Clear for next pass
       missingUsersRef.current.clear();
     }
-  }); // Run on every render (commit phase)
+  });
 
   const getChannelNameAndAvatar = (channel: Channel) => {
     let avatar = '';
@@ -113,13 +135,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
         name = channel.display_name;
         avatar = getAvatarUrl(channel.display_name);
       } else {
-          // If name is like 'id1__id2', we need to filter out OUR id
           const parts = channel.name.split('__');
-          const other = parts.find(p => p !== currentUserId); // Check against ID, not username
+          const other = parts.find(p => p !== currentUserId); 
           
-          // Try to resolve ID to name via userMap if available
           if (other) {
-              name = userMap[other] || other; // Fallback to ID if not resolved
+              name = userMap[other] || other;
               avatar = getAvatarUrl(userMap[other] || 'hive-1');
           } else {
               name = channel.display_name;
@@ -132,7 +152,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return { name, avatar, isDm };
   };
 
-  // ---------------- NOT LOGGED IN ----------------
   if (!settings.ecencyUsername || !settings.ecencyAccessToken) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 text-center p-6 space-y-4 h-full">
@@ -153,7 +172,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
     );
   }
 
-  // ---------------- CONVERSATION VIEW ----------------
   if (activeChannel) {
     const { name, avatar } = getChannelNameAndAvatar(activeChannel);
     
@@ -201,34 +219,25 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
           ) : (
             activeMessages.map((msg, i) => {
-              // 1. Determine Sender Name
-              // Priority: Message Props (Bridge/Webhook) > UserMap (Cache) > Raw ID > Message Fields
               const propName = msg.props?.override_username || msg.props?.webhook_display_name || msg.props?.username;
               const directName = msg.username || msg.sender_name;
               
               const resolvedName = propName || userMap[msg.user_id] || directName;
-              
-              // Validation: Is it really resolved?
-              // Standard Ecency ID is 26 chars. Usernames are usually shorter.
-              // If it's 26 chars, treat as unresolved ID.
               const isResolved = resolvedName && resolvedName.length < 26 && !resolvedName.includes(' ');
-              
               const displayName = isResolved ? resolvedName : '...';
 
-              // JIT Collection: If we don't have a name, and haven't tried fetching this ID yet
               if (!isResolved && msg.user_id && msg.user_id.length > 20) {
                  if (!attemptedResolutions.has(msg.user_id)) {
                     missingUsersRef.current.add(msg.user_id);
                  }
               }
 
-              // 2. Is it me?
               let isMe = false;
               if (currentUserId && msg.user_id === currentUserId) isMe = true;
               else if (displayName === currentUsername) isMe = true;
 
               return (
-                <div key={msg.id} className={`flex gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                <div key={msg.id} className={`flex gap-2 ${isMe ? 'justify-end' : 'justify-start'} group relative`}>
                   
                   {/* Avatar for Others */}
                   {!isMe && (
@@ -255,16 +264,66 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </span>
                     )}
 
-                    {/* Bubble */}
-                    <div className={`
-                      px-3 py-2 rounded-2xl text-sm break-words shadow-sm
-                      ${isMe 
-                        ? 'bg-blue-600 text-white rounded-br-none' 
-                        : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
-                      }
-                    `}>
-                      {msg.message}
-                    </div>
+                    {/* Bubble or Edit Mode */}
+                    {editingId === msg.id ? (
+                      <div className="flex flex-col items-end gap-1.5 w-full min-w-[200px]">
+                        <textarea 
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          className="w-full text-sm p-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50/50 resize-none"
+                          rows={2}
+                          autoFocus
+                        />
+                        <div className="flex gap-1">
+                           <button 
+                             onClick={cancelEditing} 
+                             className="p-1 rounded bg-slate-200 text-slate-600 hover:bg-slate-300"
+                             title="Cancel"
+                           >
+                             <X size={14} />
+                           </button>
+                           <button 
+                             onClick={saveEditing} 
+                             className="p-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+                             title="Save"
+                           >
+                             <Check size={14} />
+                           </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative group/bubble">
+                          {/* Actions Overlay for Own Messages */}
+                          {isMe && (
+                             <div className="absolute top-0 -left-12 hidden group-hover/bubble:flex items-center gap-1 bg-white shadow-sm border border-slate-100 rounded px-1.5 py-1 z-10 animate-in fade-in zoom-in duration-100">
+                                <button 
+                                  onClick={() => startEditing(msg)} 
+                                  className="text-slate-500 hover:text-blue-600 p-0.5"
+                                  title="Edit"
+                                >
+                                  <Pencil size={12} />
+                                </button>
+                                <div className="w-px h-3 bg-slate-200" />
+                                <button 
+                                  onClick={() => onDeleteMessage(msg.id)}
+                                  className="text-slate-500 hover:text-red-500 p-0.5"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                             </div>
+                          )}
+                          <div className={`
+                            px-3 py-2 rounded-2xl text-sm break-words shadow-sm relative
+                            ${isMe 
+                              ? 'bg-blue-600 text-white rounded-br-none' 
+                              : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
+                            }
+                          `}>
+                            {msg.message}
+                          </div>
+                      </div>
+                    )}
 
                     {/* Timestamp */}
                     <span className="text-[10px] text-slate-400 mt-1 px-1">

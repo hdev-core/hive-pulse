@@ -400,6 +400,48 @@ export const sendMessage = async (channelId: string, message: string, token?: st
   }
 };
 
+/**
+ * Edits a message.
+ */
+export const editMessage = async (postId: string, message: string, token?: string): Promise<Message | null> => {
+  try {
+    const response = await fetch(`${ECENCY_CHAT_BASE}/posts/${postId}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      cache: 'no-store',
+      credentials: 'include',
+      body: JSON.stringify({
+        id: postId,
+        message
+      })
+    });
+
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (e) {
+    return null;
+  }
+};
+
+/**
+ * Deletes a message.
+ */
+export const deleteMessage = async (postId: string, token?: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${ECENCY_CHAT_BASE}/posts/${postId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+      cache: 'no-store',
+      credentials: 'include'
+    });
+
+    if (!response.ok) return false;
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 export const getAvatarUrl = (username?: string) => {
   if (!username) return '';
   const clean = username.replace(/^@/, '').trim();

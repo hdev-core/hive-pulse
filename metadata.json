@@ -1,5 +1,5 @@
 {
-  "name": "HiveKit",
-  "description": "A comprehensive toolkit for the Hive blockchain. Seamlessly switch between interfaces (PeakD, Ecency, InLeo, etc) with context preservation, launch DApps, and monitor account statistics like Voting Power (VP) and Resource Credits (RC) in real-time.",
+  "name": "HivePulse",
+  "description": "Your centralized dashboard for the Hive blockchain. Monitor vital account stats (VP/RC), chat in real-time via Ecency, and seamlessly switch between frontends without losing context.",
   "requestFramePermissions": []
 }

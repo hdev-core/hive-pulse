@@ -7,6 +7,8 @@ import {
   getOrCreateDirectChannel,
   fetchChannelPosts,
   sendMessage,
+  editMessage,
+  deleteMessage,
   fetchMe,
   fetchUsersByIds
 } from './utils/ecencyHelpers';
@@ -356,6 +358,36 @@ const App: React.FC = () => {
     setSendingMessage(false);
   };
 
+  const handleEditMessage = async (messageId: string, newText: string) => {
+    const originalMessages = [...activeMessages];
+    
+    // Optimistic update
+    setActiveMessages(prev => prev.map(m => m.id === messageId ? { ...m, message: newText } : m));
+
+    const result = await editMessage(messageId, newText, settings.ecencyChatToken);
+    
+    if (!result) {
+        // Revert
+        setActiveMessages(originalMessages);
+        alert("Failed to edit message");
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    const originalMessages = [...activeMessages];
+    
+    // Optimistic delete
+    setActiveMessages(prev => prev.filter(m => m.id !== messageId));
+    
+    const success = await deleteMessage(messageId, settings.ecencyChatToken);
+    
+    if (!success) {
+         // Revert
+         setActiveMessages(originalMessages);
+         alert("Failed to delete message");
+    }
+  };
+
   const handleCreateDM = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dmTarget.trim()) return;
@@ -490,13 +522,22 @@ const App: React.FC = () => {
            ecencyUsername: userToLogin, 
            ecencyAccessToken: hiveToken,
            ecencyChatToken: chatToken === 'cookie-session' ? '' : chatToken,
-           ecencyUserId: internalId
+           ecencyUserId: internalId,
+           rcUser: userToLogin // SYNC STATS USER
          });
 
          // Seed user map
          if (internalId) {
             setUserMap(prev => ({ ...prev, [internalId]: userToLogin }));
          }
+
+         // Fetch stats immediately so badge updates
+         fetchAccountStats(userToLogin).then(data => {
+            if (data) {
+                setAccountStats(data);
+                updateBadgeFromData(data);
+            }
+         });
 
          setLoginError(null);
          setChatSessionExpired(false);
@@ -601,6 +642,8 @@ const App: React.FC = () => {
                 sendingMessage={sendingMessage}
                 userMap={userMap}
                 onResolveUsers={resolveUnknownUsers} // PASSING CALLBACK
+                onEditMessage={handleEditMessage}
+                onDeleteMessage={handleDeleteMessage}
               />
             )}
 

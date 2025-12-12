@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { PanelRight } from 'lucide-react';
 
@@ -22,7 +21,7 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-2.5">
         <img 
           src="/icon.png" 
-          alt="HiveKit" 
+          alt="HivePulse" 
           className="w-8 h-8 object-contain"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
@@ -30,7 +29,7 @@ export const Header: React.FC = () => {
             target.onerror = null;
           }}
         />
-        <h1 className="text-lg font-bold tracking-tight text-slate-900">HiveKit</h1>
+        <h1 className="text-lg font-bold tracking-tight text-slate-900">HivePulse</h1>
       </div>
       <button 
          onClick={openSidePanel} 

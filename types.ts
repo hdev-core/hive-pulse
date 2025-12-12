@@ -66,6 +66,7 @@ export interface AppSettings {
   ecencyUsername?: string;
   ecencyAccessToken?: string; // Hive token (for bootstrap)
   ecencyChatToken?: string;   // Mattermost token (for chat)
+  ecencyUserId?: string;      // Internal Mattermost User ID (for reliable 'isMe' check)
   ecencyRefreshToken?: string;
 }
 
@@ -131,6 +132,11 @@ export interface Message {
     images: any[];
     reactions: any[];
   };
+  // API specific fields
+  username?: string;
+  sender_name?: string;
+  // Injected field
+  _username?: string;
 }
 
 export interface PostResponse {

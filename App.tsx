@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
 import { fetchAccountStats } from './utils/hiveHelpers';
 import { 
@@ -7,7 +6,9 @@ import {
   fetchChannels, 
   getOrCreateDirectChannel,
   fetchChannelPosts,
-  sendMessage
+  sendMessage,
+  fetchMe,
+  fetchUsersByIds
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
 import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message } from './types';
@@ -34,6 +35,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   ecencyUsername: '',
   ecencyAccessToken: '',
   ecencyChatToken: '',
+  ecencyUserId: '',
   ecencyRefreshToken: ''
 };
 
@@ -54,7 +56,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Stats Data for Badge
+  // Stats Data
   const [accountStats, setAccountStats] = useState<AccountStats | null>(null);
 
   // Chat State
@@ -65,12 +67,15 @@ const App: React.FC = () => {
   const [dmTarget, setDmTarget] = useState('');
   const [creatingDm, setCreatingDm] = useState(false);
   
-  // Chat Active Channel State
+  // Chat Data State
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [activeMessages, setActiveMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   
+  // User Cache: Maps internal ID -> Hive Username
+  const [userMap, setUserMap] = useState<Record<string, string>>({});
+
   // Login State
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -79,24 +84,29 @@ const App: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        // 1. Load Settings
         if (typeof chrome !== 'undefined' && chrome.storage) {
           const stored = await chrome.storage.local.get(['settings']);
           if (stored.settings) {
-            setSettings({ ...DEFAULT_SETTINGS, ...stored.settings });
+            const savedSettings = { ...DEFAULT_SETTINGS, ...stored.settings };
+            setSettings(savedSettings);
             
-            // Pre-fill stats if user exists
-            if (stored.settings.rcUser) {
-              fetchAccountStats(stored.settings.rcUser).then(data => {
+            // Populate user cache with self if known
+            if (savedSettings.ecencyUserId && savedSettings.ecencyUsername) {
+              setUserMap(prev => ({ 
+                ...prev, 
+                [savedSettings.ecencyUserId!]: savedSettings.ecencyUsername! 
+              }));
+            }
+            
+            if (savedSettings.rcUser) {
+              fetchAccountStats(savedSettings.rcUser).then(data => {
                 if (data) setAccountStats(data);
               });
             }
           }
         }
 
-        // 2. Load Current Tab
         if (typeof chrome === 'undefined' || !chrome.tabs) {
-          // Dev fallback
           const dummyUrl = 'https://peakd.com/@alice/hive-is-awesome';
           setTabState(parseUrl(dummyUrl));
           setLoading(false);
@@ -123,6 +133,15 @@ const App: React.FC = () => {
   const updateSettings = (newSettings: Partial<AppSettings>) => {
     const updated = { ...settings, ...newSettings };
     setSettings(updated);
+    
+    // Update local user map if self-user changes
+    if (updated.ecencyUserId && updated.ecencyUsername) {
+       setUserMap(prev => ({ 
+         ...prev, 
+         [updated.ecencyUserId!]: updated.ecencyUsername! 
+       }));
+    }
+
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.set({ settings: updated });
     }
@@ -171,6 +190,14 @@ const App: React.FC = () => {
     }
 
     const doFetch = async (authToken?: string) => {
+      // Fetch "Me" ID if missing
+      if (!settings.ecencyUserId && authToken) {
+         const me = await fetchMe(authToken);
+         if (me) {
+           updateSettings({ ecencyUserId: me.id });
+         }
+      }
+
       const list = await fetchChannels(authToken);
       if (list === null) return false;
 
@@ -201,7 +228,6 @@ const App: React.FC = () => {
          }
       }
 
-      console.log('Refreshing Chat Session via Bootstrap...');
       const newToken = await bootstrapEcencyChat(username, accessToken);
       
       if (newToken) {
@@ -210,7 +236,6 @@ const App: React.FC = () => {
          const retrySuccess = await doFetch(newToken);
          if (!retrySuccess) setChatSessionExpired(true);
       } else {
-         console.warn("Bootstrap returned no token");
          setChatSessionExpired(true);
       }
     } catch (e) {
@@ -221,28 +246,115 @@ const App: React.FC = () => {
     }
   };
 
+  /**
+   * Helper to resolve IDs that are not yet in the userMap.
+   * Updates state once resolved.
+   * Wrapped in useCallback to pass to children.
+   */
+  const resolveUnknownUsers = useCallback(async (ids: string[], knownCache?: Record<string, string>) => {
+    if (!settings.ecencyChatToken) return;
+    
+    // 1. Filter what we don't know (check both state and ephemeral cache)
+    // IMPORTANT: Access state via functional update logic or ensure ids are filtered by caller if needed.
+    // Here we trust the caller to pass IDs they think are missing, but we double check against userMap.
+    // Note: Inside async function, we can't reliably see "current" state without ref or passing it in.
+    // But for this use case, re-fetching a known user is just a small inefficiency, not a bug.
+    
+    // We filter synchronously against the current userMap captured in closure
+    const missing = ids.filter(id => {
+       if (userMap[id]) return false;
+       if (knownCache && knownCache[id]) return false;
+       return true;
+    });
+
+    if (missing.length === 0) return;
+
+    console.log('[App] Resolving missing users:', missing);
+
+    // 2. Fetch from API
+    const resolved = await fetchUsersByIds(missing, settings.ecencyChatToken);
+
+    // 3. Update State
+    if (Object.keys(resolved).length > 0) {
+       setUserMap(prev => ({ ...prev, ...resolved }));
+    }
+  }, [userMap, settings.ecencyChatToken]);
+
+  const loadChannelMessages = async (channel: Channel) => {
+    const myId = settings.ecencyUserId;
+    
+    // 1. Parse DM channel names (id1__id2) to find the Teammate's ID.
+    if (channel.type === 'D' && myId && channel.name.includes('__')) {
+       const parts = channel.name.split('__');
+       if (parts.length === 2) {
+         const otherId = parts.find(p => p !== myId);
+         if (otherId && channel.display_name) {
+            // Seed the cache immediately (this update won't be visible in this render cycle)
+            setUserMap(prev => ({ ...prev, [otherId]: channel.display_name }));
+         }
+       }
+    }
+    
+    // 2. Fetch Messages and Users found in payload (data.profiles)
+    const { messages, users } = await fetchChannelPosts(channel.id, settings.ecencyChatToken);
+    
+    // 3. Update User Map with what we found in profiles
+    if (Object.keys(users).length > 0) {
+       setUserMap(prev => ({ ...prev, ...users }));
+    }
+
+    // 4. Update View
+    setActiveMessages(messages);
+    setLoadingMessages(false);
+
+    // 5. Fallback: Resolve Authors asynchronously
+    // We pass 'users' (from step 2) as knownCache to avoid re-fetching them
+    const authorIds = [...new Set(messages.map(m => m.user_id))];
+    resolveUnknownUsers(authorIds, users);
+  };
+
   const handleSelectChannel = async (channel: Channel | null) => {
      setActiveChannel(channel);
      if (channel) {
         setLoadingMessages(true);
-        setActiveMessages([]);
-        const msgs = await fetchChannelPosts(channel.id, settings.ecencyChatToken);
-        // API returns newer first, we want older first for display
-        setActiveMessages(msgs.reverse());
-        setLoadingMessages(false);
+        setActiveMessages([]); // clear old
+        await loadChannelMessages(channel);
      }
+  };
+
+  const handleRefreshActiveChat = async () => {
+    if (!activeChannel) {
+      refreshChat(true);
+      return;
+    }
+    setLoadingMessages(true);
+    await loadChannelMessages(activeChannel);
   };
 
   const handleSendMessage = async (text: string) => {
     if (!activeChannel) return;
     setSendingMessage(true);
+    
     const result = await sendMessage(activeChannel.id, text, settings.ecencyChatToken);
     
     if (result) {
-       // Append message optimistically or from result
-       setActiveMessages(prev => [...prev, result]);
+       // Optimistic Update
+       const msgWithUser: Message = { 
+         ...result, 
+         message: text,
+         create_at: result.create_at || Date.now(),
+         user_id: settings.ecencyUserId || result.user_id
+       };
+       setActiveMessages(prev => [...prev, msgWithUser]);
+
+       // Silent Refetch
+       const { messages, users } = await fetchChannelPosts(activeChannel.id, settings.ecencyChatToken);
+       if (Object.keys(users).length > 0) {
+          setUserMap(prev => ({ ...prev, ...users }));
+       }
+       setActiveMessages(messages);
     } else {
-       alert("Failed to send message. Please check connection.");
+       alert("Failed to send message.");
     }
     setSendingMessage(false);
   };
@@ -256,11 +368,8 @@ const App: React.FC = () => {
       let token = settings.ecencyChatToken;
       let result = await getOrCreateDirectChannel(dmTarget.trim(), token);
       
-      // Auto-retry bootstrap if failed with session error
       if (!result.success && settings.ecencyUsername && settings.ecencyAccessToken) {
-         // Only retry if it looks like a session issue or if token was missing
          if (!token || result.error?.toLowerCase().includes('session') || result.error?.toLowerCase().includes('expired')) {
-           console.log("Retrying DM with fresh bootstrap...");
            const newToken = await bootstrapEcencyChat(settings.ecencyUsername, settings.ecencyAccessToken);
            if (newToken) {
              updateSettings({ ecencyChatToken: newToken });
@@ -271,32 +380,8 @@ const App: React.FC = () => {
 
       if (result.success) {
         setDmTarget('');
-        
-        // If we got an ID, select it immediately
-        if (result.id) {
-            const newChannel: Channel = {
-               id: result.id,
-               display_name: dmTarget.trim(), 
-               name: `${settings.ecencyUsername}__${dmTarget.trim()}`,
-               type: 'D',
-               create_at: Date.now(),
-               update_at: Date.now(),
-               delete_at: 0,
-               team_id: '',
-               header: '',
-               purpose: '',
-               last_post_at: Date.now(),
-               total_msg_count: 0,
-               extra_update_at: 0,
-               creator_id: ''
-            };
-            handleSelectChannel(newChannel);
-        } else {
-            // Fallback: If we created it but didn't get ID, force a refresh
-            // The new channel should appear in the list now
-            await refreshChat(false);
-            // We can't auto-select because we don't know the ID, but the user will see it in the list
-        }
+        // Refresh entire chat list to get the new/existing channel correctly
+        await refreshChat(true);
       } else {
         alert(result.error || 'Could not create DM.');
       }
@@ -308,7 +393,7 @@ const App: React.FC = () => {
     }
   };
 
-  // --- LOGIN LOGIC ---
+  // --- LOGIN ---
   
   const handleKeychainLogin = async () => {
     const userToLogin = settings.ecencyUsername || settings.rcUser || tabState.username;
@@ -361,11 +446,23 @@ const App: React.FC = () => {
       const chatToken = await bootstrapEcencyChat(userToLogin, hiveToken);
       
       if (chatToken) {
+         let internalId = '';
+         if (chatToken !== 'cookie-session') {
+           const me = await fetchMe(chatToken);
+           if (me) internalId = me.id;
+         }
+
          updateSettings({ 
            ecencyUsername: userToLogin, 
            ecencyAccessToken: hiveToken,
            ecencyChatToken: chatToken === 'cookie-session' ? '' : chatToken,
+           ecencyUserId: internalId
          });
+
+         // Seed user map
+         if (internalId) {
+            setUserMap(prev => ({ ...prev, [internalId]: userToLogin }));
+         }
 
          setLoginError(null);
          setChatSessionExpired(false);
@@ -388,11 +485,12 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     updateSettings({ 
-      ecencyUsername: '', ecencyAccessToken: '', ecencyChatToken: '', ecencyRefreshToken: '' 
+      ecencyUsername: '', ecencyAccessToken: '', ecencyChatToken: '', ecencyRefreshToken: '', ecencyUserId: '' 
     });
     setUnreadMessages(null);
     setChannels([]);
     setActiveChannel(null);
+    setUserMap({});
   };
 
   // --- EFFECTS ---
@@ -454,6 +552,7 @@ const App: React.FC = () => {
                 chatSessionExpired={chatSessionExpired}
                 isLoggingIn={isLoggingIn}
                 refreshChat={refreshChat}
+                onRefresh={handleRefreshActiveChat}
                 handleCreateDM={handleCreateDM}
                 handleKeychainLogin={handleKeychainLogin}
                 dmTarget={dmTarget}
@@ -466,6 +565,8 @@ const App: React.FC = () => {
                 onSelectChannel={handleSelectChannel}
                 onSendMessage={handleSendMessage}
                 sendingMessage={sendingMessage}
+                userMap={userMap}
+                onResolveUsers={resolveUnknownUsers} // PASSING CALLBACK
               />
             )}
 

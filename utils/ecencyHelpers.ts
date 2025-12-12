@@ -15,8 +15,6 @@ interface UnreadResponse {
 
 /**
  * Creates auth headers.
- * We manually attach the token as Bearer because extension fetch requests 
- * often fail to send SameSite=Lax cookies to cross-origin domains.
  */
 const getHeaders = (token?: string) => {
   const headers: Record<string, string> = {
@@ -33,18 +31,14 @@ const getHeaders = (token?: string) => {
 
 /**
  * Helper to retrieve the mm_pat cookie directly from the browser jar.
- * Uses robust search across domain and subdomains.
  */
 const getMmPatCookie = async (): Promise<string | null> => {
   if (typeof chrome === 'undefined' || !chrome.cookies) return null;
 
   try {
-    // 1. Try exact URL match
     const cookie = await chrome.cookies.get({ url: 'https://ecency.com', name: 'mm_pat' });
     if (cookie) return cookie.value;
 
-    // 2. Try domain wide search (handles .ecency.com)
-    // We iterate to find one that isn't empty
     const cookies = await chrome.cookies.getAll({ domain: 'ecency.com', name: 'mm_pat' });
     if (cookies && cookies.length > 0) {
       const valid = cookies.find((c: any) => c.value && c.value.length > 5);
@@ -87,26 +81,18 @@ export const bootstrapEcencyChat = async (username: string, accessToken: string)
       return null;
     }
 
-    // Increased delay to ensure Set-Cookie is processed by the browser
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Success! The server has set the 'mm_pat' cookie.
-    // Now we extract it so we can use it in headers for future requests.
     const cookieToken = await getMmPatCookie();
     if (cookieToken) {
-      console.log('[EcencyChat] Successfully retrieved auth cookie');
       return cookieToken;
-    } else {
-      console.warn('[EcencyChat] Bootstrap OK but cookie not found in jar.');
     }
 
-    // Fallback: Check if body has it
     try {
         const data = await response.json();
         const token = data.token || data.access_token || data.sid || data.mm_token;
         if (token) return token;
         
-        // If we really can't find the token, but API said OK, we return 'cookie-session'
         if (data && (data.ok || data.status === 'ok')) {
              return 'cookie-session'; 
         }
@@ -116,6 +102,31 @@ export const bootstrapEcencyChat = async (username: string, accessToken: string)
 
   } catch (e) {
     console.error('[EcencyChat] Bootstrap error:', e);
+    return null;
+  }
+};
+
+/**
+ * Fetches the current authenticated user's details.
+ */
+export const fetchMe = async (token?: string): Promise<{ id: string; username: string } | null> => {
+  try {
+    const response = await fetch(`${ECENCY_CHAT_BASE}/users/me`, {
+      method: 'GET',
+      headers: getHeaders(token),
+      cache: 'no-store',
+      credentials: 'include'
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data && data.id) {
+       console.log('[EcencyChat] Resolved ME:', data.id, data.username);
+       return { id: data.id, username: data.username };
+    }
+    return null;
+  } catch (e) {
+    console.error('[EcencyChat] Failed to fetch me:', e);
     return null;
   }
 };
@@ -154,7 +165,6 @@ export const fetchUnreadChatCount = async (token?: string): Promise<number | nul
  */
 export const fetchChannels = async (token?: string): Promise<Channel[] | null> => {
   try {
-    console.log('[EcencyChat] Fetching channels...');
     const response = await fetch(`${ECENCY_CHAT_BASE}/channels`, {
       method: 'GET',
       headers: getHeaders(token),
@@ -168,12 +178,8 @@ export const fetchChannels = async (token?: string): Promise<Channel[] | null> =
     }
 
     const data = await response.json();
-    
-    // Check for different response structures
     if (Array.isArray(data)) return data;
     if (data && Array.isArray(data.channels)) return data.channels;
-    
-    // If we got an empty object or null, return empty array
     return [];
   } catch (e) {
     console.error('[EcencyChat] Error fetching channels:', e);
@@ -198,17 +204,11 @@ export const getOrCreateDirectChannel = async (username: string, token?: string)
 
     if (!response.ok) {
       const errText = await response.text();
-      console.warn(`[EcencyChat] DM creation failed (${response.status}):`, errText);
-      
-      let errMsg = `Error ${response.status}: Failed to create chat.`;
+      let errMsg = `Error ${response.status}`;
       try {
         const errJson = JSON.parse(errText);
-        if (errJson.message) errMsg = errJson.message;
-        else if (errJson.error) errMsg = errJson.error;
-      } catch (e) {
-        if (response.status === 404) errMsg = 'User not found.';
-        if (response.status === 401) errMsg = 'Session expired.';
-      }
+        errMsg = errJson.message || errMsg;
+      } catch (e) {}
       return { id: null, error: errMsg };
     }
 
@@ -217,20 +217,13 @@ export const getOrCreateDirectChannel = async (username: string, token?: string)
     try {
       data = JSON.parse(rawData);
     } catch (e) {
-      console.error('[EcencyChat] Failed to parse DM response JSON', rawData);
-      // If we got a 200 OK but invalid JSON, we might assume success but can't get ID
       return { id: null, success: true };
     }
 
-    // Handle various response shapes
     const channel = Array.isArray(data) ? data[0] : data;
     const id = channel?.id || channel?.channel_id || null;
 
-    if (!id) {
-       console.warn('[EcencyChat] DM created but ID missing in response:', data);
-       // Return success: true so the App knows to just refresh the list to find it
-       return { id: null, success: true }; 
-    }
+    if (!id) return { id: null, success: true }; 
 
     return { id, success: true };
   } catch (e: any) {
@@ -240,12 +233,52 @@ export const getOrCreateDirectChannel = async (username: string, token?: string)
 };
 
 /**
- * Fetches posts for a channel.
+ * Resolves Mattermost User IDs to Hive usernames
  */
-export const fetchChannelPosts = async (channelId: string, token?: string): Promise<Message[]> => {
+export const fetchUsersByIds = async (userIds: string[], token?: string): Promise<Record<string, string>> => {
+  if (userIds.length === 0) return {};
   try {
-    // page=0&per_page=60 is standard Mattermost pagination
-    const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts?page=0&per_page=60`, {
+    console.log('[EcencyChat] Resolving users:', userIds);
+    // Dedup
+    const uniqueIds = [...new Set(userIds)];
+    
+    const response = await fetch(`${ECENCY_CHAT_BASE}/users/ids`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      cache: 'no-store',
+      credentials: 'include',
+      body: JSON.stringify(uniqueIds)
+    });
+
+    if (!response.ok) {
+        console.warn('[EcencyChat] Resolve users failed status:', response.status);
+        return {};
+    }
+    
+    const users = await response.json();
+    console.log('[EcencyChat] Resolved users payload:', users);
+
+    const map: Record<string, string> = {};
+    if (Array.isArray(users)) {
+      users.forEach((u: any) => {
+        if (u.id && u.username) map[u.id] = u.username;
+      });
+    }
+    return map;
+  } catch (e) {
+    console.error('[EcencyChat] Failed to resolve users:', e);
+    return {};
+  }
+};
+
+/**
+ * Fetches posts for a channel.
+ * Returns raw messages AND a map of discovered users from data.profiles.
+ */
+export const fetchChannelPosts = async (channelId: string, token?: string): Promise<{ messages: Message[], users: Record<string, string> }> => {
+  try {
+    const ts = Date.now();
+    const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts?page=0&per_page=100&t=${ts}`, {
       method: 'GET',
       headers: getHeaders(token),
       cache: 'no-store',
@@ -253,24 +286,90 @@ export const fetchChannelPosts = async (channelId: string, token?: string): Prom
     });
 
     if (!response.ok) {
-      console.warn(`[EcencyChat] Failed to fetch posts: ${response.status}`);
-      return [];
+        console.warn(`[EcencyChat] fetchChannelPosts failed: ${response.status}`);
+        return { messages: [], users: {} };
     }
 
-    const data: PostResponse = await response.json();
+    const data: any = await response.json();
     
-    if (!data || !data.order || !data.posts) return [];
+    // DEBUG LOGGING
+    console.log('[EcencyChat] fetchChannelPosts data:', {
+        channelId,
+        orderCount: data?.order?.length,
+        postsCount: data?.posts ? Object.keys(data.posts).length : 0,
+        hasProfiles: !!data?.profiles,
+        profilesCount: data?.profiles ? Object.keys(data.profiles).length : 0
+    });
 
-    // Map order array to actual message objects
-    return data.order.map(id => data.posts[id]);
+    if (data?.posts) {
+        // Log first post to inspect props/user_id
+        const first = Object.values(data.posts)[0] as any;
+        if (first) {
+            console.log('[EcencyChat] Sample Post:', { 
+                id: first.id, 
+                user_id: first.user_id, 
+                props: first.props, 
+                username: first.username,
+                sender_name: first.sender_name 
+            });
+        }
+    }
+    
+    let messages: Message[] = [];
+    const users: Record<string, string> = {};
+
+    if (data) {
+      // 1. Extract Profiles (Standard Mattermost way to get author info)
+      if (data.profiles) {
+        Object.values(data.profiles).forEach((u: any) => {
+          if (u.id && u.username) {
+             users[u.id] = u.username;
+          }
+        });
+      }
+
+      // 2. Parse Posts
+      if (data.order && data.posts) {
+         messages = data.order.map((id: string) => data.posts[id]).filter((p: any) => !!p);
+      } else if (Array.isArray(data)) {
+         messages = data;
+      } else if (data.posts && Array.isArray(data.posts)) {
+         messages = data.posts;
+      }
+    }
+
+    // Sort: Oldest First
+    messages.sort((a, b) => a.create_at - b.create_at);
+
+    // 3. Fallback: Check if message objects themselves have user info (Bridge/Proxy cases)
+    // Aggressively check props for override_username which is common in Ecency bridges
+    // Also check standard `username` prop which might be present in some payloads
+    messages.forEach(m => {
+        // Direct property check
+        if (m.username && !users[m.user_id]) users[m.user_id] = m.username;
+        if (m.sender_name && !users[m.user_id]) users[m.user_id] = m.sender_name;
+        
+        // Props check (Webhooks/Bridges/System)
+        if (m.props) {
+            // Check for override_username, webhook_display_name, OR just 'username' in props
+            const override = m.props.override_username || m.props.webhook_display_name || m.props.username;
+            if (override && !users[m.user_id]) {
+                users[m.user_id] = override;
+            }
+        }
+    });
+
+    console.log('[EcencyChat] Discovered Users:', Object.keys(users).length);
+
+    return { messages, users };
   } catch (e) {
     console.error('[EcencyChat] Error fetching posts:', e);
-    return [];
+    return { messages: [], users: {} };
   }
 };
 
 /**
- * Sends a message to a channel.
+ * Sends a message.
  */
 export const sendMessage = async (channelId: string, message: string, token?: string): Promise<Message | null> => {
   try {
@@ -285,14 +384,8 @@ export const sendMessage = async (channelId: string, message: string, token?: st
       })
     });
 
-    if (!response.ok) {
-      const txt = await response.text();
-      console.warn(`[EcencyChat] Failed to send message: ${response.status}`, txt);
-      return null;
-    }
-
-    const data = await response.json();
-    return data;
+    if (!response.ok) return null;
+    return await response.json();
   } catch (e) {
     console.error('[EcencyChat] Error sending message:', e);
     return null;
@@ -300,5 +393,9 @@ export const sendMessage = async (channelId: string, message: string, token?: st
 };
 
 export const getAvatarUrl = (username?: string) => {
-  return username ? `https://images.ecency.com/u/${username}/avatar/small` : '';
+  if (!username) return '';
+  const clean = username.replace(/^@/, '').trim();
+  // Avoid internal IDs (usually 26 chars in MM)
+  if (clean.length > 20 && !clean.includes(' ')) return ''; 
+  return `https://images.ecency.com/u/${clean}/avatar/small`;
 };

@@ -12,19 +12,21 @@ interface ChatViewProps {
   chatSessionExpired: boolean;
   isLoggingIn: boolean;
   refreshChat: (force?: boolean) => void;
+  onRefresh: () => void;
   handleCreateDM: (e: React.FormEvent) => void;
   handleKeychainLogin: () => void;
   dmTarget: string;
   setDmTarget: (val: string) => void;
   creatingDm: boolean;
   onNavigateSettings: () => void;
-  // New props for active activeChannel
   activeChannel: Channel | null;
   activeMessages: Message[];
   loadingMessages: boolean;
   onSelectChannel: (channel: Channel | null) => void;
   onSendMessage: (text: string) => void;
   sendingMessage: boolean;
+  userMap: Record<string, string>;
+  onResolveUsers: (ids: string[]) => void; // New Callback
 }
 
 export const ChatView: React.FC<ChatViewProps> = ({
@@ -34,6 +36,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   chatSessionExpired,
   isLoggingIn,
   refreshChat,
+  onRefresh,
   handleCreateDM,
   handleKeychainLogin,
   dmTarget,
@@ -45,13 +48,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
   loadingMessages,
   onSelectChannel,
   onSendMessage,
-  sendingMessage
+  sendingMessage,
+  userMap,
+  onResolveUsers
 }) => {
   const currentUsername = settings.ecencyUsername;
+  const currentUserId = settings.ecencyUserId;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [inputText, setInputText] = useState('');
 
-  // Auto-scroll to bottom of messages
+  // Auto-scroll
   useEffect(() => {
     if (activeChannel && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -64,6 +70,34 @@ export const ChatView: React.FC<ChatViewProps> = ({
     onSendMessage(inputText);
     setInputText('');
   };
+
+  // JIT User Resolution logic
+  // We track IDs that we tried to resolve to avoid infinite loops
+  const [attemptedResolutions, setAttemptedResolutions] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+     // Reset attempts when switching channels
+     setAttemptedResolutions(new Set());
+  }, [activeChannel?.id]);
+
+  // Collect missing users during this render
+  const missingUsersRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (missingUsersRef.current.size > 0) {
+      const idsToFetch = Array.from(missingUsersRef.current);
+      // Mark as attempted
+      setAttemptedResolutions(prev => {
+         const next = new Set(prev);
+         idsToFetch.forEach(id => next.add(id));
+         return next;
+      });
+      // Trigger resolution
+      onResolveUsers(idsToFetch);
+      // Clear for next pass
+      missingUsersRef.current.clear();
+    }
+  }); // Run on every render (commit phase)
 
   const getChannelNameAndAvatar = (channel: Channel) => {
     let avatar = '';
@@ -116,12 +150,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const { name, avatar } = getChannelNameAndAvatar(activeChannel);
     
     return (
-      <div className="flex flex-col h-[400px] -m-4 bg-white">
+      <div className="fixed top-[57px] bottom-[60px] left-0 right-0 z-40 bg-white flex flex-col shadow-xl">
         {/* Chat Header */}
-        <div className="flex items-center gap-3 p-3 border-b border-slate-100 bg-white sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center gap-3 p-3 border-b border-slate-200 bg-white shadow-sm z-10">
           <button 
             onClick={() => onSelectChannel(null)}
-            className="p-1 rounded hover:bg-slate-100 text-slate-500"
+            className="p-1.5 rounded-full hover:bg-slate-100 text-slate-600"
           >
             <ChevronLeft size={20} />
           </button>
@@ -129,24 +163,26 @@ export const ChatView: React.FC<ChatViewProps> = ({
             src={avatar} 
             alt={name}
             className="w-8 h-8 rounded-full bg-slate-200 object-cover"
+            onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/hive-1/avatar/small'}
           />
           <div className="flex-1 min-w-0">
              <h3 className="font-bold text-slate-800 text-sm truncate">{name}</h3>
-             <p className="text-[10px] text-slate-400 truncate">
+             <p className="text-[10px] text-slate-500 truncate">
                 {activeChannel.type === 'D' ? 'Direct Message' : 'Community'}
              </p>
           </div>
           <button 
-            onClick={() => refreshChat(true)} 
-            className="text-slate-400 p-1 hover:text-blue-600"
+            onClick={onRefresh} 
+            className="text-slate-400 p-2 hover:text-blue-600"
             disabled={loadingMessages}
+            title="Refresh Messages"
           >
             <RefreshCw size={16} className={loadingMessages ? 'animate-spin' : ''} />
           </button>
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
           {loadingMessages && activeMessages.length === 0 ? (
             <div className="flex justify-center py-10">
               <Activity className="animate-spin text-slate-300" />
@@ -157,15 +193,78 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
           ) : (
             activeMessages.map((msg, i) => {
-              const isMe = msg.user_id === settings.ecencyUsername; 
+              // 1. Determine Sender Name
+              // Priority: Message Props (Bridge/Webhook) > UserMap (Cache) > Raw ID > Message Fields
+              const propName = msg.props?.override_username || msg.props?.webhook_display_name || msg.props?.username;
+              const directName = msg.username || msg.sender_name;
+              
+              const resolvedName = propName || userMap[msg.user_id] || directName;
+              
+              // Validation: Is it really resolved?
+              // Standard Ecency ID is 26 chars. Usernames are usually shorter.
+              // If it's 26 chars, treat as unresolved ID.
+              const isResolved = resolvedName && resolvedName.length < 26 && !resolvedName.includes(' ');
+              
+              const displayName = isResolved ? resolvedName : '...';
+
+              // JIT Collection: If we don't have a name, and haven't tried fetching this ID yet
+              if (!isResolved && msg.user_id && msg.user_id.length > 20) {
+                 if (!attemptedResolutions.has(msg.user_id)) {
+                    missingUsersRef.current.add(msg.user_id);
+                 }
+              }
+
+              // 2. Is it me?
+              let isMe = false;
+              if (currentUserId && msg.user_id === currentUserId) isMe = true;
+              else if (displayName === currentUsername) isMe = true;
+
               return (
-                <div key={msg.id} className="flex flex-col items-start">
-                  <div className="bg-white border border-slate-200 text-slate-800 rounded-lg rounded-bl-none shadow-sm px-3 py-2 max-w-[85%] text-sm break-words">
-                    {msg.message}
+                <div key={msg.id} className={`flex gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                  
+                  {/* Avatar for Others */}
+                  {!isMe && (
+                    <div className="w-8 h-8 shrink-0 mt-1">
+                      {isResolved ? (
+                        <img 
+                          src={getAvatarUrl(displayName)} 
+                          alt={displayName}
+                          className="w-8 h-8 rounded-full bg-slate-200 object-cover"
+                          onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/hive-1/avatar/small'}
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-slate-100 animate-pulse" />
+                      )}
+                    </div>
+                  )}
+
+                  <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%]`}>
+                    
+                    {/* Sender Name */}
+                    {!isMe && (
+                      <span className="text-[10px] text-slate-500 mb-0.5 ml-1 font-medium h-3.5 block">
+                        {displayName}
+                      </span>
+                    )}
+
+                    {/* Bubble */}
+                    <div className={`
+                      px-3 py-2 rounded-2xl text-sm break-words shadow-sm
+                      ${isMe 
+                        ? 'bg-blue-600 text-white rounded-br-none' 
+                        : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
+                      }
+                    `}>
+                      {msg.message}
+                    </div>
+
+                    {/* Timestamp */}
+                    <span className="text-[10px] text-slate-400 mt-1 px-1">
+                      {msg.create_at && !isNaN(msg.create_at) 
+                        ? new Date(msg.create_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : 'Just now'}
+                    </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-1 px-1">
-                    {new Date(msg.create_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
                 </div>
               );
             })
@@ -181,13 +280,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               placeholder="Type a message..."
-              className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all"
               disabled={sendingMessage}
             />
             <button 
               type="submit" 
               disabled={!inputText.trim() || sendingMessage}
-              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center justify-center"
             >
               {sendingMessage ? <Activity size={18} className="animate-spin" /> : <Send size={18} />}
             </button>

@@ -113,7 +113,14 @@ export const fetchMe = async (token?: string): Promise<{ id: string; username: s
       credentials: 'include'
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+        // Silence 404 as it is common for some auth states or uninitialized users
+        if (response.status !== 404) {
+            console.warn(`[EcencyChat] fetchMe failed: ${response.status}`);
+        }
+        return null;
+    }
+
     const data = await response.json();
     if (data && data.id) {
        return { id: data.id, username: data.username };
@@ -177,9 +184,9 @@ export const fetchChannels = async (token?: string): Promise<Channel[] | null> =
 };
 
 /**
- * Creates DM channel.
+ * Creates DM channel. Returns the full channel object if possible.
  */
-export const getOrCreateDirectChannel = async (username: string, token?: string): Promise<{ id: string | null, error?: string, success?: boolean }> => {
+export const getOrCreateDirectChannel = async (username: string, token?: string): Promise<{ channel?: Channel, id: string | null, error?: string, success?: boolean }> => {
   try {
     const cleanUser = username.replace(/^@/, '').trim().toLowerCase();
     
@@ -198,25 +205,38 @@ export const getOrCreateDirectChannel = async (username: string, token?: string)
         const errJson = JSON.parse(errText);
         errMsg = errJson.message || errMsg;
       } catch (e) {}
-      return { id: null, error: errMsg };
+      return { id: null, success: false, error: errMsg };
     }
 
-    const rawData = await response.text();
-    let data;
-    try {
-      data = JSON.parse(rawData);
-    } catch (e) {
-      return { id: null, success: true };
+    const data = await response.json();
+    
+    // Log unexpected data for debugging
+    if (!data) {
+        console.warn('[EcencyChat] Direct channel creation returned empty data');
+        return { id: null, success: false, error: "Empty response from server" };
     }
 
-    const channel = Array.isArray(data) ? data[0] : data;
-    const id = channel?.id || channel?.channel_id || null;
+    // Handle potential wrapper
+    const channelItem = Array.isArray(data) ? data[0] : (data.channel || data);
+    
+    if (channelItem && (channelItem.id || channelItem.channel_id)) {
+        // Normalize channel object
+        const channel = {
+            ...channelItem,
+            id: channelItem.id || channelItem.channel_id,
+            // Ensure type is set if missing (it's a DM)
+            type: channelItem.type || 'D'
+        } as Channel;
+        
+        return { channel, id: channel.id, success: true };
+    }
 
-    if (!id) return { id: null, success: true }; 
+    const debugStr = JSON.stringify(data).substring(0, 100);
+    console.warn('[EcencyChat] Direct channel creation returned unknown structure:', data);
+    return { id: null, success: false, error: `Invalid response: ${debugStr}...` };
 
-    return { id, success: true };
   } catch (e: any) {
-    return { id: null, error: e.message || 'Network error' };
+    return { id: null, success: false, error: e.message || 'Network error' };
   }
 };
 

@@ -186,7 +186,7 @@ const App: React.FC = () => {
 
     if (!username || !accessToken) {
       setLoadingChat(false);
-      return;
+      return null;
     }
 
     const doFetch = async (authToken?: string) => {
@@ -199,7 +199,7 @@ const App: React.FC = () => {
       }
 
       const list = await fetchChannels(authToken);
-      if (list === null) return false;
+      if (list === null) return null;
 
       const sorted = list.sort((a, b) => {
         const aUnread = a.unread_count || 0;
@@ -216,15 +216,15 @@ const App: React.FC = () => {
         chrome.action.setBadgeText({ text: totalUnread > 99 ? '99+' : totalUnread.toString() });
         chrome.action.setBadgeBackgroundColor({ color: '#3b82f6' });
       }
-      return true;
+      return sorted;
     };
     
     try {
       if (!forceBootstrap && token) {
-         const success = await doFetch(token);
-         if (success) {
+         const list = await doFetch(token);
+         if (list) {
            setLoadingChat(false);
-           return;
+           return list;
          }
       }
 
@@ -233,14 +233,17 @@ const App: React.FC = () => {
       if (newToken) {
          updateSettings({ ecencyChatToken: newToken });
          token = newToken;
-         const retrySuccess = await doFetch(newToken);
-         if (!retrySuccess) setChatSessionExpired(true);
+         const list = await doFetch(newToken);
+         if (!list) setChatSessionExpired(true);
+         return list;
       } else {
          setChatSessionExpired(true);
+         return null;
       }
     } catch (e) {
       console.error("Chat refresh failed", e);
       setChatSessionExpired(true);
+      return null;
     } finally {
       setLoadingChat(false);
     }
@@ -255,12 +258,6 @@ const App: React.FC = () => {
     if (!settings.ecencyChatToken) return;
     
     // 1. Filter what we don't know (check both state and ephemeral cache)
-    // IMPORTANT: Access state via functional update logic or ensure ids are filtered by caller if needed.
-    // Here we trust the caller to pass IDs they think are missing, but we double check against userMap.
-    // Note: Inside async function, we can't reliably see "current" state without ref or passing it in.
-    // But for this use case, re-fetching a known user is just a small inefficiency, not a bug.
-    
-    // We filter synchronously against the current userMap captured in closure
     const missing = ids.filter(id => {
        if (userMap[id]) return false;
        if (knownCache && knownCache[id]) return false;
@@ -363,25 +360,62 @@ const App: React.FC = () => {
     e.preventDefault();
     if (!dmTarget.trim()) return;
 
+    // Normalize input
+    const targetUser = dmTarget.trim().toLowerCase().replace('@', '');
+
+    // 1. Check if channel already exists locally to avoid API calls/errors
+    const existing = channels.find(c => {
+        if (c.type !== 'D') return false;
+        
+        // Check 1: Enriched Teammate
+        if (c.teammate && c.teammate.username.toLowerCase() === targetUser) return true;
+        
+        // Check 2: Display Name (strip @ just in case)
+        if (c.display_name && c.display_name.toLowerCase().replace('@','').includes(targetUser)) return true;
+
+        return false;
+    });
+
+    if (existing) {
+        setDmTarget('');
+        handleSelectChannel(existing);
+        return;
+    }
+
     setCreatingDm(true);
     try {
       let token = settings.ecencyChatToken;
-      let result = await getOrCreateDirectChannel(dmTarget.trim(), token);
+      // 2. Attempt Creation via API
+      let result = await getOrCreateDirectChannel(targetUser, token);
       
+      // 3. Retry with re-auth if needed
       if (!result.success && settings.ecencyUsername && settings.ecencyAccessToken) {
          if (!token || result.error?.toLowerCase().includes('session') || result.error?.toLowerCase().includes('expired')) {
            const newToken = await bootstrapEcencyChat(settings.ecencyUsername, settings.ecencyAccessToken);
            if (newToken) {
              updateSettings({ ecencyChatToken: newToken });
-             result = await getOrCreateDirectChannel(dmTarget.trim(), newToken);
+             result = await getOrCreateDirectChannel(targetUser, newToken);
            }
          }
       }
 
-      if (result.success) {
+      if (result.success && result.channel) {
         setDmTarget('');
-        // Refresh entire chat list to get the new/existing channel correctly
-        await refreshChat(true);
+        
+        // 4. Optimistically Add & Select Channel
+        const newChannel = result.channel;
+        setChannels(prev => {
+            // Check if it already exists to avoid dupes
+            const exists = prev.find(c => c.id === newChannel.id);
+            if (exists) return prev;
+            return [newChannel, ...prev];
+        });
+        
+        handleSelectChannel(newChannel);
+
+        // 5. Background Refresh
+        refreshChat(true);
+
       } else {
         alert(result.error || 'Could not create DM.');
       }

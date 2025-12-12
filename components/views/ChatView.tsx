@@ -113,10 +113,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
         name = channel.display_name;
         avatar = getAvatarUrl(channel.display_name);
       } else {
+          // If name is like 'id1__id2', we need to filter out OUR id
           const parts = channel.name.split('__');
-          const other = parts.find(p => p !== currentUsername);
-          name = other || channel.display_name;
-          avatar = getAvatarUrl(name);
+          const other = parts.find(p => p !== currentUserId); // Check against ID, not username
+          
+          // Try to resolve ID to name via userMap if available
+          if (other) {
+              name = userMap[other] || other; // Fallback to ID if not resolved
+              avatar = getAvatarUrl(userMap[other] || 'hive-1');
+          } else {
+              name = channel.display_name;
+              avatar = getAvatarUrl(name);
+          }
       }
     } else {
       avatar = `https://images.ecency.com/u/${channel.name}/avatar/small`;
@@ -193,8 +201,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
           ) : (
             activeMessages.map((msg, i) => {
-              console.log('msg');
-              console.log(msg);
               // 1. Determine Sender Name
               // Priority: Message Props (Bridge/Webhook) > UserMap (Cache) > Raw ID > Message Fields
               const propName = msg.props?.override_username || msg.props?.webhook_display_name || msg.props?.username;
@@ -299,6 +305,43 @@ export const ChatView: React.FC<ChatViewProps> = ({
   }
 
   // ---------------- CHANNEL LIST VIEW ----------------
+  
+  const directMessages = channels.filter(c => c.type === 'D');
+  const communityChannels = channels.filter(c => c.type !== 'D');
+
+  const renderChannelRow = (channel: Channel) => {
+    const { name, avatar } = getChannelNameAndAvatar(channel);
+
+    return (
+      <button 
+        key={channel.id}
+        onClick={() => onSelectChannel(channel)}
+        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 transition-all group text-left"
+      >
+        <img 
+          src={avatar} 
+          onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/hive-1/avatar/small'}
+          alt={name}
+          className="w-10 h-10 rounded-full bg-slate-200 object-cover border border-slate-100"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-center">
+             <span className="font-semibold text-slate-800 text-sm truncate">{name}</span>
+             {/* Unread Badge */}
+             {(channel.unread_count || 0) > 0 && (
+               <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
+                 {channel.unread_count}
+               </span>
+             )}
+          </div>
+          <p className="text-xs text-slate-400 truncate mt-0.5">
+             {channel.type === 'D' ? 'Direct Message' : 'Community Chat'}
+          </p>
+        </div>
+      </button>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full relative">
       {/* Header */}
@@ -353,47 +396,30 @@ export const ChatView: React.FC<ChatViewProps> = ({
       </form>
 
       {/* Channel List */}
-      <div className="flex-1 overflow-y-auto -mx-4 px-4 space-y-1">
+      <div className="flex-1 overflow-y-auto -mx-4 px-4 pb-4 space-y-5">
         {channels.length === 0 && !loadingChat && !chatSessionExpired ? (
           <div className="text-center py-10 text-slate-400 text-sm">
              <p>No conversations yet.</p>
              <p className="text-xs mt-1">Enter a Hive username above to chat.</p>
           </div>
         ) : (
-          channels.map(channel => {
-            console.log('channel');
-            console.log(channel);
-             const { name, avatar } = getChannelNameAndAvatar(channel);
+          <>
+            {/* Direct Messages Section */}
+            {directMessages.length > 0 && (
+              <div className="space-y-1">
+                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Direct Messages</h3>
+                 {directMessages.map(renderChannelRow)}
+              </div>
+            )}
 
-             return (
-               <button 
-                 key={channel.id}
-                 onClick={() => onSelectChannel(channel)}
-                 className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 transition-all group text-left"
-               >
-                 <img 
-                   src={avatar} 
-                   onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/hive-1/avatar/small'}
-                   alt={name}
-                   className="w-10 h-10 rounded-full bg-slate-200 object-cover border border-slate-100"
-                 />
-                 <div className="flex-1 min-w-0">
-                   <div className="flex justify-between items-center">
-                      <span className="font-semibold text-slate-800 text-sm truncate">{name}</span>
-                      {/* Unread Badge */}
-                      {(channel.unread_count || 0) > 0 && (
-                        <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
-                          {channel.unread_count}
-                        </span>
-                      )}
-                   </div>
-                   <p className="text-xs text-slate-400 truncate mt-0.5">
-                      {channel.type === 'D' ? 'Direct Message' : 'Community Chat'}
-                   </p>
-                 </div>
-               </button>
-             );
-          })
+            {/* Channels Section */}
+            {communityChannels.length > 0 && (
+              <div className="space-y-1">
+                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Channels</h3>
+                 {communityChannels.map(renderChannelRow)}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -193,6 +193,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
           ) : (
             activeMessages.map((msg, i) => {
+              console.log('msg');
+              console.log(msg);
               // 1. Determine Sender Name
               // Priority: Message Props (Bridge/Webhook) > UserMap (Cache) > Raw ID > Message Fields
               const propName = msg.props?.override_username || msg.props?.webhook_display_name || msg.props?.username;
@@ -359,6 +361,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
         ) : (
           channels.map(channel => {
+            console.log('channel');
+            console.log(channel);
              const { name, avatar } = getChannelNameAndAvatar(channel);
 
              return (

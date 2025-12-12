@@ -76,28 +76,23 @@ export const bootstrapEcencyChat = async (username: string, accessToken: string)
     });
 
     if (!response.ok) {
-      const txt = await response.text();
-      console.warn(`[EcencyChat] Bootstrap failed: ${response.status}`, txt);
-      return null;
+      // If 404/401, checking cookies might still save us
+      console.warn(`[EcencyChat] Bootstrap HTTP ${response.status}`);
+    } else {
+        // Try to parse JSON to get token
+        try {
+            const data = await response.json();
+            const token = data.token || data.access_token || data.sid || data.mm_token;
+            if (token) return token;
+        } catch (e) { /* ignore */ }
     }
 
-    await new Promise(resolve => setTimeout(resolve, 800));
-
+    // Check for cookie fallback
     const cookieToken = await getMmPatCookie();
     if (cookieToken) {
-      return cookieToken;
+      return 'cookie-session';
     }
 
-    try {
-        const data = await response.json();
-        const token = data.token || data.access_token || data.sid || data.mm_token;
-        if (token) return token;
-        
-        if (data && (data.ok || data.status === 'ok')) {
-             return 'cookie-session'; 
-        }
-    } catch (e) { /* ignore json parse error */ }
-    
     return null;
 
   } catch (e) {
@@ -121,12 +116,10 @@ export const fetchMe = async (token?: string): Promise<{ id: string; username: s
     if (!response.ok) return null;
     const data = await response.json();
     if (data && data.id) {
-       console.log('[EcencyChat] Resolved ME:', data.id, data.username);
        return { id: data.id, username: data.username };
     }
     return null;
   } catch (e) {
-    console.error('[EcencyChat] Failed to fetch me:', e);
     return null;
   }
 };
@@ -155,7 +148,6 @@ export const fetchUnreadChatCount = async (token?: string): Promise<number | nul
     }
     return total;
   } catch (error) {
-    console.error('[EcencyChat] Error fetching unread count:', error);
     return null;
   }
 };
@@ -172,10 +164,7 @@ export const fetchChannels = async (token?: string): Promise<Channel[] | null> =
       credentials: 'include'
     });
 
-    if (!response.ok) {
-      console.warn(`[EcencyChat] Failed to fetch channels: ${response.status}`);
-      return null;
-    }
+    if (!response.ok) return null;
 
     const data = await response.json();
     if (Array.isArray(data)) return data;
@@ -227,58 +216,75 @@ export const getOrCreateDirectChannel = async (username: string, token?: string)
 
     return { id, success: true };
   } catch (e: any) {
-    console.error('[EcencyChat] Error creating DM:', e);
     return { id: null, error: e.message || 'Network error' };
   }
 };
 
 /**
- * Resolves Mattermost User IDs to Hive usernames
+ * Resolves Mattermost User IDs to Hive usernames.
+ * Matches API requirement: POST { ids: [] }
  */
 export const fetchUsersByIds = async (userIds: string[], token?: string): Promise<Record<string, string>> => {
   if (userIds.length === 0) return {};
+  
+  const map: Record<string, string> = {};
+  const uniqueIds = [...new Set(userIds)];
+  
   try {
-    console.log('[EcencyChat] Resolving users:', userIds);
-    // Dedup
-    const uniqueIds = [...new Set(userIds)];
-    
     const response = await fetch(`${ECENCY_CHAT_BASE}/users/ids`, {
       method: 'POST',
       headers: getHeaders(token),
-      cache: 'no-store',
-      credentials: 'include',
-      body: JSON.stringify(uniqueIds)
+      body: JSON.stringify({ ids: uniqueIds }) 
     });
 
-    if (!response.ok) {
-        console.warn('[EcencyChat] Resolve users failed status:', response.status);
-        return {};
+    if (response.ok) {
+      const data = await response.json();
+      // Handle data.users per dev advice (returns list or object with users)
+      const users = Array.isArray(data) ? data : (data.users || []);
+      
+      if (Array.isArray(users)) {
+        users.forEach((u: any) => {
+          if (u.id && u.username) {
+            map[u.id] = u.username;
+          }
+        });
+      }
+      return map; 
     }
-    
-    const users = await response.json();
-    console.log('[EcencyChat] Resolved users payload:', users);
-
-    const map: Record<string, string> = {};
-    if (Array.isArray(users)) {
-      users.forEach((u: any) => {
-        if (u.id && u.username) map[u.id] = u.username;
-      });
-    }
-    return map;
   } catch (e) {
-    console.error('[EcencyChat] Failed to resolve users:', e);
-    return {};
+    console.error('[EcencyChat] Batch resolve error:', e);
   }
+
+  // Fallback: Check Active Users if batch fails
+  try {
+    const response = await fetch(`${ECENCY_CHAT_BASE}/users?page=0&per_page=100`, {
+       method: 'GET',
+       headers: getHeaders(token)
+    });
+
+    if (response.ok) {
+       const data = await response.json();
+       if (Array.isArray(data)) {
+         data.forEach((u: any) => {
+            if (uniqueIds.includes(u.id) && u.username) {
+               map[u.id] = u.username;
+            }
+         });
+       }
+    }
+  } catch (e) { /* ignore */ }
+
+  return map;
 };
 
 /**
  * Fetches posts for a channel.
- * Returns raw messages AND a map of discovered users from data.profiles.
+ * Updated to check `data.users` as per developer instructions.
  */
 export const fetchChannelPosts = async (channelId: string, token?: string): Promise<{ messages: Message[], users: Record<string, string> }> => {
   try {
     const ts = Date.now();
-    const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts?page=0&per_page=100&t=${ts}`, {
+    const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts?page=0&per_page=60&t=${ts}`, {
       method: 'GET',
       headers: getHeaders(token),
       cache: 'no-store',
@@ -286,49 +292,37 @@ export const fetchChannelPosts = async (channelId: string, token?: string): Prom
     });
 
     if (!response.ok) {
-        console.warn(`[EcencyChat] fetchChannelPosts failed: ${response.status}`);
         return { messages: [], users: {} };
     }
 
     const data: any = await response.json();
     
-    // DEBUG LOGGING
-    console.log('[EcencyChat] fetchChannelPosts data:', {
-        channelId,
-        orderCount: data?.order?.length,
-        postsCount: data?.posts ? Object.keys(data.posts).length : 0,
-        hasProfiles: !!data?.profiles,
-        profilesCount: data?.profiles ? Object.keys(data.profiles).length : 0
-    });
-
-    if (data?.posts) {
-        // Log first post to inspect props/user_id
-        const first = Object.values(data.posts)[0] as any;
-        if (first) {
-            console.log('[EcencyChat] Sample Post:', { 
-                id: first.id, 
-                user_id: first.user_id, 
-                props: first.props, 
-                username: first.username,
-                sender_name: first.sender_name 
-            });
-        }
-    }
-    
     let messages: Message[] = [];
     const users: Record<string, string> = {};
 
     if (data) {
-      // 1. Extract Profiles (Standard Mattermost way to get author info)
+      // Helper to process user object
+      const extractUser = (u: any) => {
+        if (u && u.id && u.username) {
+            users[u.id] = u.username;
+        }
+      };
+
+      // 1. Extract Profiles (Standard Mattermost)
       if (data.profiles) {
-        Object.values(data.profiles).forEach((u: any) => {
-          if (u.id && u.username) {
-             users[u.id] = u.username;
-          }
-        });
+        Object.values(data.profiles).forEach(extractUser);
+      }
+      
+      // 2. Extract Users (Ecency Specific Override)
+      if (data.users) {
+         if (Array.isArray(data.users)) {
+             data.users.forEach(extractUser);
+         } else if (typeof data.users === 'object') {
+             Object.values(data.users).forEach(extractUser);
+         }
       }
 
-      // 2. Parse Posts
+      // 3. Parse Posts
       if (data.order && data.posts) {
          messages = data.order.map((id: string) => data.posts[id]).filter((p: any) => !!p);
       } else if (Array.isArray(data)) {
@@ -341,9 +335,7 @@ export const fetchChannelPosts = async (channelId: string, token?: string): Prom
     // Sort: Oldest First
     messages.sort((a, b) => a.create_at - b.create_at);
 
-    // 3. Fallback: Check if message objects themselves have user info (Bridge/Proxy cases)
-    // Aggressively check props for override_username which is common in Ecency bridges
-    // Also check standard `username` prop which might be present in some payloads
+    // 4. Extract overrides from message props (Bridges/Bots)
     messages.forEach(m => {
         // Direct property check
         if (m.username && !users[m.user_id]) users[m.user_id] = m.username;
@@ -351,15 +343,12 @@ export const fetchChannelPosts = async (channelId: string, token?: string): Prom
         
         // Props check (Webhooks/Bridges/System)
         if (m.props) {
-            // Check for override_username, webhook_display_name, OR just 'username' in props
             const override = m.props.override_username || m.props.webhook_display_name || m.props.username;
             if (override && !users[m.user_id]) {
                 users[m.user_id] = override;
             }
         }
     });
-
-    console.log('[EcencyChat] Discovered Users:', Object.keys(users).length);
 
     return { messages, users };
   } catch (e) {
@@ -387,7 +376,6 @@ export const sendMessage = async (channelId: string, message: string, token?: st
     if (!response.ok) return null;
     return await response.json();
   } catch (e) {
-    console.error('[EcencyChat] Error sending message:', e);
     return null;
   }
 };
@@ -395,7 +383,7 @@ export const sendMessage = async (channelId: string, message: string, token?: st
 export const getAvatarUrl = (username?: string) => {
   if (!username) return '';
   const clean = username.replace(/^@/, '').trim();
-  // Avoid internal IDs (usually 26 chars in MM)
-  if (clean.length > 20 && !clean.includes(' ')) return ''; 
+  // Avoid rendering internal IDs as avatars
+  if (clean.length > 20 && !clean.includes(' ')) return 'https://images.ecency.com/u/hive-1/avatar/small'; 
   return `https://images.ecency.com/u/${clean}/avatar/small`;
 };

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
 import { fetchAccountStats } from './utils/hiveHelpers';
@@ -359,12 +360,13 @@ const App: React.FC = () => {
   };
 
   const handleEditMessage = async (messageId: string, newText: string) => {
+    if (!activeChannel) return;
     const originalMessages = [...activeMessages];
     
     // Optimistic update
     setActiveMessages(prev => prev.map(m => m.id === messageId ? { ...m, message: newText } : m));
 
-    const result = await editMessage(messageId, newText, settings.ecencyChatToken);
+    const result = await editMessage(activeChannel.id, messageId, newText, settings.ecencyChatToken);
     
     if (!result) {
         // Revert
@@ -374,12 +376,13 @@ const App: React.FC = () => {
   };
 
   const handleDeleteMessage = async (messageId: string) => {
+    if (!activeChannel) return;
     const originalMessages = [...activeMessages];
     
     // Optimistic delete
     setActiveMessages(prev => prev.filter(m => m.id !== messageId));
     
-    const success = await deleteMessage(messageId, settings.ecencyChatToken);
+    const success = await deleteMessage(activeChannel.id, messageId, settings.ecencyChatToken);
     
     if (!success) {
          // Revert

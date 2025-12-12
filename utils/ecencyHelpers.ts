@@ -1,3 +1,4 @@
+
 import { Channel, PostResponse, Message } from '../types';
 
 declare const chrome: any;
@@ -402,42 +403,54 @@ export const sendMessage = async (channelId: string, message: string, token?: st
 
 /**
  * Edits a message.
+ * Endpoint: PATCH /channels/[id]/posts/[postId]
  */
-export const editMessage = async (postId: string, message: string, token?: string): Promise<Message | null> => {
+export const editMessage = async (channelId: string, postId: string, message: string, token?: string): Promise<Message | null> => {
   try {
-    const response = await fetch(`${ECENCY_CHAT_BASE}/posts/${postId}`, {
-      method: 'PUT',
+    const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts/${postId}`, {
+      method: 'PATCH',
       headers: getHeaders(token),
       cache: 'no-store',
       credentials: 'include',
       body: JSON.stringify({
-        id: postId,
         message
       })
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+        console.warn(`[EcencyChat] Edit failed: ${response.status} ${response.statusText} at ${response.url}`);
+        return null;
+    }
     return await response.json();
   } catch (e) {
+    console.error('[EcencyChat] Edit error:', e);
     return null;
   }
 };
 
 /**
  * Deletes a message.
+ * Endpoint: DELETE /channels/[id]/posts/[postId]
  */
-export const deleteMessage = async (postId: string, token?: string): Promise<boolean> => {
+export const deleteMessage = async (channelId: string, postId: string, token?: string): Promise<boolean> => {
   try {
-    const response = await fetch(`${ECENCY_CHAT_BASE}/posts/${postId}`, {
+    const headers = getHeaders(token);
+    // Send empty JSON body to satisfy proxies that expect Content-Type/Body
+    const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts/${postId}`, {
       method: 'DELETE',
-      headers: getHeaders(token),
+      headers,
       cache: 'no-store',
-      credentials: 'include'
+      credentials: 'include',
+      body: JSON.stringify({})
     });
 
-    if (!response.ok) return false;
+    if (!response.ok) {
+        console.warn(`[EcencyChat] Delete failed: ${response.status} ${response.statusText} at ${response.url}`);
+        return false;
+    }
     return true;
   } catch (e) {
+    console.error('[EcencyChat] Delete error:', e);
     return false;
   }
 };

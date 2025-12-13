@@ -48,6 +48,28 @@ const COMMON_EMOJIS = [
 const EMOJI_MAP: Record<string, string> = {};
 COMMON_EMOJIS.forEach(e => EMOJI_MAP[e.name] = e.char);
 
+// Resilient Avatar Component to prevent 404s
+const Avatar = ({ url, alt, className }: { url: string, alt: string, className?: string }) => {
+  const [error, setError] = useState(false);
+  
+  if (error || !url) {
+    return (
+      <div className={`${className} flex items-center justify-center bg-slate-200 text-slate-400`}>
+        <User size={14} />
+      </div>
+    );
+  }
+  
+  return (
+    <img 
+      src={url} 
+      alt={alt} 
+      className={className}
+      onError={() => setError(true)}
+    />
+  );
+};
+
 export const ChatView: React.FC<ChatViewProps> = ({
   settings,
   channels,
@@ -237,7 +259,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             src={avatar} 
             alt={name}
             className="w-8 h-8 rounded-full bg-slate-200 object-cover"
-            onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/hive-1/avatar/small'}
+            onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/ecency/avatar/small'}
           />
           <div className="flex-1 min-w-0">
              <h3 className="font-bold text-slate-800 text-sm truncate">{name}</h3>
@@ -267,6 +289,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
           ) : (
             activeMessages.map((msg, i) => {
+              // Handle System Messages
+              if (msg.type && msg.type.startsWith('system_')) {
+                 return (
+                    <div key={msg.id} className="flex justify-center my-1">
+                         <span className="text-[10px] text-slate-400 italic bg-slate-100 px-2 py-0.5 rounded-full">
+                           {msg.message}
+                         </span>
+                    </div>
+                 );
+              }
+
               const propName = msg.props?.override_username || msg.props?.webhook_display_name || msg.props?.username;
               const directName = msg.username || msg.sender_name;
               
@@ -305,11 +338,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   {!isMe && (
                     <div className="w-8 h-8 shrink-0 mt-1">
                       {isResolved ? (
-                        <img 
-                          src={getAvatarUrl(displayName)} 
+                        <Avatar 
+                          url={getAvatarUrl(displayName)} 
                           alt={displayName}
                           className="w-8 h-8 rounded-full bg-slate-200 object-cover"
-                          onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/hive-1/avatar/small'}
                         />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-slate-100 animate-pulse" />
@@ -507,7 +539,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       >
         <img 
           src={avatar} 
-          onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/hive-1/avatar/small'}
+          onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/ecency/avatar/small'}
           alt={name}
           className="w-10 h-10 rounded-full bg-slate-200 object-cover border border-slate-100"
         />

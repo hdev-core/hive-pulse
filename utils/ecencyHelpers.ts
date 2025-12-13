@@ -497,6 +497,8 @@ export const toggleReaction = async (channelId: string, postId: string, emoji: s
 export const getAvatarUrl = (username?: string) => {
   if (!username) return '';
   const clean = username.replace(/^@/, '').trim();
-  if (clean.length > 20 && !clean.includes(' ')) return 'https://images.ecency.com/u/hive-1/avatar/small'; 
+  // If it looks like an internal ID (length > 20 and no spaces), return a safe fallback.
+  // Using 'ecency' ensures we get a valid image instead of a 404 from 'hive-1'
+  if (clean.length > 20 && !clean.includes(' ')) return 'https://images.ecency.com/u/ecency/avatar/small'; 
   return `https://images.ecency.com/u/${clean}/avatar/small`;
 };

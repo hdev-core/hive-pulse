@@ -5,16 +5,18 @@ import { fetchAccountStats } from './utils/hiveHelpers';
 import { 
   bootstrapEcencyChat, 
   fetchChannels, 
-  getOrCreateDirectChannel,
+  getOrCreateDirectChannel, 
   fetchChannelPosts,
   sendMessage,
   editMessage,
   deleteMessage,
   fetchMe,
-  fetchUsersByIds
+  fetchUserByUsername,
+  fetchUsersByIds,
+  toggleReaction
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
-import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message } from './types';
+import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message, Reaction } from './types';
 import { Activity } from 'lucide-react';
 
 // Components
@@ -196,7 +198,7 @@ const App: React.FC = () => {
       // Fetch "Me" ID if missing
       if (!settings.ecencyUserId && authToken) {
          const me = await fetchMe(authToken);
-         if (me) {
+         if (me && me.id) {
            updateSettings({ ecencyUserId: me.id });
          }
       }
@@ -231,11 +233,15 @@ const App: React.FC = () => {
          }
       }
 
-      const newToken = await bootstrapEcencyChat(username, accessToken);
+      const result = await bootstrapEcencyChat(username, accessToken);
       
-      if (newToken) {
-         updateSettings({ ecencyChatToken: newToken });
-         token = newToken;
+      if (result && result.token) {
+         const { token: newToken, userId } = result;
+         updateSettings({ 
+             ecencyChatToken: newToken,
+             ecencyUserId: userId || settings.ecencyUserId // Prefer new ID, fallback to old
+         });
+         
          const list = await doFetch(newToken);
          if (!list) setChatSessionExpired(true);
          return list;
@@ -255,12 +261,10 @@ const App: React.FC = () => {
   /**
    * Helper to resolve IDs that are not yet in the userMap.
    * Updates state once resolved.
-   * Wrapped in useCallback to pass to children.
    */
   const resolveUnknownUsers = useCallback(async (ids: string[], knownCache?: Record<string, string>) => {
     if (!settings.ecencyChatToken) return;
     
-    // 1. Filter what we don't know (check both state and ephemeral cache)
     const missing = ids.filter(id => {
        if (userMap[id]) return false;
        if (knownCache && knownCache[id]) return false;
@@ -269,12 +273,8 @@ const App: React.FC = () => {
 
     if (missing.length === 0) return;
 
-    console.log('[App] Resolving missing users:', missing);
-
-    // 2. Fetch from API
     const resolved = await fetchUsersByIds(missing, settings.ecencyChatToken);
 
-    // 3. Update State
     if (Object.keys(resolved).length > 0) {
        setUserMap(prev => ({ ...prev, ...resolved }));
     }
@@ -283,32 +283,25 @@ const App: React.FC = () => {
   const loadChannelMessages = async (channel: Channel) => {
     const myId = settings.ecencyUserId;
     
-    // 1. Parse DM channel names (id1__id2) to find the Teammate's ID.
     if (channel.type === 'D' && myId && channel.name.includes('__')) {
        const parts = channel.name.split('__');
        if (parts.length === 2) {
          const otherId = parts.find(p => p !== myId);
          if (otherId && channel.display_name) {
-            // Seed the cache immediately (this update won't be visible in this render cycle)
             setUserMap(prev => ({ ...prev, [otherId]: channel.display_name }));
          }
        }
     }
     
-    // 2. Fetch Messages and Users found in payload (data.profiles)
     const { messages, users } = await fetchChannelPosts(channel.id, settings.ecencyChatToken);
     
-    // 3. Update User Map with what we found in profiles
     if (Object.keys(users).length > 0) {
        setUserMap(prev => ({ ...prev, ...users }));
     }
 
-    // 4. Update View
     setActiveMessages(messages);
     setLoadingMessages(false);
 
-    // 5. Fallback: Resolve Authors asynchronously
-    // We pass 'users' (from step 2) as knownCache to avoid re-fetching them
     const authorIds = [...new Set(messages.map(m => m.user_id))];
     resolveUnknownUsers(authorIds, users);
   };
@@ -338,7 +331,6 @@ const App: React.FC = () => {
     const result = await sendMessage(activeChannel.id, text, settings.ecencyChatToken);
     
     if (result) {
-       // Optimistic Update
        const msgWithUser: Message = { 
          ...result, 
          message: text,
@@ -363,13 +355,11 @@ const App: React.FC = () => {
     if (!activeChannel) return;
     const originalMessages = [...activeMessages];
     
-    // Optimistic update
     setActiveMessages(prev => prev.map(m => m.id === messageId ? { ...m, message: newText } : m));
 
     const result = await editMessage(activeChannel.id, messageId, newText, settings.ecencyChatToken);
     
     if (!result) {
-        // Revert
         setActiveMessages(originalMessages);
         alert("Failed to edit message");
     }
@@ -379,15 +369,107 @@ const App: React.FC = () => {
     if (!activeChannel) return;
     const originalMessages = [...activeMessages];
     
-    // Optimistic delete
     setActiveMessages(prev => prev.filter(m => m.id !== messageId));
     
     const success = await deleteMessage(activeChannel.id, messageId, settings.ecencyChatToken);
     
     if (!success) {
-         // Revert
          setActiveMessages(originalMessages);
          alert("Failed to delete message");
+    }
+  };
+
+  const handleToggleReaction = async (messageId: string, emojiName: string) => {
+    if (!activeChannel) return;
+
+    let userId = settings.ecencyUserId;
+    
+    // Fallback ID Resolution
+    if (!userId) {
+       console.log('[App] User ID missing, attempting resolution...');
+       
+       // 1. Try to find myself in userMap
+       if (settings.ecencyUsername) {
+          const foundId = Object.entries(userMap).find(([id, name]) => name === settings.ecencyUsername)?.[0];
+          if (foundId) {
+             userId = foundId;
+             updateSettings({ ecencyUserId: foundId });
+          }
+       }
+
+       // 2. Try API fetchMe or fetchUserByUsername
+       if (!userId && settings.ecencyChatToken) {
+         try {
+           const me = await fetchMe(settings.ecencyChatToken);
+           if (me && me.id) {
+             userId = me.id;
+             updateSettings({ ecencyUserId: me.id });
+           } else if (settings.ecencyUsername) {
+             // Fallback: fetch user by username directly
+             const user = await fetchUserByUsername(settings.ecencyUsername, settings.ecencyChatToken);
+             if (user && user.id) {
+                 userId = user.id;
+                 updateSettings({ ecencyUserId: user.id });
+             }
+           }
+         } catch (e) { console.error('[App] ID resolution failed', e); }
+       }
+    }
+
+    if (!userId) {
+       console.error('[App] Cannot toggle reaction: Unable to resolve User ID');
+       return;
+    }
+    
+    const originalMessages = [...activeMessages];
+    
+    // Optimistic Update
+    setActiveMessages(prev => {
+        const msgIndex = prev.findIndex(m => m.id === messageId);
+        if (msgIndex === -1) return prev;
+
+        const message = prev[msgIndex];
+        const reactions = message.metadata?.reactions || [];
+        const myReaction = reactions.find(r => r.user_id === userId && r.emoji_name === emojiName);
+
+        let newReactions = [...reactions];
+        if (myReaction) {
+           newReactions = newReactions.filter(r => r !== myReaction);
+        } else {
+           newReactions.push({ 
+               user_id: userId!, 
+               post_id: messageId, 
+               emoji_name: emojiName, 
+               create_at: Date.now() 
+           });
+        }
+
+        const updatedMessage = {
+           ...message,
+           metadata: { ...message.metadata, reactions: newReactions }
+        };
+
+        const next = [...prev];
+        next[msgIndex] = updatedMessage;
+        return next;
+    });
+
+    try {
+        const message = originalMessages.find(m => m.id === messageId);
+        const hasReaction = message?.metadata?.reactions?.some(r => r.user_id === userId && r.emoji_name === emojiName);
+        
+        // If we have it, we remove it (shouldAdd=false). If we don't, we add it (shouldAdd=true).
+        const shouldAdd = !hasReaction;
+        
+        const success = await toggleReaction(activeChannel.id, messageId, emojiName, shouldAdd, settings.ecencyChatToken);
+
+        if (!success) {
+            console.warn('[App] Reaction API failed, reverting.');
+            setActiveMessages(originalMessages);
+        }
+    } catch (e) {
+        console.error('[App] Reaction Error', e);
+        setActiveMessages(originalMessages);
     }
   };
 
@@ -395,19 +477,12 @@ const App: React.FC = () => {
     e.preventDefault();
     if (!dmTarget.trim()) return;
 
-    // Normalize input
     const targetUser = dmTarget.trim().toLowerCase().replace('@', '');
 
-    // 1. Check if channel already exists locally to avoid API calls/errors
     const existing = channels.find(c => {
         if (c.type !== 'D') return false;
-        
-        // Check 1: Enriched Teammate
         if (c.teammate && c.teammate.username.toLowerCase() === targetUser) return true;
-        
-        // Check 2: Display Name (strip @ just in case)
         if (c.display_name && c.display_name.toLowerCase().replace('@','').includes(targetUser)) return true;
-
         return false;
     });
 
@@ -420,15 +495,14 @@ const App: React.FC = () => {
     setCreatingDm(true);
     try {
       let token = settings.ecencyChatToken;
-      // 2. Attempt Creation via API
       let result = await getOrCreateDirectChannel(targetUser, token);
       
-      // 3. Retry with re-auth if needed
       if (!result.success && settings.ecencyUsername && settings.ecencyAccessToken) {
          if (!token || result.error?.toLowerCase().includes('session') || result.error?.toLowerCase().includes('expired')) {
-           const newToken = await bootstrapEcencyChat(settings.ecencyUsername, settings.ecencyAccessToken);
-           if (newToken) {
-             updateSettings({ ecencyChatToken: newToken });
+           const bootstrapRes = await bootstrapEcencyChat(settings.ecencyUsername, settings.ecencyAccessToken);
+           if (bootstrapRes && bootstrapRes.token) {
+             const { token: newToken, userId } = bootstrapRes;
+             updateSettings({ ecencyChatToken: newToken, ecencyUserId: userId || settings.ecencyUserId });
              result = await getOrCreateDirectChannel(targetUser, newToken);
            }
          }
@@ -436,19 +510,13 @@ const App: React.FC = () => {
 
       if (result.success && result.channel) {
         setDmTarget('');
-        
-        // 4. Optimistically Add & Select Channel
         const newChannel = result.channel;
         setChannels(prev => {
-            // Check if it already exists to avoid dupes
             const exists = prev.find(c => c.id === newChannel.id);
             if (exists) return prev;
             return [newChannel, ...prev];
         });
-        
         handleSelectChannel(newChannel);
-
-        // 5. Background Refresh
         refreshChat(true);
 
       } else {
@@ -512,29 +580,37 @@ const App: React.FC = () => {
 
       const response = results[0].result;
       const hiveToken = createEcencyToken(payload, response.result);
-      const chatToken = await bootstrapEcencyChat(userToLogin, hiveToken);
+      const bootstrapRes = await bootstrapEcencyChat(userToLogin, hiveToken);
       
-      if (chatToken) {
-         let internalId = '';
-         if (chatToken !== 'cookie-session') {
-           const me = await fetchMe(chatToken);
-           if (me) internalId = me.id;
+      if (bootstrapRes && bootstrapRes.token) {
+         const { token: chatToken, userId: internalId } = bootstrapRes;
+         const finalToken = chatToken === 'cookie-session' ? '' : chatToken;
+         
+         // If we didn't get ID from bootstrap, try fetching me or fallback
+         let finalUserId = internalId;
+         if (!finalUserId && finalToken) {
+            const me = await fetchMe(finalToken);
+            if (me) {
+              finalUserId = me.id;
+            } else {
+              // Try fallback username lookup
+              const user = await fetchUserByUsername(userToLogin, finalToken);
+              if (user) finalUserId = user.id;
+            }
          }
 
          updateSettings({ 
            ecencyUsername: userToLogin, 
            ecencyAccessToken: hiveToken,
-           ecencyChatToken: chatToken === 'cookie-session' ? '' : chatToken,
-           ecencyUserId: internalId,
+           ecencyChatToken: finalToken,
+           ecencyUserId: finalUserId || '',
            rcUser: userToLogin // SYNC STATS USER
          });
 
-         // Seed user map
-         if (internalId) {
-            setUserMap(prev => ({ ...prev, [internalId]: userToLogin }));
+         if (finalUserId) {
+            setUserMap(prev => ({ ...prev, [finalUserId]: userToLogin }));
          }
 
-         // Fetch stats immediately so badge updates
          fetchAccountStats(userToLogin).then(data => {
             if (data) {
                 setAccountStats(data);
@@ -644,9 +720,10 @@ const App: React.FC = () => {
                 onSendMessage={handleSendMessage}
                 sendingMessage={sendingMessage}
                 userMap={userMap}
-                onResolveUsers={resolveUnknownUsers} // PASSING CALLBACK
+                onResolveUsers={resolveUnknownUsers}
                 onEditMessage={handleEditMessage}
                 onDeleteMessage={handleDeleteMessage}
+                onToggleReaction={handleToggleReaction}
               />
             )}
 

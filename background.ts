@@ -51,17 +51,22 @@ const updateGlobalBadge = async () => {
        // If null, it might mean we are unauthorized (token expired or missing)
        // Try bootstrapping if we have the Hive access token
        if (unreadCount === null) {
-          const chatToken = await bootstrapEcencyChat(
+          const result = await bootstrapEcencyChat(
              settings.ecencyUsername,
              settings.ecencyAccessToken
           );
-          if (chatToken) {
+          if (result && result.token) {
+            const { token, userId } = result;
             // Save the new token for future use to avoid constant bootstrapping
-            const newSettings = { ...settings, ecencyChatToken: chatToken === 'cookie-session' ? '' : chatToken };
+            const newSettings = { 
+                ...settings, 
+                ecencyChatToken: token === 'cookie-session' ? '' : token,
+                ecencyUserId: userId || settings.ecencyUserId 
+            };
             await chrome.storage.local.set({ settings: newSettings });
             
             // Retry fetch
-            unreadCount = await fetchUnreadChatCount(chatToken === 'cookie-session' ? undefined : chatToken);
+            unreadCount = await fetchUnreadChatCount(token === 'cookie-session' ? undefined : token);
           }
        }
        

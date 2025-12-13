@@ -4,7 +4,7 @@ import { Channel, AppSettings, Message } from '../../types';
 import { getAvatarUrl } from '../../utils/ecencyHelpers';
 import { 
   MessageCircle, RefreshCw, User, Send, Activity, ChevronLeft, MessageSquarePlus,
-  Pencil, Trash2, X, Check
+  Pencil, Trash2, X, Check, Smile
 } from 'lucide-react';
 
 interface ChatViewProps {
@@ -31,7 +31,44 @@ interface ChatViewProps {
   onResolveUsers: (ids: string[]) => void;
   onEditMessage: (id: string, text: string) => void;
   onDeleteMessage: (id: string) => void;
+  onToggleReaction: (id: string, emoji: string) => void;
 }
+
+const COMMON_EMOJIS = [
+    { name: '+1', char: '👍' },
+    { name: 'heart', char: '❤️' },
+    { name: 'joy', char: '😂' },
+    { name: 'tada', char: '🎉' },
+    { name: 'open_mouth', char: '😮' },
+    { name: 'cry', char: '😢' },
+    { name: 'fire', char: '🔥' },
+    { name: '-1', char: '👎' }
+];
+
+const EMOJI_MAP: Record<string, string> = {};
+COMMON_EMOJIS.forEach(e => EMOJI_MAP[e.name] = e.char);
+
+// Resilient Avatar Component to prevent 404s
+const Avatar = ({ url, alt, className }: { url: string, alt: string, className?: string }) => {
+  const [error, setError] = useState(false);
+  
+  if (error || !url) {
+    return (
+      <div className={`${className} flex items-center justify-center bg-slate-200 text-slate-400`}>
+        <User size={14} />
+      </div>
+    );
+  }
+  
+  return (
+    <img 
+      src={url} 
+      alt={alt} 
+      className={className}
+      onError={() => setError(true)}
+    />
+  );
+};
 
 export const ChatView: React.FC<ChatViewProps> = ({
   settings,
@@ -56,7 +93,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   userMap,
   onResolveUsers,
   onEditMessage,
-  onDeleteMessage
+  onDeleteMessage,
+  onToggleReaction
 }) => {
   const currentUsername = settings.ecencyUsername;
   const currentUserId = settings.ecencyUserId;
@@ -67,12 +105,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
 
+  // Picker State
+  const [pickerId, setPickerId] = useState<string | null>(null);
+  const [pickerPos, setPickerPos] = useState<{ top: number, left: number } | null>(null);
+
   // Auto-scroll
   useEffect(() => {
     if (activeChannel && messagesEndRef.current && !editingId) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [activeMessages, activeChannel, loadingMessages]); // Removing editingId dep avoids jumping during edit
+  }, [activeMessages, activeChannel, loadingMessages]); 
 
   const handleSendSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +126,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const startEditing = (msg: Message) => {
     setEditingId(msg.id);
     setEditText(msg.message);
+    setPickerId(null);
   };
 
   const cancelEditing = () => {
@@ -99,12 +142,38 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
+  const togglePicker = (msgId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (pickerId === msgId) {
+          setPickerId(null);
+          setPickerPos(null);
+          return;
+      }
+      
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const isTopHalf = rect.top < window.innerHeight / 2;
+      
+      // Calculate Fixed Position
+      // If message is in top half, render below button. Else render above.
+      // Offset slightly to align nicely
+      let top = isTopHalf ? rect.bottom + 5 : rect.top - 180; 
+      let left = rect.left - 100;
+
+      // Bounds checking
+      if (left < 10) left = 10;
+      if (left > window.innerWidth - 270) left = window.innerWidth - 270;
+      
+      setPickerPos({ top, left });
+      setPickerId(msgId);
+  };
+
   // JIT User Resolution logic
   const [attemptedResolutions, setAttemptedResolutions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
      setAttemptedResolutions(new Set());
-     setEditingId(null); // Clear edit on channel change
+     setEditingId(null);
+     setPickerId(null);
   }, [activeChannel?.id]);
 
   const missingUsersRef = useRef<Set<string>>(new Set());
@@ -190,7 +259,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             src={avatar} 
             alt={name}
             className="w-8 h-8 rounded-full bg-slate-200 object-cover"
-            onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/hive-1/avatar/small'}
+            onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/ecency/avatar/small'}
           />
           <div className="flex-1 min-w-0">
              <h3 className="font-bold text-slate-800 text-sm truncate">{name}</h3>
@@ -220,6 +289,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
           ) : (
             activeMessages.map((msg, i) => {
+              // Handle System Messages
+              if (msg.type && msg.type.startsWith('system_')) {
+                 return (
+                    <div key={msg.id} className="flex justify-center my-1">
+                         <span className="text-[10px] text-slate-400 italic bg-slate-100 px-2 py-0.5 rounded-full">
+                           {msg.message}
+                         </span>
+                    </div>
+                 );
+              }
+
               const propName = msg.props?.override_username || msg.props?.webhook_display_name || msg.props?.username;
               const directName = msg.username || msg.sender_name;
               
@@ -237,6 +317,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
               if (currentUserId && msg.user_id === currentUserId) isMe = true;
               else if (displayName === currentUsername) isMe = true;
 
+              // Process Reactions
+              const reactions = msg.metadata?.reactions || [];
+              const reactionGroups: Record<string, { count: number, hasReacted: boolean }> = {};
+              
+              reactions.forEach(r => {
+                 if (!reactionGroups[r.emoji_name]) {
+                    reactionGroups[r.emoji_name] = { count: 0, hasReacted: false };
+                 }
+                 reactionGroups[r.emoji_name].count++;
+                 if (currentUserId && r.user_id === currentUserId) {
+                    reactionGroups[r.emoji_name].hasReacted = true;
+                 }
+              });
+
               return (
                 <div key={msg.id} className={`flex gap-2 ${isMe ? 'justify-end' : 'justify-start'} group relative`}>
                   
@@ -244,11 +338,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   {!isMe && (
                     <div className="w-8 h-8 shrink-0 mt-1">
                       {isResolved ? (
-                        <img 
-                          src={getAvatarUrl(displayName)} 
+                        <Avatar 
+                          url={getAvatarUrl(displayName)} 
                           alt={displayName}
                           className="w-8 h-8 rounded-full bg-slate-200 object-cover"
-                          onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/hive-1/avatar/small'}
                         />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-slate-100 animate-pulse" />
@@ -294,26 +387,42 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     ) : (
                       <div className="relative group/bubble">
-                          {/* Actions Overlay for Own Messages */}
-                          {isMe && (
-                             <div className="absolute top-0 -left-12 hidden group-hover/bubble:flex items-center gap-1 bg-white shadow-sm border border-slate-100 rounded px-1.5 py-1 z-10 animate-in fade-in zoom-in duration-100">
-                                <button 
-                                  onClick={() => startEditing(msg)} 
-                                  className="text-slate-500 hover:text-blue-600 p-0.5"
-                                  title="Edit"
-                                >
-                                  <Pencil size={12} />
-                                </button>
-                                <div className="w-px h-3 bg-slate-200" />
-                                <button 
-                                  onClick={() => onDeleteMessage(msg.id)}
-                                  className="text-slate-500 hover:text-red-500 p-0.5"
-                                  title="Delete"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                             </div>
-                          )}
+                          {/* Actions Overlay */}
+                          <div className={`
+                             absolute top-0 hidden group-hover:flex items-center gap-1 bg-white shadow-sm border border-slate-100 rounded px-1.5 py-1 z-10 animate-in fade-in zoom-in duration-100
+                             ${isMe ? 'right-full mr-2' : 'left-full ml-2'}
+                          `}>
+                              {/* Add Reaction Button */}
+                              <button 
+                                onClick={(e) => togglePicker(msg.id, e)} 
+                                className="text-slate-500 hover:text-amber-500 p-0.5"
+                                title="Add Reaction"
+                              >
+                                <Smile size={12} />
+                              </button>
+
+                              {isMe && (
+                                <>
+                                  <div className="w-px h-3 bg-slate-200" />
+                                  <button 
+                                    onClick={() => startEditing(msg)} 
+                                    className="text-slate-500 hover:text-blue-600 p-0.5"
+                                    title="Edit"
+                                  >
+                                    <Pencil size={12} />
+                                  </button>
+                                  <div className="w-px h-3 bg-slate-200" />
+                                  <button 
+                                    onClick={() => onDeleteMessage(msg.id)}
+                                    className="text-slate-500 hover:text-red-500 p-0.5"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </>
+                              )}
+                          </div>
+
                           <div className={`
                             px-3 py-2 rounded-2xl text-sm break-words shadow-sm relative
                             ${isMe 
@@ -326,8 +435,30 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     )}
 
+                    {/* Reactions Bar */}
+                    {Object.keys(reactionGroups).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1 px-1">
+                            {Object.entries(reactionGroups).map(([name, { count, hasReacted }]) => (
+                                <button
+                                   key={name}
+                                   onClick={() => onToggleReaction(msg.id, name)}
+                                   className={`
+                                     flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium border transition-colors
+                                     ${hasReacted 
+                                        ? 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100' 
+                                        : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                                     }
+                                   `}
+                                >
+                                    <span>{EMOJI_MAP[name] || name}</span>
+                                    <span>{count}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Timestamp */}
-                    <span className="text-[10px] text-slate-400 mt-1 px-1">
+                    <span className="text-[10px] text-slate-400 mt-0.5 px-1">
                       {msg.create_at && !isNaN(msg.create_at) 
                         ? new Date(msg.create_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                         : 'Just now'}
@@ -339,6 +470,34 @@ export const ChatView: React.FC<ChatViewProps> = ({
           )}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Global Fixed Position Picker */}
+        {pickerId && pickerPos && (
+             <>
+                <div 
+                   className="fixed inset-0 z-50 cursor-default bg-transparent"
+                   onClick={() => setPickerId(null)}
+                />
+                <div 
+                   className="fixed z-50 bg-white rounded-xl shadow-2xl border border-slate-200 p-4 grid grid-cols-4 gap-3 w-64 animate-in fade-in zoom-in-95 duration-100"
+                   style={{ top: pickerPos.top, left: pickerPos.left }}
+                >
+                    {COMMON_EMOJIS.map(emoji => (
+                        <button
+                            key={emoji.name}
+                            onClick={() => {
+                                onToggleReaction(pickerId, emoji.name);
+                                setPickerId(null);
+                            }}
+                            className="w-10 h-10 flex items-center justify-center hover:bg-slate-100 rounded-lg text-2xl transition-all active:scale-95"
+                            title={emoji.name}
+                        >
+                            {emoji.char}
+                        </button>
+                    ))}
+                </div>
+             </>
+        )}
 
         {/* Input Area */}
         <div className="p-3 bg-white border-t border-slate-200">
@@ -380,7 +539,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       >
         <img 
           src={avatar} 
-          onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/hive-1/avatar/small'}
+          onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/ecency/avatar/small'}
           alt={name}
           className="w-10 h-10 rounded-full bg-slate-200 object-cover border border-slate-100"
         />
@@ -417,6 +576,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
         >
           <RefreshCw size={16} />
         </button>
+      </div>
+
+      {/* NEW: Logged In User Highlight */}
+      <div className="mb-4 flex items-center gap-3 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
+          <div className="relative">
+             <Avatar 
+                url={getAvatarUrl(currentUsername)} 
+                alt={currentUsername || ''} 
+                className="w-10 h-10 rounded-full bg-white shadow-sm object-cover" 
+             />
+             <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full shadow-sm"></div>
+          </div>
+          <div className="flex-1">
+             <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-600/80">Logged In As</span>
+             <div className="font-bold text-slate-900 text-sm">@{currentUsername}</div>
+          </div>
       </div>
 
       {/* Session Expired Alert */}

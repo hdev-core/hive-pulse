@@ -110,6 +110,13 @@ export interface Channel {
   }
 }
 
+export interface Reaction {
+  user_id: string;
+  post_id: string;
+  emoji_name: string;
+  create_at: number;
+}
+
 export interface Message {
   id: string;
   create_at: number;
@@ -130,7 +137,7 @@ export interface Message {
     emojis: any[];
     files: any[];
     images: any[];
-    reactions: any[];
+    reactions: Reaction[];
   };
   // API specific fields
   username?: string;

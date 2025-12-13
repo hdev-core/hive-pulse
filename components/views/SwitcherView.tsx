@@ -17,6 +17,29 @@ export const SwitcherView: React.FC<SwitcherViewProps> = ({ tabState, onSwitch }
     ? FRONTENDS.find(f => f.id === tabState.detectedFrontendId)?.name 
     : 'Unknown';
 
+  const MODES = [
+    { 
+      mode: ActionMode.SAME_PAGE, 
+      icon: LinkIcon, 
+      label: 'Link', 
+      desc: 'Opens the exact same profile or post on the target.' 
+    },
+    { 
+      mode: ActionMode.WALLET, 
+      icon: Wallet, 
+      label: 'Wallet', 
+      desc: 'Goes directly to the wallet or transfers page.' 
+    },
+    { 
+      mode: ActionMode.COMPOSE, 
+      icon: PenLine, 
+      label: 'Post', 
+      desc: 'Opens the post editor to start writing.' 
+    }
+  ];
+
+  const activeDesc = MODES.find(m => m.mode === actionMode)?.desc;
+
   return (
     <div className="flex flex-col gap-4">
       <div className={`
@@ -39,27 +62,30 @@ export const SwitcherView: React.FC<SwitcherViewProps> = ({ tabState, onSwitch }
         )}
       </div>
 
-      <div className="bg-slate-200/60 p-1 rounded-lg flex gap-1">
-        {[
-          { mode: ActionMode.SAME_PAGE, icon: LinkIcon, label: 'Link' },
-          { mode: ActionMode.WALLET, icon: Wallet, label: 'Wallet' },
-          { mode: ActionMode.COMPOSE, icon: PenLine, label: 'Post' }
-        ].map((item) => (
-          <button
-            key={item.mode}
-            onClick={() => setActionMode(item.mode)}
-            className={`
-              flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-all
-              ${actionMode === item.mode 
-                ? 'bg-white text-slate-900 shadow-sm' 
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
-              }
-            `}
-          >
-            <item.icon size={14} />
-            {item.label}
-          </button>
-        ))}
+      <div className="flex flex-col gap-2">
+        <div className="bg-slate-200/60 p-1 rounded-lg flex gap-1">
+          {MODES.map((item) => (
+            <button
+              key={item.mode}
+              onClick={() => setActionMode(item.mode)}
+              className={`
+                flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-all
+                ${actionMode === item.mode 
+                  ? 'bg-white text-slate-900 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                }
+              `}
+            >
+              <item.icon size={14} />
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="text-center px-2">
+           <p className="text-[10px] text-slate-400 font-medium">
+             {activeDesc}
+           </p>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">

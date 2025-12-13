@@ -2,11 +2,11 @@
   <!-- Hexagon Background - Flat Hive Red -->
   <path d="M64 8 L114 36 V92 L64 120 L14 92 V36 Z" fill="#E31337" stroke="none"/>
   
-  <!-- Cycling Arrows - White -->
-  <g fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M48 56 A 18 18 0 0 1 80 56" />
-    <path d="M80 56 L 74 50 M 80 56 L 86 50" />
-    <path d="M80 72 A 18 18 0 0 1 48 72" />
-    <path d="M48 72 L 54 78 M 48 72 L 42 78" />
+  <!-- Toolbox Icon - White -->
+  <g fill="white">
+     <!-- Handle -->
+     <path d="M54 36 H74 C76 36 78 38 78 40 V46 H50 V40 C50 38 52 36 54 36 Z" />
+     <!-- Box Body -->
+     <path d="M34 46 H94 C97 46 99 48 99 51 V87 C99 90 97 92 94 92 H34 C31 92 29 90 29 87 V51 C29 48 31 46 34 46 Z M 60 46 V 56 H 68 V 46 Z" />
   </g>
 </svg>

@@ -1,3 +1,4 @@
+
 import { FRONTENDS, GENERIC_HIVE_PATH_REGEX, USERNAME_REGEX } from '../constants';
 import { FrontendId, CurrentTabState, ActionMode } from '../types';
 
@@ -66,6 +67,17 @@ export const getTargetUrl = (
   // Ensure no double slashes if path starts with /
   if (finalPath.startsWith('/') && targetConfig.domain.endsWith('/')) {
     finalPath = finalPath.substring(1);
+  }
+
+  // Special handling for Hive.blog's dedicated wallet subdomain
+  if (targetId === FrontendId.HIVEBLOG) {
+    const isWalletAction = mode === ActionMode.WALLET;
+    // Check for common wallet-related paths if doing a same-page switch
+    const isWalletPath = /\/@[\w.-]+\/(transfers|permissions|password|wallet)/.test(finalPath);
+    
+    if (isWalletAction || isWalletPath) {
+      return `https://wallet.hive.blog${finalPath}`;
+    }
   }
 
   return `https://${targetConfig.domain}${finalPath}`;

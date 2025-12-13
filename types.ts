@@ -20,6 +20,7 @@ export enum AppView {
   SWITCHER = 'SWITCHER',
   SHARE = 'SHARE',
   STATS = 'STATS',
+  CHAT = 'CHAT',
   APPS = 'APPS',
   SETTINGS = 'SETTINGS'
 }
@@ -52,7 +53,7 @@ export interface DAppConfig {
   name: string;
   url: string;
   description: string;
-  icon: string; // Lucide icon name or emoji
+  logo: string; // PNG filename
   category: 'Game' | 'DeFi' | 'Video' | 'Tool' | 'Social';
 }
 
@@ -62,6 +63,11 @@ export interface AppSettings {
   openInNewTab: boolean;
   rcUser?: string;
   badgeMetric: 'RC' | 'VP';
+  ecencyUsername?: string;
+  ecencyAccessToken?: string; // Hive token (for bootstrap)
+  ecencyChatToken?: string;   // Mattermost token (for chat)
+  ecencyUserId?: string;      // Internal Mattermost User ID (for reliable 'isMe' check)
+  ecencyRefreshToken?: string;
 }
 
 export interface AccountStats {
@@ -77,4 +83,63 @@ export interface AccountStats {
     value: number; // 0-10000 basis points
     isLow: boolean;
   };
+}
+
+export interface Channel {
+  id: string;
+  create_at: number;
+  update_at: number;
+  delete_at: number;
+  team_id: string;
+  type: 'O' | 'P' | 'D' | 'G'; // Open, Private, Direct, Group
+  display_name: string;
+  name: string;
+  header: string;
+  purpose: string;
+  last_post_at: number;
+  total_msg_count: number;
+  extra_update_at: number;
+  creator_id: string;
+  // Enriched fields from Ecency Proxy
+  unread_count?: number; 
+  mention_count?: number;
+  is_favorite?: boolean;
+  teammate?: {
+    id: string;
+    username: string;
+  }
+}
+
+export interface Message {
+  id: string;
+  create_at: number;
+  update_at: number;
+  delete_at: number;
+  user_id: string;
+  channel_id: string;
+  root_id: string;
+  original_id: string;
+  message: string;
+  type: string;
+  props: any;
+  hashtag: string;
+  file_ids: any[];
+  pending_post_id: string;
+  metadata: {
+    embeds: any[];
+    emojis: any[];
+    files: any[];
+    images: any[];
+    reactions: any[];
+  };
+  // API specific fields
+  username?: string;
+  sender_name?: string;
+  // Injected field
+  _username?: string;
+}
+
+export interface PostResponse {
+  order: string[]; // array of post ids
+  posts: Record<string, Message>; // map of id -> Message
 }

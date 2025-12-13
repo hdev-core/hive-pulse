@@ -1,85 +1,48 @@
-# Hive Frontend Switcher - Chrome Extension
+# HivePulse
 
-This is a Chrome Extension built with React, TypeScript, and Tailwind CSS that allows users to seamlessly switch between different Hive blockchain interfaces (PeakD, Ecency, Hive.blog, InLeo, Actifit) while preserving your current navigation context. It also serves as a utility tool to monitor your **Voting Power (VP)** and **Resource Credits (RC)** in real-time.
+**The heartbeat of your Hive experience.**
 
-## Features
+HivePulse (formerly HiveKit) is a Chrome Extension that transforms your browser into a powerful dashboard for the Hive Blockchain. It combines real-time communication, vital account statistics, and seamless interoperability into one sleek overlay.
 
-*   **Context Preservation:** Detects the current post, profile, or feed you are viewing and redirects you to the exact same page on the target frontend.
-*   **Account Stats Monitoring:**
-    *   **Voting Power (VP):** Monitor your current voting power percentage to optimize curation rewards.
-    *   **Resource Credits (RC):** Track your mana to ensure you have enough credits for transactions.
-    *   **Extension Badge:** Display your current VP (default) or RC % directly on the browser extension icon. Background monitoring updates this every 15 minutes.
-    *   **Mini Dashboard:** Quickly view stats on the main screen without navigating away.
-*   **Action Modes:**
-    *   **Link (Default):** Switches the current view to another frontend.
-    *   **Wallet:** Takes you directly to the wallet page on the selected frontend (context-aware: if you are viewing a user's profile, it opens *their* wallet).
-    *   **Post:** Opens the "Compose/Publish" editor on the selected frontend.
-*   **Navigation Control:** Toggle between opening links in the **Same Tab** (default) or a **New Tab**.
-*   **Username Detection:** Automatically extracts usernames from URLs (e.g., `/@alice`) to provide smarter navigation.
+## Key Capabilities
+
+### 1. The Pulse (Stats & Health)
+*   **Vital Signs:** Monitor your **Voting Power (VP)** and **Resource Credits (RC)** in real-time.
+*   **Smart Badge:** The extension icon changes color (Green/Orange/Red) based on your energy levels, or shows a counter when you have unread messages.
+*   **Auto-Sync:** Simply log in to chat, and HivePulse automatically tracks stats for that user.
+
+### 2. The Signal (Ecency Chat)
+*   **Full-Featured Messenger:** Access your Ecency DMs and Community Channels from any tab.
+*   **Real-Time:** Receive notifications immediately when someone messages you.
+*   **Secure:** Log in via **Hive Keychain** (client-side signing). No password entry required.
+*   **Manage:** Edit and delete messages directly from the extension.
+
+### 3. The Nexus (Frontend Switcher)
+*   **Context Aware:** Viewing a post on PeakD but want to read it on Ecency? Switch instantly. HivePulse detects the current author, permlink, or feed and redirects you to the exact same spot on the target interface.
 *   **Supported Frontends:** PeakD, Ecency, Hive.blog, InLeo, Actifit, Waivio, Liketu, HiveScan.
-*   **DApp Launcher:** Quick access to popular Hive DApps (Splinterlands, 3Speak, Hive-Engine, etc.).
+*   **Action Modes:** Jump straight to the **Wallet** or **Post Editor** of your favorite frontend.
 
-## Prerequisites
+## Installation
 
-- Node.js (v16 or higher)
-- NPM or Yarn
-
-## Installation & Compilation
-
-1.  **Initialize the project (if you haven't already):**
-    If you are creating this from scratch, ensure you have a `package.json`. If not, run:
+1.  **Initialize:**
     ```bash
-    npm init -y
-    npm install react react-dom lucide-react
-    npm install -D typescript @types/react @types/react-dom vite @vitejs/plugin-react tailwindcss postcss autoprefixer
+    npm install
     ```
 
-2.  **Setup Tailwind:**
-    Generate config:
-    ```bash
-    npx tailwindcss init -p
-    ```
-    (Note: The code provided uses the CDN version of Tailwind in `index.html` for simplicity in this specific output format, but for a production extension, you should configure the `content` array in `tailwind.config.js` and import CSS in `index.tsx`).
-
-3.  **Build the Extension:**
-    Since this is a React app using Vite, you need to build it into static files that Chrome can read.
-
-    Update your `package.json` scripts:
-    ```json
-    "scripts": {
-      "build": "vite build"
-    }
-    ```
-
-    Create a `vite.config.ts` (if not already present) that is configured to output to a `dist` folder.
-
-    Run the build command:
+2.  **Build:**
     ```bash
     npm run build
     ```
 
-    *Note: The build process automatically copies `manifest.json` and `icon.png` to the `dist` folder.*
+3.  **Load in Chrome:**
+    *   Go to `chrome://extensions`
+    *   Enable **Developer Mode**
+    *   Click **Load unpacked** -> Select the `dist` folder.
 
-## Loading into Chrome
+## Privacy & Security
 
-1.  Open Google Chrome and navigate to `chrome://extensions`.
-2.  Enable **Developer mode** in the top right corner.
-3.  Click the **Load unpacked** button.
-4.  Select the `dist` folder generated by your build command.
-5.  The "Hive Frontend Switcher" icon should appear in your toolbar.
+*   **No Keys Stored:** HivePulse uses Hive Keychain for authentication. Your private keys never touch this application.
+*   **Direct Connection:** Chat messages go directly to Ecency APIs; RPC calls go directly to Hive nodes.
 
-## Usage
-
-### Switching Frontends
-1.  **Navigate** to any Hive frontend page (e.g., `https://peakd.com/@alice/test-post`).
-2.  **Click** the extension icon.
-3.  **Select** the target frontend.
-4.  Use the top toggle buttons to switch between **Link**, **Wallet**, or **Post** modes.
-
-### Monitoring Stats
-1.  Open the extension and navigate to the **Stats** tab (Activity icon).
-2.  Enter your Hive username (e.g., `alice`) and click search.
-3.  Your Voting Power (VP) and Resource Credits (RC) will be displayed.
-4.  This user is now saved as your "Monitored User".
-5.  **Badge:** You can toggle whether the extension icon displays your VP or RC percentage in the Stats view.
-6.  **Mini View:** Your stats will also appear on the main "Switcher" screen for quick reference.
+---
+*Stay connected. Stay charged. Keep your finger on the Pulse.*

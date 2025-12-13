@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "HiveKit",
-  "version": "1.1.0",
-  "description": "Switch between Hive frontends, share links, and launch DApps.",
+  "name": "HivePulse",
+  "version": "1.2.0",
+  "description": "The heartbeat of your Hive experience. Chat, Stats, and seamless Frontend Switching.",
   "icons": {
     "16": "icon.png",
     "32": "icon.png",
@@ -11,7 +11,7 @@
   },
   "action": {
     "default_popup": "index.html",
-    "default_title": "HiveKit",
+    "default_title": "HivePulse",
     "default_icon": {
       "16": "icon.png",
       "32": "icon.png",
@@ -19,14 +19,31 @@
       "128": "icon.png"
     }
   },
+  "side_panel": {
+    "default_path": "index.html"
+  },
   "background": {
     "service_worker": "assets/background.js",
     "type": "module"
   },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["assets/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "permissions": [
     "activeTab",
     "tabs",
     "storage",
-    "alarms"
+    "alarms",
+    "scripting",
+    "sidePanel",
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://ecency.com/*",
+    "https://api.hive.blog/*"
   ]
 }

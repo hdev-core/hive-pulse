@@ -110,87 +110,94 @@ export const FRONTENDS: FrontendConfig[] = [
 
 export const DAPPS: DAppConfig[] = [
   {
-    name: 'Dbuzz',
-    url: 'https://d.buzz',
-    description: 'Micro-blogging on Hive.',
-    icon: 'MessageCircle',
-    category: 'Social'
-  },
-  {
-    name: 'Actifit',
-    url: 'https://actifit.io',
-    description: 'Move-to-earn fitness tracking.',
-    icon: 'Activity',
-    category: 'Social'
-  },
-  {
     name: 'Splinterlands',
     url: 'https://splinterlands.com',
     description: 'The #1 Play2Earn card game.',
-    icon: 'Sword',
-    category: 'Game'
-  },
-  {
-    name: 'Rising Star',
-    url: 'https://www.risingstargame.com',
-    description: 'Play to earn music career game.',
-    icon: 'Music',
+    logo: 'splinterlands.png',
     category: 'Game'
   },
   {
     name: 'Hive-Engine',
     url: 'https://hive-engine.com',
     description: 'Smart contracts & sidechain tokens.',
-    icon: 'Coins',
+    logo: 'hive-engine.png',
     category: 'DeFi'
+  },
+  {
+    name: 'Actifit',
+    url: 'https://actifit.io',
+    description: 'Move-to-earn fitness tracking.',
+    logo: 'actifit.png',
+    category: 'Social'
   },
   {
     name: 'PeakMonsters',
     url: 'https://peakmonsters.com',
     description: 'Advanced Splinterlands market.',
-    icon: 'ShoppingCart',
+    logo: 'peakmonsters.png',
     category: 'Tool'
   },
   {
     name: '3Speak',
     url: 'https://3speak.tv',
     description: 'Censorship-resistant video platform.',
-    icon: 'Video',
+    logo: '3speak.png',
     category: 'Video'
   },
   {
-    name: 'Vimm',
-    url: 'https://vimm.tv',
-    description: 'Web3 Live Streaming.',
-    icon: 'MonitorPlay',
-    category: 'Video'
+    name: 'InLeo',
+    url: 'https://inleo.io',
+    description: 'Tokenized social media.',
+    logo: 'inleo.png',
+    category: 'Social'
+  },
+  {
+    name: 'Snapie',
+    url: 'https://snapie.net',
+    description: 'Share your moments.',
+    logo: 'snapie.png',
+    category: 'Social'
   },
   {
     name: 'TravelFeed',
     url: 'https://travelfeed.io',
     description: 'Travel community & blogs.',
-    icon: 'Plane',
+    logo: 'travelfeed.png',
     category: 'Social'
   },
   {
     name: 'HoloZing',
     url: 'https://holozing.com',
     description: 'Upcoming creature capture game.',
-    icon: 'Gamepad2',
+    logo: 'holozing.png',
     category: 'Game'
   },
   {
     name: 'NFTShowroom',
     url: 'https://nftshowroom.com',
     description: 'Digital Art Marketplace.',
-    icon: 'Palette',
+    logo: 'nftshowroom.png',
     category: 'Tool'
   },
   {
-    name: 'HiveDAO',
-    url: 'https://hive.blog/proposals',
-    description: 'Vote on ecosystem proposals.',
-    icon: 'Vote',
+    name: 'WorldMappin',
+    url: 'https://worldmappin.com',
+    description: 'Interactive visual map for Hive.',
+    logo: 'worldmappin.png',
+    category: 'Tool'
+  },
+  {
+    name: 'Rising Star',
+    url: 'https://www.risingstargame.com',
+    description: 'Play to earn music career game.',
+    logo: 'risingstar.png',
+    category: 'Game'
+  },
+  {
+    name: 'Magi',
+    url: 'https://vsc.eco',
+    description: 'Next-gen Smart Contracts (VSC).',
+    logo: 'magi.png',
     category: 'Tool'
   }
 ];

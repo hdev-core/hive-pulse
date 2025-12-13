@@ -40,7 +40,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: 'index.html',
-        background: 'background.ts'
+        background: 'background.ts',
+        content: 'content.ts'
       },
       output: {
         entryFileNames: 'assets/[name].js',

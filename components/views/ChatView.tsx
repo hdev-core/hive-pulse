@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Channel, AppSettings, Message } from '../../types';
 import { getAvatarUrl } from '../../utils/ecencyHelpers';
@@ -438,7 +439,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input 
              type="text" 
-             placeholder="Username (e.g. mcfarhat)" 
+             placeholder="Username (without @)" 
              value={dmTarget}
              onChange={(e) => setDmTarget(e.target.value)}
              className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"

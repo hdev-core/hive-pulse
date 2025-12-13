@@ -53,7 +53,7 @@ export interface DAppConfig {
   name: string;
   url: string;
   description: string;
-  icon: string; // Lucide icon name or emoji
+  logo: string; // PNG filename
   category: 'Game' | 'DeFi' | 'Video' | 'Tool' | 'Social';
 }
 

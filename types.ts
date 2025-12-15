@@ -61,6 +61,11 @@ export interface AppSettings {
   autoRedirect: boolean;
   preferredFrontendId: FrontendId;
   openInNewTab: boolean;
+  
+  // Notification Settings
+  notificationsEnabled: boolean;
+  notificationInterval: number; // in minutes
+
   rcUser?: string;
   badgeMetric: 'RC' | 'VP';
   ecencyUsername?: string;
@@ -104,6 +109,7 @@ export interface Channel {
   unread_count?: number; 
   mention_count?: number;
   is_favorite?: boolean;
+  last_viewed_at?: number; // Explicitly added for UI logic
   teammate?: {
     id: string;
     username: string;

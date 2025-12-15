@@ -32,6 +32,7 @@ interface ChatViewProps {
   onEditMessage: (id: string, text: string) => void;
   onDeleteMessage: (id: string) => void;
   onToggleReaction: (id: string, emoji: string) => void;
+  unreadCounts: Record<string, number>;
 }
 
 const COMMON_EMOJIS = [
@@ -48,7 +49,6 @@ const COMMON_EMOJIS = [
 const EMOJI_MAP: Record<string, string> = {};
 COMMON_EMOJIS.forEach(e => EMOJI_MAP[e.name] = e.char);
 
-// Resilient Avatar Component to prevent 404s
 const Avatar = ({ url, alt, className }: { url: string, alt: string, className?: string }) => {
   const [error, setError] = useState(false);
   
@@ -94,22 +94,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onResolveUsers,
   onEditMessage,
   onDeleteMessage,
-  onToggleReaction
+  onToggleReaction,
+  unreadCounts
 }) => {
   const currentUsername = settings.ecencyUsername;
   const currentUserId = settings.ecencyUserId;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [inputText, setInputText] = useState('');
   
-  // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-
-  // Picker State
   const [pickerId, setPickerId] = useState<string | null>(null);
   const [pickerPos, setPickerPos] = useState<{ top: number, left: number } | null>(null);
 
-  // Auto-scroll
   useEffect(() => {
     if (activeChannel && messagesEndRef.current && !editingId) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -152,14 +149,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
       
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const isTopHalf = rect.top < window.innerHeight / 2;
-      
-      // Calculate Fixed Position
-      // If message is in top half, render below button. Else render above.
-      // Offset slightly to align nicely
       let top = isTopHalf ? rect.bottom + 5 : rect.top - 180; 
       let left = rect.left - 100;
-
-      // Bounds checking
       if (left < 10) left = 10;
       if (left > window.innerWidth - 270) left = window.innerWidth - 270;
       
@@ -167,7 +158,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
       setPickerId(msgId);
   };
 
-  // JIT User Resolution logic
   const [attemptedResolutions, setAttemptedResolutions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -247,7 +237,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
     
     return (
       <div className="fixed top-[57px] bottom-[60px] left-0 right-0 z-40 bg-white flex flex-col shadow-xl">
-        {/* Chat Header */}
         <div className="flex items-center gap-3 p-3 border-b border-slate-200 bg-white shadow-sm z-10">
           <button 
             onClick={() => onSelectChannel(null)}
@@ -277,7 +266,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </button>
         </div>
 
-        {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
           {loadingMessages && activeMessages.length === 0 ? (
             <div className="flex justify-center py-10">
@@ -289,7 +277,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
           ) : (
             activeMessages.map((msg, i) => {
-              // Handle System Messages
               if (msg.type && msg.type.startsWith('system_')) {
                  return (
                     <div key={msg.id} className="flex justify-center my-1">
@@ -317,7 +304,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
               if (currentUserId && msg.user_id === currentUserId) isMe = true;
               else if (displayName === currentUsername) isMe = true;
 
-              // Process Reactions
               const reactions = msg.metadata?.reactions || [];
               const reactionGroups: Record<string, { count: number, hasReacted: boolean }> = {};
               
@@ -334,7 +320,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
               return (
                 <div key={msg.id} className={`flex gap-2 ${isMe ? 'justify-end' : 'justify-start'} group relative`}>
                   
-                  {/* Avatar for Others */}
                   {!isMe && (
                     <div className="w-8 h-8 shrink-0 mt-1">
                       {isResolved ? (
@@ -351,14 +336,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                   <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%]`}>
                     
-                    {/* Sender Name */}
                     {!isMe && (
                       <span className="text-[10px] text-slate-500 mb-0.5 ml-1 font-medium h-3.5 block">
                         {displayName}
                       </span>
                     )}
 
-                    {/* Bubble or Edit Mode */}
                     {editingId === msg.id ? (
                       <div className="flex flex-col items-end gap-1.5 w-full min-w-[200px]">
                         <textarea 
@@ -387,12 +370,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     ) : (
                       <div className="relative group/bubble">
-                          {/* Actions Overlay */}
                           <div className={`
                              absolute top-0 hidden group-hover:flex items-center gap-1 bg-white shadow-sm border border-slate-100 rounded px-1.5 py-1 z-10 animate-in fade-in zoom-in duration-100
                              ${isMe ? 'right-full mr-2' : 'left-full ml-2'}
                           `}>
-                              {/* Add Reaction Button */}
                               <button 
                                 onClick={(e) => togglePicker(msg.id, e)} 
                                 className="text-slate-500 hover:text-amber-500 p-0.5"
@@ -435,7 +416,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     )}
 
-                    {/* Reactions Bar */}
                     {Object.keys(reactionGroups).length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1 px-1">
                             {Object.entries(reactionGroups).map(([name, { count, hasReacted }]) => (
@@ -457,7 +437,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         </div>
                     )}
 
-                    {/* Timestamp */}
                     <span className="text-[10px] text-slate-400 mt-0.5 px-1">
                       {msg.create_at && !isNaN(msg.create_at) 
                         ? new Date(msg.create_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -471,7 +450,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Global Fixed Position Picker */}
         {pickerId && pickerPos && (
              <>
                 <div 
@@ -499,7 +477,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
              </>
         )}
 
-        {/* Input Area */}
         <div className="p-3 bg-white border-t border-slate-200">
           <form onSubmit={handleSendSubmit} className="flex gap-2">
             <input 
@@ -523,37 +500,52 @@ export const ChatView: React.FC<ChatViewProps> = ({
     );
   }
 
-  // ---------------- CHANNEL LIST VIEW ----------------
-  
   const directMessages = channels.filter(c => c.type === 'D');
   const communityChannels = channels.filter(c => c.type !== 'D');
 
   const renderChannelRow = (channel: Channel) => {
     const { name, avatar } = getChannelNameAndAvatar(channel);
+    const unreadCount = unreadCounts[channel.id] || 0;
+    const hasUnread = unreadCount > 0;
 
     return (
       <button 
         key={channel.id}
         onClick={() => onSelectChannel(channel)}
-        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 transition-all group text-left"
+        className={`
+          w-full flex items-center gap-3 p-3 rounded-xl transition-all group text-left border
+          ${hasUnread 
+            ? 'bg-blue-50/50 border-blue-100 hover:border-blue-200' 
+            : 'bg-transparent border-transparent hover:bg-white hover:shadow-sm hover:border-slate-100'
+          }
+        `}
       >
-        <img 
-          src={avatar} 
-          onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/ecency/avatar/small'}
-          alt={name}
-          className="w-10 h-10 rounded-full bg-slate-200 object-cover border border-slate-100"
-        />
+        <div className="relative">
+          <img 
+            src={avatar} 
+            onError={(e) => (e.target as HTMLImageElement).src = 'https://images.ecency.com/u/ecency/avatar/small'}
+            alt={name}
+            className={`
+              w-10 h-10 rounded-full object-cover
+              ${hasUnread ? 'ring-2 ring-blue-500 ring-offset-1' : 'bg-slate-200 border border-slate-100'}
+            `}
+          />
+          {hasUnread && (
+            <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-blue-600 transform translate-x-1/4 -translate-y-1/4" />
+          )}
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-center">
-             <span className="font-semibold text-slate-800 text-sm truncate">{name}</span>
-             {/* Unread Badge */}
-             {(channel.unread_count || 0) > 0 && (
-               <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
-                 {channel.unread_count}
+             <span className={`text-sm truncate ${hasUnread ? 'font-bold text-blue-900' : 'font-semibold text-slate-800'}`}>
+                {name}
+             </span>
+             {unreadCount > 0 && (
+               <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center shadow-sm">
+                 {unreadCount}
                </span>
              )}
           </div>
-          <p className="text-xs text-slate-400 truncate mt-0.5">
+          <p className={`text-xs truncate mt-0.5 ${hasUnread ? 'text-blue-600 font-medium' : 'text-slate-400'}`}>
              {channel.type === 'D' ? 'Direct Message' : 'Community Chat'}
           </p>
         </div>
@@ -563,7 +555,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   return (
     <div className="flex flex-col h-full relative">
-      {/* Header */}
       <div className="flex items-center justify-between mb-3 px-1">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-bold text-slate-800">Messages</h2>
@@ -578,7 +569,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </button>
       </div>
 
-      {/* NEW: Logged In User Highlight */}
       <div className="mb-4 flex items-center gap-3 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
           <div className="relative">
              <Avatar 
@@ -594,7 +584,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
       </div>
 
-      {/* Session Expired Alert */}
       {chatSessionExpired && (
          <div className="mb-4 bg-red-50 border border-red-100 p-3 rounded-lg flex flex-col gap-2">
             <p className="text-xs text-red-600 font-medium">Session expired. Please re-verify.</p>
@@ -608,7 +597,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
          </div>
       )}
 
-      {/* Quick DM Launcher */}
       <form onSubmit={handleCreateDM} className="flex gap-2 mb-4">
         <div className="relative flex-1">
           <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -630,7 +618,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </button>
       </form>
 
-      {/* Channel List */}
       <div className="flex-1 overflow-y-auto -mx-4 px-4 pb-4 space-y-5">
         {channels.length === 0 && !loadingChat && !chatSessionExpired ? (
           <div className="text-center py-10 text-slate-400 text-sm">
@@ -639,7 +626,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
         ) : (
           <>
-            {/* Direct Messages Section */}
             {directMessages.length > 0 && (
               <div className="space-y-1">
                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Direct Messages</h3>
@@ -647,7 +633,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </div>
             )}
 
-            {/* Channels Section */}
             {communityChannels.length > 0 && (
               <div className="space-y-1">
                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Channels</h3>

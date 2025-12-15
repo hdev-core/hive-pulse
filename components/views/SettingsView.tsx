@@ -4,7 +4,7 @@ import { AppSettings, FrontendId } from '../../types';
 import { FRONTENDS } from '../../constants';
 import { FrontendIcon } from '../FrontendIcon';
 import { 
-  ShieldCheck, User, Activity, KeyRound, LogOut, Check 
+  ShieldCheck, User, Activity, KeyRound, LogOut, Check, Bell 
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -79,6 +79,50 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
            </div>
          )}
+      </section>
+
+      {/* Notifications Section */}
+      <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+            <Bell size={18} className="text-slate-500" />
+            <span className="font-semibold text-sm text-slate-800">Background Chat Monitoring</span>
+        </div>
+
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-slate-600">Enable Notifications</span>
+          <button 
+            onClick={() => updateSettings({ notificationsEnabled: !settings.notificationsEnabled })}
+            className={`
+              w-11 h-6 rounded-full transition-colors relative
+              ${settings.notificationsEnabled ? 'bg-emerald-500' : 'bg-slate-200'}
+            `}
+          >
+            <div className={`
+              w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm
+              ${settings.notificationsEnabled ? 'left-6' : 'left-1'}
+            `} />
+          </button>
+        </div>
+
+        {settings.notificationsEnabled && (
+          <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+             <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Chat Check Frequency</label>
+             <select 
+               value={settings.notificationInterval || 1}
+               onChange={(e) => updateSettings({ notificationInterval: Number(e.target.value) })}
+               className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+             >
+                <option value={1}>Every 1 minute</option>
+                <option value={3}>Every 3 minutes</option>
+                <option value={5}>Every 5 minutes</option>
+                <option value={10}>Every 10 minutes</option>
+                <option value={15}>Every 15 minutes</option>
+             </select>
+             <p className="text-[10px] text-slate-400 mt-1">
+               Controls how frequently the extension checks for new chat messages in the background.
+             </p>
+          </div>
+        )}
       </section>
 
       {/* Auto Redirect Section */}

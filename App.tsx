@@ -1,17 +1,18 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
 import { fetchAccountStats } from './utils/hiveHelpers';
 import { 
   bootstrapEcencyChat, 
   fetchChannels, 
-  getOrCreateDirectChannel,
+  getOrCreateDirectChannel, 
   fetchChannelPosts,
   sendMessage,
   editMessage,
   deleteMessage,
   fetchMe,
-  fetchUsersByIds
+  fetchUserByUsername,
+  fetchUsersByIds,
+  toggleReaction
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
 import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message } from './types';
@@ -33,6 +34,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   autoRedirect: false,
   preferredFrontendId: FrontendId.PEAKD,
   openInNewTab: false,
+  notificationsEnabled: true,
+  notificationInterval: 1,
   rcUser: '',
   badgeMetric: 'VP',
   ecencyUsername: '',
@@ -56,15 +59,14 @@ const App: React.FC = () => {
   });
   
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [initializing, setInitializing] = useState(true);
 
   // Stats Data
   const [accountStats, setAccountStats] = useState<AccountStats | null>(null);
 
   // Chat State
-  const [unreadMessages, setUnreadMessages] = useState<number | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [loadingChat, setLoadingChat] = useState(false);
   const [chatSessionExpired, setChatSessionExpired] = useState(false);
   const [dmTarget, setDmTarget] = useState('');
@@ -76,73 +78,86 @@ const App: React.FC = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   
-  // User Cache: Maps internal ID -> Hive Username
+  // User Cache
   const [userMap, setUserMap] = useState<Record<string, string>>({});
 
   // Login State
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  // --- INITIALIZATION ---
+  const refreshChat = async (forceBootstrap = false) => {
+    // This function can now be simplified or just trigger a background refresh
+    // For now, we'll keep a simplified version for immediate UI feedback
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.getBackgroundPage((bg: any) => {
+        bg.checkStatus();
+      });
+    }
+  };
+
+  // --- INITIALIZATION & STORAGE SYNC ---
   useEffect(() => {
-    const init = async () => {
-      try {
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-          const stored = await chrome.storage.local.get(['settings']);
-          if (stored.settings) {
-            const savedSettings = { ...DEFAULT_SETTINGS, ...stored.settings };
-            setSettings(savedSettings);
-            
-            // Populate user cache with self if known
-            if (savedSettings.ecencyUserId && savedSettings.ecencyUsername) {
-              setUserMap(prev => ({ 
-                ...prev, 
-                [savedSettings.ecencyUserId!]: savedSettings.ecencyUsername! 
-              }));
-            }
-            
-            if (savedSettings.rcUser) {
-              fetchAccountStats(savedSettings.rcUser).then(data => {
-                if (data) setAccountStats(data);
-              });
-            }
-          }
-        }
+    const hydrate = async () => {
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        try {
+           chrome.storage.local.get(['settings', 'channels', 'unreadCounts'], (result: any) => {
+              if (result.settings) {
+                 const saved = { ...DEFAULT_SETTINGS, ...result.settings };
+                 setSettings(saved);
+                 if (saved.ecencyUserId && saved.ecencyUsername) {
+                    setUserMap(prev => ({ ...prev, [saved.ecencyUserId!]: saved.ecencyUsername! }));
+                 }
+                 if (saved.rcUser) {
+                    fetchAccountStats(saved.rcUser).then(data => data && setAccountStats(data));
+                 }
+              }
+              if (result.channels) {
+                setChannels(result.channels);
+              }
+              if (result.unreadCounts) {
+                setUnreadCounts(result.unreadCounts);
+              }
+              setInitializing(false);
+           });
+        } catch (e) { setInitializing(false); }
+      } else { setInitializing(false); }
 
-        if (typeof chrome === 'undefined' || !chrome.tabs) {
-          const dummyUrl = 'https://peakd.com/@alice/hive-is-awesome';
-          setTabState(parseUrl(dummyUrl));
-          setLoading(false);
-          return;
-        }
-
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab && tab.url) {
-          setTabState(parseUrl(tab.url));
-        }
-      } catch (error) {
-        console.error("Error initializing:", error);
-        setError("Could not read extension state.");
-      } finally {
-        setLoading(false);
+      if (typeof chrome !== 'undefined' && chrome.tabs) {
+         try {
+           chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
+              if (tabs && tabs.length > 0 && tabs[0].url) setTabState(parseUrl(tabs[0].url));
+           });
+         } catch (e) { }
       }
     };
+    hydrate();
 
-    init();
+    // Listen for storage changes from the background script
+    const storageListener = (changes: any, areaName: string) => {
+      if (areaName === 'local') {
+        if (changes.channels) {
+          setChannels(changes.channels.newValue || []);
+        }
+        if (changes.unreadCounts) {
+          setUnreadCounts(changes.unreadCounts.newValue || {});
+        }
+        if (changes.settings) {
+          setSettings(prev => ({ ...prev, ...changes.settings.newValue }));
+        }
+      }
+    };
+    chrome.storage.onChanged.addListener(storageListener);
+    return () => chrome.storage.onChanged.removeListener(storageListener);
   }, []);
 
-  // --- HELPERS ---
+  const totalUnreadMessages = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
 
   const updateSettings = (newSettings: Partial<AppSettings>) => {
     const updated = { ...settings, ...newSettings };
     setSettings(updated);
     
-    // Update local user map if self-user changes
     if (updated.ecencyUserId && updated.ecencyUsername) {
-       setUserMap(prev => ({ 
-         ...prev, 
-         [updated.ecencyUserId!]: updated.ecencyUsername! 
-       }));
+       setUserMap(prev => ({ ...prev, [updated.ecencyUserId!]: updated.ecencyUsername! }));
     }
 
     if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -152,6 +167,8 @@ const App: React.FC = () => {
 
   const updateBadgeFromData = (data: AccountStats) => {
     if (typeof chrome !== 'undefined' && chrome.action) {
+       if (totalUnreadMessages > 0) return;
+
        const percent = settings.badgeMetric === 'RC' ? data.rc.percentage : data.vp.percentage;
        const rounded = Math.round(percent);
        chrome.action.setBadgeText({ text: `${rounded}%` });
@@ -179,136 +196,33 @@ const App: React.FC = () => {
 
   // --- CHAT LOGIC ---
 
-  const refreshChat = async (forceBootstrap = false) => {
-    setLoadingChat(true);
-    setChatSessionExpired(false);
-    
-    let token = settings.ecencyChatToken;
-    let username = settings.ecencyUsername;
-    let accessToken = settings.ecencyAccessToken;
-
-    if (!username || !accessToken) {
-      setLoadingChat(false);
-      return null;
-    }
-
-    const doFetch = async (authToken?: string) => {
-      // Fetch "Me" ID if missing
-      if (!settings.ecencyUserId && authToken) {
-         const me = await fetchMe(authToken);
-         if (me) {
-           updateSettings({ ecencyUserId: me.id });
-         }
-      }
-
-      const list = await fetchChannels(authToken);
-      if (list === null) return null;
-
-      const sorted = list.sort((a, b) => {
-        const aUnread = a.unread_count || 0;
-        const bUnread = b.unread_count || 0;
-        if (aUnread !== bUnread) return bUnread - aUnread;
-        return b.last_post_at - a.last_post_at;
-      });
-      setChannels(sorted);
-      
-      const totalUnread = sorted.reduce((sum, c) => sum + (c.unread_count || 0), 0);
-      setUnreadMessages(totalUnread);
-      
-      if (typeof chrome !== 'undefined' && chrome.action && totalUnread > 0) {
-        chrome.action.setBadgeText({ text: totalUnread > 99 ? '99+' : totalUnread.toString() });
-        chrome.action.setBadgeBackgroundColor({ color: '#3b82f6' });
-      }
-      return sorted;
-    };
-    
-    try {
-      if (!forceBootstrap && token) {
-         const list = await doFetch(token);
-         if (list) {
-           setLoadingChat(false);
-           return list;
-         }
-      }
-
-      const newToken = await bootstrapEcencyChat(username, accessToken);
-      
-      if (newToken) {
-         updateSettings({ ecencyChatToken: newToken });
-         token = newToken;
-         const list = await doFetch(newToken);
-         if (!list) setChatSessionExpired(true);
-         return list;
-      } else {
-         setChatSessionExpired(true);
-         return null;
-      }
-    } catch (e) {
-      console.error("Chat refresh failed", e);
-      setChatSessionExpired(true);
-      return null;
-    } finally {
-      setLoadingChat(false);
-    }
-  };
-
-  /**
-   * Helper to resolve IDs that are not yet in the userMap.
-   * Updates state once resolved.
-   * Wrapped in useCallback to pass to children.
-   */
   const resolveUnknownUsers = useCallback(async (ids: string[], knownCache?: Record<string, string>) => {
     if (!settings.ecencyChatToken) return;
     
-    // 1. Filter what we don't know (check both state and ephemeral cache)
-    const missing = ids.filter(id => {
-       if (userMap[id]) return false;
-       if (knownCache && knownCache[id]) return false;
-       return true;
-    });
-
+    const missing = ids.filter(id => !(userMap[id] || (knownCache && knownCache[id])));
     if (missing.length === 0) return;
 
-    console.log('[App] Resolving missing users:', missing);
-
-    // 2. Fetch from API
     const resolved = await fetchUsersByIds(missing, settings.ecencyChatToken);
-
-    // 3. Update State
     if (Object.keys(resolved).length > 0) {
        setUserMap(prev => ({ ...prev, ...resolved }));
     }
   }, [userMap, settings.ecencyChatToken]);
 
   const loadChannelMessages = async (channel: Channel) => {
-    const myId = settings.ecencyUserId;
-    
-    // 1. Parse DM channel names (id1__id2) to find the Teammate's ID.
-    if (channel.type === 'D' && myId && channel.name.includes('__')) {
-       const parts = channel.name.split('__');
-       if (parts.length === 2) {
-         const otherId = parts.find(p => p !== myId);
-         if (otherId && channel.display_name) {
-            // Seed the cache immediately (this update won't be visible in this render cycle)
-            setUserMap(prev => ({ ...prev, [otherId]: channel.display_name }));
-         }
+    if (channel.type === 'D' && settings.ecencyUserId && channel.name.includes('__')) {
+       const otherId = channel.name.split('__').find(p => p !== settings.ecencyUserId);
+       if (otherId && channel.display_name) {
+          setUserMap(prev => ({ ...prev, [otherId]: channel.display_name }));
        }
     }
     
-    // 2. Fetch Messages and Users found in payload (data.profiles)
     const { messages, users } = await fetchChannelPosts(channel.id, settings.ecencyChatToken);
     
-    // 3. Update User Map with what we found in profiles
-    if (Object.keys(users).length > 0) {
-       setUserMap(prev => ({ ...prev, ...users }));
-    }
+    if (Object.keys(users).length > 0) setUserMap(prev => ({ ...prev, ...users }));
 
-    // 4. Update View
     setActiveMessages(messages);
     setLoadingMessages(false);
 
-    // 5. Fallback: Resolve Authors asynchronously
-    // We pass 'users' (from step 2) as knownCache to avoid re-fetching them
     const authorIds = [...new Set(messages.map(m => m.user_id))];
     resolveUnknownUsers(authorIds, users);
   };
@@ -316,15 +230,27 @@ const App: React.FC = () => {
   const handleSelectChannel = async (channel: Channel | null) => {
      setActiveChannel(channel);
      if (channel) {
+        // Mark channel as read
+        chrome.storage.local.get(['channelTotals', 'channelReadState'], (result: any) => {
+          const totals = result.channelTotals || {};
+          const readState = result.channelReadState || {};
+          if (totals[channel.id]) {
+            const updatedReadState = { ...readState, [channel.id]: totals[channel.id] };
+            chrome.storage.local.set({ channelReadState: updatedReadState });
+          }
+        });
+        // Optimistically update UI
+        setUnreadCounts(prev => ({ ...prev, [channel.id]: 0 }));
+
         setLoadingMessages(true);
-        setActiveMessages([]); // clear old
+        setActiveMessages([]); 
         await loadChannelMessages(channel);
      }
   };
 
   const handleRefreshActiveChat = async () => {
     if (!activeChannel) {
-      refreshChat(true);
+      refreshChat();
       return;
     }
     setLoadingMessages(true);
@@ -338,20 +264,10 @@ const App: React.FC = () => {
     const result = await sendMessage(activeChannel.id, text, settings.ecencyChatToken);
     
     if (result) {
-       // Optimistic Update
-       const msgWithUser: Message = { 
-         ...result, 
-         message: text,
-         create_at: result.create_at || Date.now(),
-         user_id: settings.ecencyUserId || result.user_id
-       };
-       setActiveMessages(prev => [...prev, msgWithUser]);
-
-       // Silent Refetch
+       setActiveMessages(prev => [...prev, { ...result, message: text, create_at: result.create_at || Date.now(), user_id: settings.ecencyUserId || result.user_id }]);
+       // Silent refetch for consistency
        const { messages, users } = await fetchChannelPosts(activeChannel.id, settings.ecencyChatToken);
-       if (Object.keys(users).length > 0) {
-          setUserMap(prev => ({ ...prev, ...users }));
-       }
+       if (Object.keys(users).length > 0) setUserMap(prev => ({ ...prev, ...users }));
        setActiveMessages(messages);
     } else {
        alert("Failed to send message.");
@@ -362,14 +278,9 @@ const App: React.FC = () => {
   const handleEditMessage = async (messageId: string, newText: string) => {
     if (!activeChannel) return;
     const originalMessages = [...activeMessages];
-    
-    // Optimistic update
     setActiveMessages(prev => prev.map(m => m.id === messageId ? { ...m, message: newText } : m));
-
     const result = await editMessage(activeChannel.id, messageId, newText, settings.ecencyChatToken);
-    
     if (!result) {
-        // Revert
         setActiveMessages(originalMessages);
         alert("Failed to edit message");
     }
@@ -378,183 +289,153 @@ const App: React.FC = () => {
   const handleDeleteMessage = async (messageId: string) => {
     if (!activeChannel) return;
     const originalMessages = [...activeMessages];
-    
-    // Optimistic delete
     setActiveMessages(prev => prev.filter(m => m.id !== messageId));
-    
     const success = await deleteMessage(activeChannel.id, messageId, settings.ecencyChatToken);
-    
     if (!success) {
-         // Revert
          setActiveMessages(originalMessages);
          alert("Failed to delete message");
+    }
+  };
+
+  const handleToggleReaction = async (messageId: string, emojiName: string) => {
+    let userId = settings.ecencyUserId;
+    if (!userId && settings.ecencyUsername) {
+      const foundId = Object.entries(userMap).find(([, name]) => name === settings.ecencyUsername)?.[0];
+      if (foundId) {
+        userId = foundId;
+        updateSettings({ ecencyUserId: foundId });
+      }
+    }
+    if (!activeChannel || !userId) return;
+    
+    const originalMessages = [...activeMessages];
+    setActiveMessages(prev => {
+        const msgIndex = prev.findIndex(m => m.id === messageId);
+        if (msgIndex === -1) return prev;
+        const message = prev[msgIndex];
+        const reactions = message.metadata?.reactions || [];
+        const myReaction = reactions.find(r => r.user_id === userId && r.emoji_name === emojiName);
+        const newReactions = myReaction ? reactions.filter(r => r !== myReaction) : [...reactions, { user_id: userId!, post_id: messageId, emoji_name: emojiName, create_at: Date.now() }];
+        const updatedMessage = { ...message, metadata: { ...message.metadata, reactions: newReactions } };
+        return [...prev.slice(0, msgIndex), updatedMessage, ...prev.slice(msgIndex + 1)];
+    });
+
+    try {
+        const message = originalMessages.find(m => m.id === messageId);
+        const hasReaction = message?.metadata?.reactions?.some(r => r.user_id === userId && r.emoji_name === emojiName);
+        await toggleReaction(activeChannel.id, messageId, emojiName, !hasReaction, settings.ecencyChatToken);
+    } catch (e) {
+        setActiveMessages(originalMessages);
     }
   };
 
   const handleCreateDM = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dmTarget.trim()) return;
-
-    // Normalize input
     const targetUser = dmTarget.trim().toLowerCase().replace('@', '');
-
-    // 1. Check if channel already exists locally to avoid API calls/errors
     const existing = channels.find(c => {
         if (c.type !== 'D') return false;
-        
-        // Check 1: Enriched Teammate
-        if (c.teammate && c.teammate.username.toLowerCase() === targetUser) return true;
-        
-        // Check 2: Display Name (strip @ just in case)
-        if (c.display_name && c.display_name.toLowerCase().replace('@','').includes(targetUser)) return true;
-
-        return false;
+        if (c.teammate?.username.toLowerCase() === targetUser) return true;
+        return c.display_name?.toLowerCase().replace('@','').includes(targetUser);
     });
-
     if (existing) {
         setDmTarget('');
         handleSelectChannel(existing);
         return;
     }
-
     setCreatingDm(true);
     try {
       let token = settings.ecencyChatToken;
-      // 2. Attempt Creation via API
       let result = await getOrCreateDirectChannel(targetUser, token);
-      
-      // 3. Retry with re-auth if needed
-      if (!result.success && settings.ecencyUsername && settings.ecencyAccessToken) {
-         if (!token || result.error?.toLowerCase().includes('session') || result.error?.toLowerCase().includes('expired')) {
-           const newToken = await bootstrapEcencyChat(settings.ecencyUsername, settings.ecencyAccessToken);
-           if (newToken) {
-             updateSettings({ ecencyChatToken: newToken });
-             result = await getOrCreateDirectChannel(targetUser, newToken);
-           }
+      if (!result.success && settings.ecencyUsername && settings.ecencyAccessToken && (!token || result.error?.toLowerCase().includes('session') || result.error?.toLowerCase().includes('expired'))) {
+         const bootstrapRes = await bootstrapEcencyChat(settings.ecencyUsername, settings.ecencyAccessToken);
+         if (bootstrapRes?.token) {
+           const { token: newToken, userId } = bootstrapRes;
+           updateSettings({ ecencyChatToken: newToken, ecencyUserId: userId || settings.ecencyUserId });
+           result = await getOrCreateDirectChannel(targetUser, newToken);
          }
       }
-
       if (result.success && result.channel) {
         setDmTarget('');
-        
-        // 4. Optimistically Add & Select Channel
         const newChannel = result.channel;
-        setChannels(prev => {
-            // Check if it already exists to avoid dupes
-            const exists = prev.find(c => c.id === newChannel.id);
-            if (exists) return prev;
-            return [newChannel, ...prev];
-        });
-        
+        setChannels(prev => [newChannel, ...prev.filter(c => c.id !== newChannel.id)]);
         handleSelectChannel(newChannel);
-
-        // 5. Background Refresh
-        refreshChat(true);
-
+        refreshChat();
       } else {
         alert(result.error || 'Could not create DM.');
       }
     } catch (e) {
-      console.error(e);
       alert('Error creating chat.');
     } finally {
       setCreatingDm(false);
     }
   };
 
-  // --- LOGIN ---
-  
   const handleKeychainLogin = async () => {
     const userToLogin = settings.ecencyUsername || settings.rcUser || tabState.username;
-
     if (!userToLogin) {
       setLoginError("Please enter a username in Settings first.");
       if (currentView !== AppView.SETTINGS) setCurrentView(AppView.SETTINGS);
       return;
     }
-
     setIsLoggingIn(true);
     setLoginError(null);
-
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab || !tab.id || tab.url?.match(/^(chrome|edge|about|data|chrome-extension):/)) {
+      if (!tab?.id || tab.url?.match(/^(chrome|edge|about|data|chrome-extension):/)) {
         setLoginError("Please open a regular website to use Keychain.");
         setIsLoggingIn(false);
         return;
       }
-
       const payload = createEcencyLoginPayload(userToLogin);
       const messageToSign = JSON.stringify(payload);
-
-      const results = await chrome.scripting.executeScript({
+      const [result] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         world: 'MAIN',
-        func: (username: string, message: string) => {
-          return new Promise((resolve) => {
-            // @ts-ignore
-            if (!window.hive_keychain) {
-              resolve({ success: false, error: 'Hive Keychain not found. Please reload page.' });
-              return;
-            }
-            // @ts-ignore
-            window.hive_keychain.requestSignBuffer(username, message, 'Posting', (resp: any) => resolve(resp));
-          });
-        },
+        func: (username: string, message: string) => new Promise((resolve) => {
+          // @ts-ignore
+          if (!window.hive_keychain) return resolve({ success: false, error: 'Hive Keychain not found.' });
+          // @ts-ignore
+          window.hive_keychain.requestSignBuffer(username, message, 'Posting', (resp: any) => resolve(resp));
+        }),
         args: [userToLogin, messageToSign]
       });
-
-      if (!results?.[0]?.result?.success) {
-        setLoginError(results?.[0]?.result?.error || "Login canceled.");
+      if (!result?.result?.success) {
+        setLoginError(result?.result?.error || "Login canceled.");
         setIsLoggingIn(false);
         return;
       }
-
-      const response = results[0].result;
-      const hiveToken = createEcencyToken(payload, response.result);
-      const chatToken = await bootstrapEcencyChat(userToLogin, hiveToken);
-      
-      if (chatToken) {
-         let internalId = '';
-         if (chatToken !== 'cookie-session') {
-           const me = await fetchMe(chatToken);
-           if (me) internalId = me.id;
-         }
-
+      const { result: signature } = result.result;
+      const hiveToken = createEcencyToken(payload, signature);
+      const bootstrapRes = await bootstrapEcencyChat(userToLogin, hiveToken);
+      if (bootstrapRes?.token) {
+         const { token: chatToken, userId, refreshToken } = bootstrapRes;
          updateSettings({ 
            ecencyUsername: userToLogin, 
            ecencyAccessToken: hiveToken,
            ecencyChatToken: chatToken === 'cookie-session' ? '' : chatToken,
-           ecencyUserId: internalId,
-           rcUser: userToLogin // SYNC STATS USER
+           ecencyUserId: userId || '',
+           ecencyRefreshToken: refreshToken || '',
+           rcUser: userToLogin
          });
-
-         // Seed user map
-         if (internalId) {
-            setUserMap(prev => ({ ...prev, [internalId]: userToLogin }));
-         }
-
-         // Fetch stats immediately so badge updates
+         if (userId) setUserMap(prev => ({ ...prev, [userId]: userToLogin }));
          fetchAccountStats(userToLogin).then(data => {
             if (data) {
                 setAccountStats(data);
                 updateBadgeFromData(data);
             }
          });
-
          setLoginError(null);
          setChatSessionExpired(false);
-         
          if (currentView === AppView.CHAT) {
-           setTimeout(() => refreshChat(true), 100); 
+           setTimeout(() => refreshChat(), 100);
          } else {
-           setTimeout(() => setCurrentView(AppView.CHAT), 500);
+           setCurrentView(AppView.CHAT);
          }
       } else {
          setLoginError("Failed to initialize chat session.");
       }
     } catch (e) {
-      console.error(e);
       setLoginError("Unexpected error.");
     } finally {
       setIsLoggingIn(false);
@@ -562,55 +443,30 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    updateSettings({ 
-      ecencyUsername: '', ecencyAccessToken: '', ecencyChatToken: '', ecencyRefreshToken: '', ecencyUserId: '' 
-    });
-    setUnreadMessages(null);
+    updateSettings({ ecencyUsername: '', ecencyAccessToken: '', ecencyChatToken: '', ecencyRefreshToken: '', ecencyUserId: '' });
     setChannels([]);
     setActiveChannel(null);
     setUserMap({});
+    setUnreadCounts({});
   };
-
-  // --- EFFECTS ---
-
-  useEffect(() => {
-    if (currentView === AppView.CHAT && settings.ecencyUsername) {
-      refreshChat(false);
-    }
-  }, [currentView]);
 
   useEffect(() => {
     if (accountStats) {
       updateBadgeFromData(accountStats);
     }
-  }, [settings.badgeMetric]);
-
-  // --- RENDER ---
-
-  if (error) {
-     return <div className="p-6 text-center text-red-500">{error}</div>;
-  }
+  }, [settings.badgeMetric, accountStats, totalUnreadMessages]);
 
   return (
-    <div className="flex flex-col h-[500px] w-full bg-slate-50 text-slate-800 font-sans">
-      
+    <div className="flex flex-col h-full w-full bg-slate-50 text-slate-800 font-sans">
       <Header />
-
       <main className="flex-1 overflow-y-auto scrollbar-thin">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
-            <Activity className="text-slate-300 animate-spin" size={32} />
-          </div>
-        ) : (
           <div className="p-4 pb-20">
             {currentView === AppView.SWITCHER && (
               <SwitcherView tabState={tabState} onSwitch={handleSwitch} />
             )}
-            
             {currentView === AppView.SHARE && (
               <ShareView tabState={tabState} />
             )}
-
             {currentView === AppView.STATS && (
               <StatsView 
                 settings={settings} 
@@ -621,11 +477,11 @@ const App: React.FC = () => {
                 }}
               />
             )}
-
             {currentView === AppView.CHAT && (
               <ChatView 
                 settings={settings}
                 channels={channels}
+                unreadCounts={unreadCounts}
                 loadingChat={loadingChat}
                 chatSessionExpired={chatSessionExpired}
                 isLoggingIn={isLoggingIn}
@@ -644,16 +500,15 @@ const App: React.FC = () => {
                 onSendMessage={handleSendMessage}
                 sendingMessage={sendingMessage}
                 userMap={userMap}
-                onResolveUsers={resolveUnknownUsers} // PASSING CALLBACK
+                onResolveUsers={resolveUnknownUsers}
                 onEditMessage={handleEditMessage}
                 onDeleteMessage={handleDeleteMessage}
+                onToggleReaction={handleToggleReaction}
               />
             )}
-
             {currentView === AppView.APPS && (
               <AppsView />
             )}
-
             {currentView === AppView.SETTINGS && (
               <SettingsView 
                 settings={settings}
@@ -665,13 +520,11 @@ const App: React.FC = () => {
               />
             )}
           </div>
-        )}
       </main>
-
       <BottomNav 
         currentView={currentView} 
         setCurrentView={setCurrentView} 
-        unreadMessages={unreadMessages} 
+        unreadMessages={totalUnreadMessages} 
       />
     </div>
   );

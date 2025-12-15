@@ -61,6 +61,11 @@ export interface AppSettings {
   autoRedirect: boolean;
   preferredFrontendId: FrontendId;
   openInNewTab: boolean;
+  
+  // Notification Settings
+  notificationsEnabled: boolean;
+  notificationInterval: number; // in minutes
+
   rcUser?: string;
   badgeMetric: 'RC' | 'VP';
   ecencyUsername?: string;
@@ -104,10 +109,18 @@ export interface Channel {
   unread_count?: number; 
   mention_count?: number;
   is_favorite?: boolean;
+  last_viewed_at?: number; // Explicitly added for UI logic
   teammate?: {
     id: string;
     username: string;
   }
+}
+
+export interface Reaction {
+  user_id: string;
+  post_id: string;
+  emoji_name: string;
+  create_at: number;
 }
 
 export interface Message {
@@ -130,7 +143,7 @@ export interface Message {
     emojis: any[];
     files: any[];
     images: any[];
-    reactions: any[];
+    reactions: Reaction[];
   };
   // API specific fields
   username?: string;

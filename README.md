@@ -8,14 +8,16 @@ HivePulse (formerly HiveKit) is a Chrome Extension that transforms your browser 
 
 ### 1. The Pulse (Stats & Health)
 *   **Vital Signs:** Monitor your **Voting Power (VP)** and **Resource Credits (RC)** in real-time.
-*   **Smart Badge:** The extension icon changes color (Green/Orange/Red) based on your energy levels, or shows a counter when you have unread messages.
+*   **Smart Badge:** The extension icon changes color (Green/Orange/Red) based on your energy levels, or switches to a **Blue Counter** when you have unread messages.
 *   **Auto-Sync:** Simply log in to chat, and HivePulse automatically tracks stats for that user.
 
 ### 2. The Signal (Ecency Chat)
 *   **Full-Featured Messenger:** Access your Ecency DMs and Community Channels from any tab.
-*   **Real-Time:** Receive notifications immediately when someone messages you.
+*   **Side Panel Mode:** Pin HivePulse to the browser's side panel to keep your chats and stats visible while you browse.
+*   **Robust Unread Tracking:** Never miss a message. We use a dual-verification system (API counts + Timestamp comparison) to ensure the **Blue Dot** indicator is always accurate.
+*   **Background Monitoring:** HivePulse actively checks for new messages even when the popup is closed, updating the extension badge. *(Note: Checks are performed periodically based on the interval configured in Settings).*
 *   **Secure:** Log in via **Hive Keychain** (client-side signing). No password entry required.
-*   **Manage:** Edit and delete messages directly from the extension.
+*   **Manage:** Edit, delete, and react to messages directly from the extension.
 
 ### 3. The Nexus (Frontend Switcher)
 *   **Context Aware:** Viewing a post on PeakD but want to read it on Ecency? Switch instantly. HivePulse detects the current author, permlink, or feed and redirects you to the exact same spot on the target interface.

@@ -1,17 +1,31 @@
-
-import { Channel, PostResponse, Message } from '../types';
+import { Channel, PostResponse, Message, Reaction } from '../types';
 
 declare const chrome: any;
 
 // Helper to interact with Ecency Chat API
 const ECENCY_CHAT_BASE = 'https://ecency.com/api/mattermost';
 
-interface UnreadResponse {
+export interface UnreadChannel {
+  channelId: string;
+  type: string;
+  mention_count: number;
+  message_count: number;
+}
+
+export interface UnreadsApiResponse {
+  channels: UnreadChannel[];
+  totalMentions: number;
+  totalDMs: number;
+  totalUnread: number;
+}
+
+export interface ChannelMember {
   channel_id: string;
   user_id: string;
+  last_viewed_at: number;
   msg_count: number;
   mention_count: number;
-  last_viewed_at: number;
+  last_update_at: number;
 }
 
 /**
@@ -33,7 +47,7 @@ const getHeaders = (token?: string) => {
 /**
  * Helper to retrieve the mm_pat cookie directly from the browser jar.
  */
-const getMmPatCookie = async (): Promise<string | null> => {
+export const getMmPatCookie = async (): Promise<string | null> => {
   if (typeof chrome === 'undefined' || !chrome.cookies) return null;
 
   try {
@@ -52,10 +66,17 @@ const getMmPatCookie = async (): Promise<string | null> => {
   return null;
 };
 
+interface BootstrapResult {
+    token: string;
+    userId?: string;
+    refreshToken?: string;
+}
+
 /**
  * Bootstraps the Ecency Chat session.
+ * Returns an object with token, optional userId, and optional refresh token.
  */
-export const bootstrapEcencyChat = async (username: string, accessToken: string): Promise<string | null> => {
+export const bootstrapEcencyChat = async (username: string, accessToken: string): Promise<BootstrapResult | null> => {
   try {
     const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
     
@@ -77,21 +98,46 @@ export const bootstrapEcencyChat = async (username: string, accessToken: string)
     });
 
     if (!response.ok) {
-      // If 404/401, checking cookies might still save us
       console.warn(`[EcencyChat] Bootstrap HTTP ${response.status}`);
     } else {
-        // Try to parse JSON to get token
         try {
             const data = await response.json();
             const token = data.token || data.access_token || data.sid || data.mm_token;
-            if (token) return token;
+            let userId = data.user_id || data.id; 
+            const refreshToken = data.refresh_token || data.refreshToken;
+            
+            if (token) {
+                // If we didn't get userId from bootstrap, verify strictly
+                if (!userId) {
+                    // Try /users/me first
+                    const me = await fetchMe(token);
+                    if (me && me.id) {
+                      userId = me.id;
+                    } else {
+                      // Fallback to /users/username/{username}
+                      const userByName = await fetchUserByUsername(cleanUsername, token);
+                      if (userByName && userByName.id) userId = userByName.id;
+                    }
+                }
+                return { token, userId, refreshToken };
+            }
         } catch (e) { /* ignore */ }
     }
 
     // Check for cookie fallback
     const cookieToken = await getMmPatCookie();
     if (cookieToken) {
-      return 'cookie-session';
+       // Try to get ID if possible
+       const me = await fetchMe(cookieToken);
+       let uid = me?.id;
+       if (!uid) {
+           const userByName = await fetchUserByUsername(cleanUsername, cookieToken);
+           if (userByName) uid = userByName.id;
+       }
+       return { 
+           token: 'cookie-session',
+           userId: uid
+       };
     }
 
     return null;
@@ -100,6 +146,32 @@ export const bootstrapEcencyChat = async (username: string, accessToken: string)
     console.error('[EcencyChat] Bootstrap error:', e);
     return null;
   }
+};
+
+/**
+ * Attempts to refresh the session using a refresh token.
+ */
+export const refreshEcencySession = async (refreshToken: string): Promise<{ token: string, refreshToken?: string } | null> => {
+  try {
+     const response = await fetch(`${ECENCY_CHAT_BASE}/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: refreshToken })
+     });
+
+     if (response.ok) {
+        const data = await response.json();
+        if (data && (data.token || data.access_token)) {
+           return {
+              token: data.token || data.access_token,
+              refreshToken: data.refresh_token || data.refreshToken || refreshToken 
+           };
+        }
+     }
+  } catch (e) {
+     console.error('Refresh token failed', e);
+  }
+  return null;
 };
 
 /**
@@ -115,7 +187,6 @@ export const fetchMe = async (token?: string): Promise<{ id: string; username: s
     });
 
     if (!response.ok) {
-        // Silence 404 as it is common for some auth states or uninitialized users
         if (response.status !== 404) {
             console.warn(`[EcencyChat] fetchMe failed: ${response.status}`);
         }
@@ -132,13 +203,73 @@ export const fetchMe = async (token?: string): Promise<{ id: string; username: s
   }
 };
 
+export const fetchUserByUsername = async (username: string, token?: string): Promise<{ id: string; username: string } | null> => {
+  try {
+    const response = await fetch(`${ECENCY_CHAT_BASE}/users/username/${username}`, {
+      method: 'GET',
+      headers: getHeaders(token),
+      cache: 'no-store'
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (data && data.id) {
+       return { id: data.id, username: data.username };
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+};
+
 /**
- * Fetches the total unread message count.
+ * Fetches detailed member info for all channels the user is in.
+ * This includes reliable last_viewed_at timestamps.
  */
-export const fetchUnreadChatCount = async (token?: string): Promise<number | null> => {
+export const fetchMyChannelMembers = async (token?: string, userId: string = 'me'): Promise<Record<string, ChannelMember>> => {
+  try {
+    // Note: using a large per_page to ensure we get all active channels
+    const response = await fetch(`${ECENCY_CHAT_BASE}/users/${userId}/channels/members?page=0&per_page=500`, {
+      method: 'GET',
+      headers: getHeaders(token),
+      cache: 'no-store',
+      credentials: 'include'
+    });
+
+    if (!response.ok) return {};
+
+    const data = await response.json();
+    const map: Record<string, ChannelMember> = {};
+
+    if (Array.isArray(data)) {
+      data.forEach((member: any) => {
+        if (member.channel_id) {
+          map[member.channel_id] = {
+            channel_id: member.channel_id,
+            user_id: member.user_id,
+            last_viewed_at: member.last_viewed_at || 0,
+            msg_count: member.msg_count || 0,
+            mention_count: member.mention_count || 0,
+            last_update_at: member.last_update_at || 0
+          };
+        }
+      });
+    }
+    return map;
+  } catch (e) {
+    console.error('[EcencyChat] Fetch Members error:', e);
+    return {};
+  }
+};
+
+/**
+ * Fetches aggregate unread counts for all channels the user is in.
+ */
+export const fetchUnreads = async (token?: string): Promise<UnreadsApiResponse | null> => {
   try {
     const response = await fetch(`${ECENCY_CHAT_BASE}/channels/unreads`, {
-      method: 'GET', 
+      method: 'GET',
       headers: getHeaders(token),
       cache: 'no-store',
       credentials: 'include'
@@ -147,15 +278,12 @@ export const fetchUnreadChatCount = async (token?: string): Promise<number | nul
     if (!response.ok) return null;
 
     const data = await response.json();
-    
-    let total = 0;
-    if (Array.isArray(data)) {
-      total = data.reduce((sum: any, item: UnreadResponse) => sum + (item.msg_count || 0), 0);
-    } else if (data && typeof data === 'object') {
-       total = (data.msg_count || 0);
+    if (data && data.channels) {
+        return data as UnreadsApiResponse;
     }
-    return total;
-  } catch (error) {
+    return null;
+  } catch (e) {
+    console.error('[EcencyChat] Fetch Unreads error:', e);
     return null;
   }
 };
@@ -211,40 +339,29 @@ export const getOrCreateDirectChannel = async (username: string, token?: string)
 
     const data = await response.json();
     
-    // Log unexpected data for debugging
     if (!data) {
-        console.warn('[EcencyChat] Direct channel creation returned empty data');
         return { id: null, success: false, error: "Empty response from server" };
     }
 
-    // Handle potential wrapper
     const channelItem = Array.isArray(data) ? data[0] : (data.channel || data);
     
     if (channelItem && (channelItem.id || channelItem.channel_id)) {
-        // Normalize channel object
         const channel = {
             ...channelItem,
             id: channelItem.id || channelItem.channel_id,
-            // Ensure type is set if missing (it's a DM)
             type: channelItem.type || 'D'
         } as Channel;
         
         return { channel, id: channel.id, success: true };
     }
 
-    const debugStr = JSON.stringify(data).substring(0, 100);
-    console.warn('[EcencyChat] Direct channel creation returned unknown structure:', data);
-    return { id: null, success: false, error: `Invalid response: ${debugStr}...` };
+    return { id: null, success: false, error: `Invalid response format` };
 
   } catch (e: any) {
     return { id: null, success: false, error: e.message || 'Network error' };
   }
 };
 
-/**
- * Resolves Mattermost User IDs to Hive usernames.
- * Matches API requirement: POST { ids: [] }
- */
 export const fetchUsersByIds = async (userIds: string[], token?: string): Promise<Record<string, string>> => {
   if (userIds.length === 0) return {};
   
@@ -260,7 +377,6 @@ export const fetchUsersByIds = async (userIds: string[], token?: string): Promis
 
     if (response.ok) {
       const data = await response.json();
-      // Handle data.users per dev advice (returns list or object with users)
       const users = Array.isArray(data) ? data : (data.users || []);
       
       if (Array.isArray(users)) {
@@ -276,7 +392,6 @@ export const fetchUsersByIds = async (userIds: string[], token?: string): Promis
     console.error('[EcencyChat] Batch resolve error:', e);
   }
 
-  // Fallback: Check Active Users if batch fails
   try {
     const response = await fetch(`${ECENCY_CHAT_BASE}/users?page=0&per_page=100`, {
        method: 'GET',
@@ -298,14 +413,10 @@ export const fetchUsersByIds = async (userIds: string[], token?: string): Promis
   return map;
 };
 
-/**
- * Fetches posts for a channel.
- * Updated to check `data.users` as per developer instructions.
- */
-export const fetchChannelPosts = async (channelId: string, token?: string): Promise<{ messages: Message[], users: Record<string, string> }> => {
+export const fetchChannelPosts = async (channelId: string, token?: string, limit: number = 60): Promise<{ messages: Message[], users: Record<string, string> }> => {
   try {
     const ts = Date.now();
-    const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts?page=0&per_page=60&t=${ts}`, {
+    const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts?page=0&per_page=${limit}&t=${ts}`, {
       method: 'GET',
       headers: getHeaders(token),
       cache: 'no-store',
@@ -322,19 +433,16 @@ export const fetchChannelPosts = async (channelId: string, token?: string): Prom
     const users: Record<string, string> = {};
 
     if (data) {
-      // Helper to process user object
       const extractUser = (u: any) => {
         if (u && u.id && u.username) {
             users[u.id] = u.username;
         }
       };
 
-      // 1. Extract Profiles (Standard Mattermost)
       if (data.profiles) {
         Object.values(data.profiles).forEach(extractUser);
       }
       
-      // 2. Extract Users (Ecency Specific Override)
       if (data.users) {
          if (Array.isArray(data.users)) {
              data.users.forEach(extractUser);
@@ -343,7 +451,6 @@ export const fetchChannelPosts = async (channelId: string, token?: string): Prom
          }
       }
 
-      // 3. Parse Posts
       if (data.order && data.posts) {
          messages = data.order.map((id: string) => data.posts[id]).filter((p: any) => !!p);
       } else if (Array.isArray(data)) {
@@ -353,16 +460,12 @@ export const fetchChannelPosts = async (channelId: string, token?: string): Prom
       }
     }
 
-    // Sort: Oldest First
     messages.sort((a, b) => a.create_at - b.create_at);
 
-    // 4. Extract overrides from message props (Bridges/Bots)
     messages.forEach(m => {
-        // Direct property check
         if (m.username && !users[m.user_id]) users[m.user_id] = m.username;
         if (m.sender_name && !users[m.user_id]) users[m.user_id] = m.sender_name;
         
-        // Props check (Webhooks/Bridges/System)
         if (m.props) {
             const override = m.props.override_username || m.props.webhook_display_name || m.props.username;
             if (override && !users[m.user_id]) {
@@ -378,9 +481,6 @@ export const fetchChannelPosts = async (channelId: string, token?: string): Prom
   }
 };
 
-/**
- * Sends a message.
- */
 export const sendMessage = async (channelId: string, message: string, token?: string): Promise<Message | null> => {
   try {
     const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts`, {
@@ -401,10 +501,6 @@ export const sendMessage = async (channelId: string, message: string, token?: st
   }
 };
 
-/**
- * Edits a message.
- * Endpoint: PATCH /channels/[id]/posts/[postId]
- */
 export const editMessage = async (channelId: string, postId: string, message: string, token?: string): Promise<Message | null> => {
   try {
     const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts/${postId}`, {
@@ -417,25 +513,16 @@ export const editMessage = async (channelId: string, postId: string, message: st
       })
     });
 
-    if (!response.ok) {
-        console.warn(`[EcencyChat] Edit failed: ${response.status} ${response.statusText} at ${response.url}`);
-        return null;
-    }
+    if (!response.ok) return null;
     return await response.json();
   } catch (e) {
-    console.error('[EcencyChat] Edit error:', e);
     return null;
   }
 };
 
-/**
- * Deletes a message.
- * Endpoint: DELETE /channels/[id]/posts/[postId]
- */
 export const deleteMessage = async (channelId: string, postId: string, token?: string): Promise<boolean> => {
   try {
     const headers = getHeaders(token);
-    // Send empty JSON body to satisfy proxies that expect Content-Type/Body
     const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts/${postId}`, {
       method: 'DELETE',
       headers,
@@ -444,13 +531,34 @@ export const deleteMessage = async (channelId: string, postId: string, token?: s
       body: JSON.stringify({})
     });
 
-    if (!response.ok) {
-        console.warn(`[EcencyChat] Delete failed: ${response.status} ${response.statusText} at ${response.url}`);
-        return false;
-    }
+    if (!response.ok) return false;
     return true;
   } catch (e) {
-    console.error('[EcencyChat] Delete error:', e);
+    return false;
+  }
+};
+
+export const toggleReaction = async (channelId: string, postId: string, emoji: string, shouldAdd: boolean, token?: string): Promise<boolean> => {
+  try {
+    // Always use POST with 'add' param as requested by API specs
+    const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts/${postId}/reactions`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({
+        emoji,
+        add: shouldAdd
+      })
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        console.warn(`Reaction toggle failed:`, text);
+        return false;
+    }
+
+    return true;
+  } catch (e) {
+    console.error('[EcencyChat] Toggle Reaction error:', e);
     return false;
   }
 };
@@ -458,7 +566,6 @@ export const deleteMessage = async (channelId: string, postId: string, token?: s
 export const getAvatarUrl = (username?: string) => {
   if (!username) return '';
   const clean = username.replace(/^@/, '').trim();
-  // Avoid rendering internal IDs as avatars
-  if (clean.length > 20 && !clean.includes(' ')) return 'https://images.ecency.com/u/hive-1/avatar/small'; 
+  if (clean.length > 20 && !clean.includes(' ')) return 'https://images.ecency.com/u/ecency/avatar/small'; 
   return `https://images.ecency.com/u/${clean}/avatar/small`;
 };

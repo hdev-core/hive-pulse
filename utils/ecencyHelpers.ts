@@ -1,4 +1,3 @@
-
 import { Channel, PostResponse, Message, Reaction } from '../types';
 
 declare const chrome: any;
@@ -6,12 +5,27 @@ declare const chrome: any;
 // Helper to interact with Ecency Chat API
 const ECENCY_CHAT_BASE = 'https://ecency.com/api/mattermost';
 
-interface UnreadResponse {
+export interface UnreadChannel {
+  channelId: string;
+  type: string;
+  mention_count: number;
+  message_count: number;
+}
+
+export interface UnreadsApiResponse {
+  channels: UnreadChannel[];
+  totalMentions: number;
+  totalDMs: number;
+  totalUnread: number;
+}
+
+export interface ChannelMember {
   channel_id: string;
   user_id: string;
+  last_viewed_at: number;
   msg_count: number;
   mention_count: number;
-  last_viewed_at: number;
+  last_update_at: number;
 }
 
 /**
@@ -33,7 +47,7 @@ const getHeaders = (token?: string) => {
 /**
  * Helper to retrieve the mm_pat cookie directly from the browser jar.
  */
-const getMmPatCookie = async (): Promise<string | null> => {
+export const getMmPatCookie = async (): Promise<string | null> => {
   if (typeof chrome === 'undefined' || !chrome.cookies) return null;
 
   try {
@@ -55,11 +69,12 @@ const getMmPatCookie = async (): Promise<string | null> => {
 interface BootstrapResult {
     token: string;
     userId?: string;
+    refreshToken?: string;
 }
 
 /**
  * Bootstraps the Ecency Chat session.
- * Returns an object with token and optional userId.
+ * Returns an object with token, optional userId, and optional refresh token.
  */
 export const bootstrapEcencyChat = async (username: string, accessToken: string): Promise<BootstrapResult | null> => {
   try {
@@ -89,6 +104,7 @@ export const bootstrapEcencyChat = async (username: string, accessToken: string)
             const data = await response.json();
             const token = data.token || data.access_token || data.sid || data.mm_token;
             let userId = data.user_id || data.id; 
+            const refreshToken = data.refresh_token || data.refreshToken;
             
             if (token) {
                 // If we didn't get userId from bootstrap, verify strictly
@@ -103,7 +119,7 @@ export const bootstrapEcencyChat = async (username: string, accessToken: string)
                       if (userByName && userByName.id) userId = userByName.id;
                     }
                 }
-                return { token, userId };
+                return { token, userId, refreshToken };
             }
         } catch (e) { /* ignore */ }
     }
@@ -133,6 +149,32 @@ export const bootstrapEcencyChat = async (username: string, accessToken: string)
 };
 
 /**
+ * Attempts to refresh the session using a refresh token.
+ */
+export const refreshEcencySession = async (refreshToken: string): Promise<{ token: string, refreshToken?: string } | null> => {
+  try {
+     const response = await fetch(`${ECENCY_CHAT_BASE}/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: refreshToken })
+     });
+
+     if (response.ok) {
+        const data = await response.json();
+        if (data && (data.token || data.access_token)) {
+           return {
+              token: data.token || data.access_token,
+              refreshToken: data.refresh_token || data.refreshToken || refreshToken 
+           };
+        }
+     }
+  } catch (e) {
+     console.error('Refresh token failed', e);
+  }
+  return null;
+};
+
+/**
  * Fetches the current authenticated user's details.
  */
 export const fetchMe = async (token?: string): Promise<{ id: string; username: string } | null> => {
@@ -145,7 +187,6 @@ export const fetchMe = async (token?: string): Promise<{ id: string; username: s
     });
 
     if (!response.ok) {
-        // Suppress 404 warnings as it seems common for some accounts
         if (response.status !== 404) {
             console.warn(`[EcencyChat] fetchMe failed: ${response.status}`);
         }
@@ -162,9 +203,6 @@ export const fetchMe = async (token?: string): Promise<{ id: string; username: s
   }
 };
 
-/**
- * Fetches a user by username.
- */
 export const fetchUserByUsername = async (username: string, token?: string): Promise<{ id: string; username: string } | null> => {
   try {
     const response = await fetch(`${ECENCY_CHAT_BASE}/users/username/${username}`, {
@@ -186,12 +224,52 @@ export const fetchUserByUsername = async (username: string, token?: string): Pro
 };
 
 /**
- * Fetches the total unread message count.
+ * Fetches detailed member info for all channels the user is in.
+ * This includes reliable last_viewed_at timestamps.
  */
-export const fetchUnreadChatCount = async (token?: string): Promise<number | null> => {
+export const fetchMyChannelMembers = async (token?: string, userId: string = 'me'): Promise<Record<string, ChannelMember>> => {
+  try {
+    // Note: using a large per_page to ensure we get all active channels
+    const response = await fetch(`${ECENCY_CHAT_BASE}/users/${userId}/channels/members?page=0&per_page=500`, {
+      method: 'GET',
+      headers: getHeaders(token),
+      cache: 'no-store',
+      credentials: 'include'
+    });
+
+    if (!response.ok) return {};
+
+    const data = await response.json();
+    const map: Record<string, ChannelMember> = {};
+
+    if (Array.isArray(data)) {
+      data.forEach((member: any) => {
+        if (member.channel_id) {
+          map[member.channel_id] = {
+            channel_id: member.channel_id,
+            user_id: member.user_id,
+            last_viewed_at: member.last_viewed_at || 0,
+            msg_count: member.msg_count || 0,
+            mention_count: member.mention_count || 0,
+            last_update_at: member.last_update_at || 0
+          };
+        }
+      });
+    }
+    return map;
+  } catch (e) {
+    console.error('[EcencyChat] Fetch Members error:', e);
+    return {};
+  }
+};
+
+/**
+ * Fetches aggregate unread counts for all channels the user is in.
+ */
+export const fetchUnreads = async (token?: string): Promise<UnreadsApiResponse | null> => {
   try {
     const response = await fetch(`${ECENCY_CHAT_BASE}/channels/unreads`, {
-      method: 'GET', 
+      method: 'GET',
       headers: getHeaders(token),
       cache: 'no-store',
       credentials: 'include'
@@ -200,15 +278,12 @@ export const fetchUnreadChatCount = async (token?: string): Promise<number | nul
     if (!response.ok) return null;
 
     const data = await response.json();
-    
-    let total = 0;
-    if (Array.isArray(data)) {
-      total = data.reduce((sum: any, item: UnreadResponse) => sum + (item.msg_count || 0), 0);
-    } else if (data && typeof data === 'object') {
-       total = (data.msg_count || 0);
+    if (data && data.channels) {
+        return data as UnreadsApiResponse;
     }
-    return total;
-  } catch (error) {
+    return null;
+  } catch (e) {
+    console.error('[EcencyChat] Fetch Unreads error:', e);
     return null;
   }
 };
@@ -287,9 +362,6 @@ export const getOrCreateDirectChannel = async (username: string, token?: string)
   }
 };
 
-/**
- * Resolves Mattermost User IDs to Hive usernames.
- */
 export const fetchUsersByIds = async (userIds: string[], token?: string): Promise<Record<string, string>> => {
   if (userIds.length === 0) return {};
   
@@ -341,13 +413,10 @@ export const fetchUsersByIds = async (userIds: string[], token?: string): Promis
   return map;
 };
 
-/**
- * Fetches posts for a channel.
- */
-export const fetchChannelPosts = async (channelId: string, token?: string): Promise<{ messages: Message[], users: Record<string, string> }> => {
+export const fetchChannelPosts = async (channelId: string, token?: string, limit: number = 60): Promise<{ messages: Message[], users: Record<string, string> }> => {
   try {
     const ts = Date.now();
-    const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts?page=0&per_page=60&t=${ts}`, {
+    const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts?page=0&per_page=${limit}&t=${ts}`, {
       method: 'GET',
       headers: getHeaders(token),
       cache: 'no-store',
@@ -497,8 +566,6 @@ export const toggleReaction = async (channelId: string, postId: string, emoji: s
 export const getAvatarUrl = (username?: string) => {
   if (!username) return '';
   const clean = username.replace(/^@/, '').trim();
-  // If it looks like an internal ID (length > 20 and no spaces), return a safe fallback.
-  // Using 'ecency' ensures we get a valid image instead of a 404 from 'hive-1'
   if (clean.length > 20 && !clean.includes(' ')) return 'https://images.ecency.com/u/ecency/avatar/small'; 
   return `https://images.ecency.com/u/${clean}/avatar/small`;
 };

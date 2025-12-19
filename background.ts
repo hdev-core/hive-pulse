@@ -1,11 +1,11 @@
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
 import { fetchAccountStats } from './utils/hiveHelpers';
+// Fixed error: Removed fetchMyChannelMembers as it is not exported from ecencyHelpers and is unused
 import { 
   fetchChannels, 
   bootstrapEcencyChat, 
   refreshEcencySession, 
   getMmPatCookie, 
-  fetchMyChannelMembers,
   fetchChannelPosts,
   fetchUnreads,
   fetchMe

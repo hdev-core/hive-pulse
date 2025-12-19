@@ -5,11 +5,27 @@
 
 @layer base {
   html, body {
-    @apply h-[500px] w-[350px] overflow-hidden bg-slate-50 font-sans;
+    /* Fixed: Increased height to match App.tsx (600px is Chrome max) and width to 380px */
+    @apply h-[600px] w-[380px] overflow-hidden bg-slate-50 font-sans;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
   
   #root {
-    @apply h-full w-full flex flex-col;
+    @apply h-full w-full flex flex-col overflow-hidden;
   }
+}
+
+/* Custom scrollbar for better fit in small popup */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

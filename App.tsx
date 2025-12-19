@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
 import { fetchAccountStats } from './utils/hiveHelpers';
 import { 
@@ -10,9 +11,10 @@ import {
   editMessage,
   deleteMessage,
   fetchMe,
-  fetchUserByUsername,
   fetchUsersByIds,
-  toggleReaction
+  toggleReaction,
+  fetchUnreads,
+  UnauthorizedError
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
 import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message } from './types';
@@ -29,6 +31,12 @@ import { AppsView } from './components/views/AppsView';
 import { SettingsView } from './components/views/SettingsView';
 
 declare const chrome: any;
+
+declare global {
+  interface Window {
+    hive_keychain: any;
+  }
+}
 
 const DEFAULT_SETTINGS: AppSettings = {
   autoRedirect: false,
@@ -85,17 +93,139 @@ const App: React.FC = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  const refreshChat = async (forceBootstrap = false) => {
-    // This function can now be simplified or just trigger a background refresh
-    // For now, we'll keep a simplified version for immediate UI feedback
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.getBackgroundPage((bg: any) => {
-        bg.checkStatus();
-      });
+  // Polling Reference
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // --- REFRESH CHAT ---
+  const refreshChat = async () => {
+    if (!settings.ecencyUsername) return;
+    setLoadingChat(true);
+
+    try {
+      const [newChannels, unreadResp] = await Promise.all([
+        fetchChannels(settings.ecencyChatToken),
+        fetchUnreads(settings.ecencyChatToken)
+      ]);
+
+      if (newChannels) {
+        setChannels(newChannels);
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.local.set({ channels: newChannels });
+        }
+        setChatSessionExpired(false);
+      }
+
+      if (unreadResp && unreadResp.channels) {
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.local.get(['channelReadState'], (result: any) => {
+            const channelReadState = result.channelReadState || {};
+            const counts: Record<string, number> = {};
+            const newReadState = { ...channelReadState };
+            
+            unreadResp.channels.forEach(u => {
+              if (u.channelId) {
+                const currentTotal = u.message_count || 0;
+                if (newReadState[u.channelId] === undefined) {
+                    newReadState[u.channelId] = currentTotal;
+                    counts[u.channelId] = 0;
+                } else {
+                    const diff = Math.max(0, currentTotal - newReadState[u.channelId]);
+                    counts[u.channelId] = diff;
+                }
+              }
+            });
+
+            setUnreadCounts(counts);
+            chrome.storage.local.set({ 
+                unreadCounts: counts, 
+                channelReadState: newReadState
+            });
+          });
+        }
+      }
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        setChatSessionExpired(true);
+      }
+      console.error("Chat polling failed", e);
+    } finally {
+      setLoadingChat(false);
     }
   };
 
-  // --- INITIALIZATION & STORAGE SYNC ---
+  // --- FETCH ACTIVE MESSAGES ---
+  const loadActiveMessages = useCallback(async (channelId: string) => {
+    if (!settings.ecencyUsername) return;
+    
+    setLoadingMessages(true);
+    try {
+      const { messages, users } = await fetchChannelPosts(channelId, settings.ecencyChatToken, 40);
+      
+      if (Object.keys(users).length > 0) {
+        setUserMap(prev => ({ ...prev, ...users }));
+      }
+      
+      setActiveMessages(messages);
+      setChatSessionExpired(false);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        setChatSessionExpired(true);
+      }
+      console.error("Failed to load messages", e);
+    } finally {
+      setLoadingMessages(false);
+    }
+  }, [settings.ecencyChatToken, settings.ecencyUsername]);
+
+  // --- HEARTBEAT EFFECT ---
+  useEffect(() => {
+    const shouldPoll = currentView === AppView.CHAT && settings.ecencyUsername;
+    
+    if (!shouldPoll) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    const heartbeat = async () => {
+      try {
+        if (activeChannel) {
+          const { messages, users } = await fetchChannelPosts(activeChannel.id, settings.ecencyChatToken, 40);
+          if (Object.keys(users).length > 0) {
+            setUserMap(prev => ({ ...prev, ...users }));
+          }
+          
+          setActiveMessages(prev => {
+            // Only trigger a state update if the data has actually changed
+            if (prev.length === messages.length && 
+                prev.length > 0 && 
+                prev[prev.length - 1].id === messages[messages.length - 1].id &&
+                prev[prev.length - 1].update_at === messages[messages.length - 1].update_at) {
+              return prev;
+            }
+            return messages;
+          });
+        }
+        await refreshChat();
+      } catch (e) {
+        if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+      }
+    };
+
+    heartbeat();
+    pollingIntervalRef.current = setInterval(heartbeat, activeChannel ? 4000 : 12000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [currentView, activeChannel?.id, settings.ecencyChatToken, settings.ecencyUsername]);
+
+  // --- INITIALIZATION ---
   useEffect(() => {
     const hydrate = async () => {
       if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -111,12 +241,8 @@ const App: React.FC = () => {
                     fetchAccountStats(saved.rcUser).then(data => data && setAccountStats(data));
                  }
               }
-              if (result.channels) {
-                setChannels(result.channels);
-              }
-              if (result.unreadCounts) {
-                setUnreadCounts(result.unreadCounts);
-              }
+              if (result.channels) setChannels(result.channels);
+              if (result.unreadCounts) setUnreadCounts(result.unreadCounts);
               setInitializing(false);
            });
         } catch (e) { setInitializing(false); }
@@ -132,22 +258,17 @@ const App: React.FC = () => {
     };
     hydrate();
 
-    // Listen for storage changes from the background script
     const storageListener = (changes: any, areaName: string) => {
       if (areaName === 'local') {
-        if (changes.channels) {
-          setChannels(changes.channels.newValue || []);
-        }
-        if (changes.unreadCounts) {
-          setUnreadCounts(changes.unreadCounts.newValue || {});
-        }
-        if (changes.settings) {
-          setSettings(prev => ({ ...prev, ...changes.settings.newValue }));
-        }
+        if (changes.channels) setChannels(changes.channels.newValue || []);
+        if (changes.unreadCounts) setUnreadCounts(changes.unreadCounts.newValue || {});
+        if (changes.settings) setSettings(prev => ({ ...prev, ...changes.settings.newValue }));
       }
     };
-    chrome.storage.onChanged.addListener(storageListener);
-    return () => chrome.storage.onChanged.removeListener(storageListener);
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+        chrome.storage.onChanged.addListener(storageListener);
+    }
   }, []);
 
   const totalUnreadMessages = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
@@ -155,11 +276,9 @@ const App: React.FC = () => {
   const updateSettings = (newSettings: Partial<AppSettings>) => {
     const updated = { ...settings, ...newSettings };
     setSettings(updated);
-    
     if (updated.ecencyUserId && updated.ecencyUsername) {
        setUserMap(prev => ({ ...prev, [updated.ecencyUserId!]: updated.ecencyUsername! }));
     }
-
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.set({ settings: updated });
     }
@@ -167,328 +286,216 @@ const App: React.FC = () => {
 
   const updateBadgeFromData = (data: AccountStats) => {
     if (typeof chrome !== 'undefined' && chrome.action) {
-       if (totalUnreadMessages > 0) return;
-
-       const percent = settings.badgeMetric === 'RC' ? data.rc.percentage : data.vp.percentage;
+       const metric = settings.badgeMetric || 'VP';
+       const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
        const rounded = Math.round(percent);
        chrome.action.setBadgeText({ text: `${rounded}%` });
-       
        let color = '#22c55e';
-       if (rounded < 20) color = '#ef4444'; 
+       if (rounded < 20) color = '#ef4444';
        else if (rounded < 50) color = '#f97316';
        chrome.action.setBadgeBackgroundColor({ color });
     }
+    setAccountStats(data);
   };
 
-  const handleSwitch = (targetId: FrontendId, mode: ActionMode) => {
-    const newUrl = getTargetUrl(targetId, tabState.path, mode, tabState.username);
-    if (typeof chrome !== 'undefined' && chrome.tabs) {
-      if (settings.openInNewTab) {
-        chrome.tabs.create({ url: newUrl });
-      } else {
-        chrome.tabs.update({ url: newUrl });
-        window.close();
-      }
+  const handleSwitch = (id: FrontendId, mode: ActionMode) => {
+    const url = getTargetUrl(id, tabState.path, mode, tabState.username);
+    if (settings.openInNewTab) {
+      window.open(url, '_blank');
+    } else if (typeof chrome !== 'undefined' && chrome.tabs) {
+      chrome.tabs.update({ url });
     } else {
-      window.open(newUrl, '_blank');
+      window.location.href = url;
     }
   };
 
-  // --- CHAT LOGIC ---
-
-  const resolveUnknownUsers = useCallback(async (ids: string[], knownCache?: Record<string, string>) => {
-    if (!settings.ecencyChatToken) return;
-    
-    const missing = ids.filter(id => !(userMap[id] || (knownCache && knownCache[id])));
-    if (missing.length === 0) return;
-
-    const resolved = await fetchUsersByIds(missing, settings.ecencyChatToken);
-    if (Object.keys(resolved).length > 0) {
-       setUserMap(prev => ({ ...prev, ...resolved }));
-    }
-  }, [userMap, settings.ecencyChatToken]);
-
-  const loadChannelMessages = async (channel: Channel) => {
-    if (channel.type === 'D' && settings.ecencyUserId && channel.name.includes('__')) {
-       const otherId = channel.name.split('__').find(p => p !== settings.ecencyUserId);
-       if (otherId && channel.display_name) {
-          setUserMap(prev => ({ ...prev, [otherId]: channel.display_name }));
-       }
-    }
-    
-    const { messages, users } = await fetchChannelPosts(channel.id, settings.ecencyChatToken);
-    
-    if (Object.keys(users).length > 0) setUserMap(prev => ({ ...prev, ...users }));
-
-    setActiveMessages(messages);
-    setLoadingMessages(false);
-
-    const authorIds = [...new Set(messages.map(m => m.user_id))];
-    resolveUnknownUsers(authorIds, users);
-  };
-
-  const handleSelectChannel = async (channel: Channel | null) => {
-     setActiveChannel(channel);
-     if (channel) {
-        // Mark channel as read
-        chrome.storage.local.get(['channelTotals', 'channelReadState'], (result: any) => {
-          const totals = result.channelTotals || {};
-          const readState = result.channelReadState || {};
-          if (totals[channel.id]) {
-            const updatedReadState = { ...readState, [channel.id]: totals[channel.id] };
-            chrome.storage.local.set({ channelReadState: updatedReadState });
-          }
-        });
-        // Optimistically update UI
-        setUnreadCounts(prev => ({ ...prev, [channel.id]: 0 }));
-
-        setLoadingMessages(true);
-        setActiveMessages([]); 
-        await loadChannelMessages(channel);
-     }
-  };
-
-  const handleRefreshActiveChat = async () => {
-    if (!activeChannel) {
-      refreshChat();
-      return;
-    }
-    setLoadingMessages(true);
-    await loadChannelMessages(activeChannel);
-  };
-
-  const handleSendMessage = async (text: string) => {
-    if (!activeChannel) return;
-    setSendingMessage(true);
-    
-    const result = await sendMessage(activeChannel.id, text, settings.ecencyChatToken);
-    
-    if (result) {
-       setActiveMessages(prev => [...prev, { ...result, message: text, create_at: result.create_at || Date.now(), user_id: settings.ecencyUserId || result.user_id }]);
-       // Silent refetch for consistency
-       const { messages, users } = await fetchChannelPosts(activeChannel.id, settings.ecencyChatToken);
-       if (Object.keys(users).length > 0) setUserMap(prev => ({ ...prev, ...users }));
-       setActiveMessages(messages);
-    } else {
-       alert("Failed to send message.");
-    }
-    setSendingMessage(false);
-  };
-
-  const handleEditMessage = async (messageId: string, newText: string) => {
-    if (!activeChannel) return;
-    const originalMessages = [...activeMessages];
-    setActiveMessages(prev => prev.map(m => m.id === messageId ? { ...m, message: newText } : m));
-    const result = await editMessage(activeChannel.id, messageId, newText, settings.ecencyChatToken);
-    if (!result) {
-        setActiveMessages(originalMessages);
-        alert("Failed to edit message");
-    }
-  };
-
-  const handleDeleteMessage = async (messageId: string) => {
-    if (!activeChannel) return;
-    const originalMessages = [...activeMessages];
-    setActiveMessages(prev => prev.filter(m => m.id !== messageId));
-    const success = await deleteMessage(activeChannel.id, messageId, settings.ecencyChatToken);
-    if (!success) {
-         setActiveMessages(originalMessages);
-         alert("Failed to delete message");
-    }
-  };
-
-  const handleToggleReaction = async (messageId: string, emojiName: string) => {
-    let userId = settings.ecencyUserId;
-    if (!userId && settings.ecencyUsername) {
-      const foundId = Object.entries(userMap).find(([, name]) => name === settings.ecencyUsername)?.[0];
-      if (foundId) {
-        userId = foundId;
-        updateSettings({ ecencyUserId: foundId });
-      }
-    }
-    if (!activeChannel || !userId) return;
-    
-    const originalMessages = [...activeMessages];
-    setActiveMessages(prev => {
-        const msgIndex = prev.findIndex(m => m.id === messageId);
-        if (msgIndex === -1) return prev;
-        const message = prev[msgIndex];
-        const reactions = message.metadata?.reactions || [];
-        const myReaction = reactions.find(r => r.user_id === userId && r.emoji_name === emojiName);
-        const newReactions = myReaction ? reactions.filter(r => r !== myReaction) : [...reactions, { user_id: userId!, post_id: messageId, emoji_name: emojiName, create_at: Date.now() }];
-        const updatedMessage = { ...message, metadata: { ...message.metadata, reactions: newReactions } };
-        return [...prev.slice(0, msgIndex), updatedMessage, ...prev.slice(msgIndex + 1)];
-    });
-
-    try {
-        const message = originalMessages.find(m => m.id === messageId);
-        const hasReaction = message?.metadata?.reactions?.some(r => r.user_id === userId && r.emoji_name === emojiName);
-        await toggleReaction(activeChannel.id, messageId, emojiName, !hasReaction, settings.ecencyChatToken);
-    } catch (e) {
-        setActiveMessages(originalMessages);
-    }
-  };
-
-  const handleCreateDM = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dmTarget.trim()) return;
-    const targetUser = dmTarget.trim().toLowerCase().replace('@', '');
-    const existing = channels.find(c => {
-        if (c.type !== 'D') return false;
-        if (c.teammate?.username.toLowerCase() === targetUser) return true;
-        return c.display_name?.toLowerCase().replace('@','').includes(targetUser);
-    });
-    if (existing) {
-        setDmTarget('');
-        handleSelectChannel(existing);
-        return;
-    }
-    setCreatingDm(true);
-    try {
-      let token = settings.ecencyChatToken;
-      let result = await getOrCreateDirectChannel(targetUser, token);
-      if (!result.success && settings.ecencyUsername && settings.ecencyAccessToken && (!token || result.error?.toLowerCase().includes('session') || result.error?.toLowerCase().includes('expired'))) {
-         const bootstrapRes = await bootstrapEcencyChat(settings.ecencyUsername, settings.ecencyAccessToken);
-         if (bootstrapRes?.token) {
-           const { token: newToken, userId } = bootstrapRes;
-           updateSettings({ ecencyChatToken: newToken, ecencyUserId: userId || settings.ecencyUserId });
-           result = await getOrCreateDirectChannel(targetUser, newToken);
-         }
-      }
-      if (result.success && result.channel) {
-        setDmTarget('');
-        const newChannel = result.channel;
-        setChannels(prev => [newChannel, ...prev.filter(c => c.id !== newChannel.id)]);
-        handleSelectChannel(newChannel);
-        refreshChat();
-      } else {
-        alert(result.error || 'Could not create DM.');
-      }
-    } catch (e) {
-      alert('Error creating chat.');
-    } finally {
-      setCreatingDm(false);
-    }
-  };
-
-  const handleKeychainLogin = async () => {
-    const userToLogin = settings.ecencyUsername || settings.rcUser || tabState.username;
-    if (!userToLogin) {
-      setLoginError("Please enter a username in Settings first.");
-      if (currentView !== AppView.SETTINGS) setCurrentView(AppView.SETTINGS);
+  const handleLogin = async () => {
+    if (!settings.ecencyUsername) {
+      setLoginError("Please enter a username.");
       return;
     }
     setIsLoggingIn(true);
     setLoginError(null);
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab?.id || tab.url?.match(/^(chrome|edge|about|data|chrome-extension):/)) {
-        setLoginError("Please open a regular website to use Keychain.");
-        setIsLoggingIn(false);
-        return;
-      }
-      const payload = createEcencyLoginPayload(userToLogin);
-      const messageToSign = JSON.stringify(payload);
-      const [result] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        world: 'MAIN',
-        func: (username: string, message: string) => new Promise((resolve) => {
-          // @ts-ignore
-          if (!window.hive_keychain) return resolve({ success: false, error: 'Hive Keychain not found.' });
-          // @ts-ignore
-          window.hive_keychain.requestSignBuffer(username, message, 'Posting', (resp: any) => resolve(resp));
-        }),
-        args: [userToLogin, messageToSign]
-      });
-      if (!result?.result?.success) {
-        setLoginError(result?.result?.error || "Login canceled.");
-        setIsLoggingIn(false);
-        return;
-      }
-      const { result: signature } = result.result;
-      const hiveToken = createEcencyToken(payload, signature);
-      const bootstrapRes = await bootstrapEcencyChat(userToLogin, hiveToken);
-      if (bootstrapRes?.token) {
-         const { token: chatToken, userId, refreshToken } = bootstrapRes;
-         updateSettings({ 
-           ecencyUsername: userToLogin, 
-           ecencyAccessToken: hiveToken,
-           ecencyChatToken: chatToken === 'cookie-session' ? '' : chatToken,
-           ecencyUserId: userId || '',
-           ecencyRefreshToken: refreshToken || '',
-           rcUser: userToLogin
-         });
-         if (userId) setUserMap(prev => ({ ...prev, [userId]: userToLogin }));
-         fetchAccountStats(userToLogin).then(data => {
-            if (data) {
-                setAccountStats(data);
-                updateBadgeFromData(data);
+      const payload = createEcencyLoginPayload(settings.ecencyUsername);
+      if (typeof window.hive_keychain !== 'undefined') {
+        window.hive_keychain.requestSignBuffer(
+          settings.ecencyUsername,
+          JSON.stringify(payload),
+          'Posting',
+          async (response: any) => {
+            if (response.success) {
+              const token = createEcencyToken(payload, response.result);
+              const bootstrap = await bootstrapEcencyChat(settings.ecencyUsername, token);
+              if (bootstrap && bootstrap.token) {
+                updateSettings({
+                  ecencyAccessToken: token,
+                  ecencyChatToken: bootstrap.token,
+                  ecencyUserId: bootstrap.userId,
+                  ecencyRefreshToken: bootstrap.refreshToken
+                });
+                setChatSessionExpired(false);
+                refreshChat();
+              } else {
+                setLoginError("Failed to bootstrap chat session.");
+              }
+            } else {
+              setLoginError(response.message || "Login failed");
             }
-         });
-         setLoginError(null);
-         setChatSessionExpired(false);
-         if (currentView === AppView.CHAT) {
-           setTimeout(() => refreshChat(), 100);
-         } else {
-           setCurrentView(AppView.CHAT);
-         }
+            setIsLoggingIn(false);
+          }
+        );
       } else {
-         setLoginError("Failed to initialize chat session.");
+        setLoginError("Hive Keychain not found.");
+        setIsLoggingIn(false);
       }
     } catch (e) {
-      setLoginError("Unexpected error.");
-    } finally {
+      setLoginError("An unexpected error occurred.");
       setIsLoggingIn(false);
     }
   };
 
   const handleLogout = () => {
-    updateSettings({ ecencyUsername: '', ecencyAccessToken: '', ecencyChatToken: '', ecencyRefreshToken: '', ecencyUserId: '' });
+    updateSettings({
+      ecencyAccessToken: '',
+      ecencyChatToken: '',
+      ecencyUserId: '',
+      ecencyRefreshToken: ''
+    });
     setChannels([]);
     setActiveChannel(null);
-    setUserMap({});
-    setUnreadCounts({});
+    setActiveMessages([]);
   };
 
-  useEffect(() => {
-    if (accountStats) {
-      updateBadgeFromData(accountStats);
+  const handleSendMessage = async (text: string) => {
+    if (!activeChannel) return;
+    setSendingMessage(true);
+    try {
+      const msg = await sendMessage(activeChannel.id, text, settings.ecencyChatToken);
+      if (msg) {
+        setActiveMessages(prev => [...prev, msg]);
+      }
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    } finally {
+      setSendingMessage(false);
     }
-  }, [settings.badgeMetric, accountStats, totalUnreadMessages]);
+  };
+
+  const handleResolveUsers = async (ids: string[]) => {
+    try {
+      const resolved = await fetchUsersByIds(ids, settings.ecencyChatToken);
+      if (Object.keys(resolved).length > 0) {
+        setUserMap(prev => ({ ...prev, ...resolved }));
+      }
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    }
+  };
+
+  const handleEditMessage = async (id: string, text: string) => {
+    if (!activeChannel) return;
+    try {
+      await editMessage(activeChannel.id, id, text, settings.ecencyChatToken);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    }
+  };
+
+  const handleDeleteMessage = async (id: string) => {
+    if (!activeChannel) return;
+    try {
+      const ok = await deleteMessage(activeChannel.id, id, settings.ecencyChatToken);
+      if (ok) {
+        setActiveMessages(prev => prev.filter(m => m.id !== id));
+      }
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    }
+  };
+
+  const handleToggleReaction = async (id: string, emoji: string) => {
+    if (!activeChannel) return;
+    try {
+      const msg = activeMessages.find(m => m.id === id);
+      const existing = msg?.metadata?.reactions?.find(r => r.emoji_name === emoji && r.user_id === settings.ecencyUserId);
+      await toggleReaction(activeChannel.id, id, emoji, !existing, settings.ecencyChatToken);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    }
+  };
+
+  const handleCreateDM = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dmTarget) return;
+    setCreatingDm(true);
+    try {
+      const result = await getOrCreateDirectChannel(dmTarget, settings.ecencyChatToken);
+      if (result.success && result.channel) {
+        handleSelectChannel(result.channel);
+        setDmTarget('');
+      } else {
+        alert(result.error || "Failed to create DM");
+      }
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    } finally {
+      setCreatingDm(false);
+    }
+  };
+
+  const handleSelectChannel = (channel: Channel | null) => {
+    setActiveChannel(channel);
+    if (channel) {
+      // Clear previous messages immediately to avoid flicker and show loader
+      setActiveMessages([]);
+      loadActiveMessages(channel.id);
+      
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.get(['channelReadState'], (result: any) => {
+          const readState = result.channelReadState || {};
+          // We don't have the current message count here easily, but heartbeat will sync it
+          // Setting unread count locally for immediate feedback
+          setUnreadCounts(prev => ({ ...prev, [channel.id]: 0 }));
+        });
+      }
+    }
+  };
+
+  if (initializing) {
+    return (
+      <div className="w-[380px] h-[600px] flex items-center justify-center bg-slate-50">
+        <Activity className="animate-spin text-blue-500" size={32} />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-50 text-slate-800 font-sans">
+    <div className="w-[380px] h-[600px] flex flex-col bg-slate-50 overflow-hidden font-sans border border-slate-200">
       <Header />
-      <main className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="p-4 pb-20">
+      
+      <main className="flex-1 overflow-hidden relative flex flex-col">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
             {currentView === AppView.SWITCHER && (
-              <SwitcherView tabState={tabState} onSwitch={handleSwitch} />
+            <SwitcherView tabState={tabState} onSwitch={handleSwitch} />
             )}
             {currentView === AppView.SHARE && (
-              <ShareView tabState={tabState} />
+            <ShareView tabState={tabState} />
             )}
             {currentView === AppView.STATS && (
-              <StatsView 
-                settings={settings} 
-                updateSettings={updateSettings} 
-                onDataFetched={(data) => {
-                  setAccountStats(data);
-                  updateBadgeFromData(data);
-                }}
-              />
+            <StatsView settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} />
             )}
             {currentView === AppView.CHAT && (
-              <ChatView 
+            <ChatView 
                 settings={settings}
                 channels={channels}
-                unreadCounts={unreadCounts}
                 loadingChat={loadingChat}
                 chatSessionExpired={chatSessionExpired}
                 isLoggingIn={isLoggingIn}
                 refreshChat={refreshChat}
-                onRefresh={handleRefreshActiveChat}
+                onRefresh={() => activeChannel && loadActiveMessages(activeChannel.id)}
                 handleCreateDM={handleCreateDM}
-                handleKeychainLogin={handleKeychainLogin}
+                handleKeychainLogin={handleLogin}
                 dmTarget={dmTarget}
                 setDmTarget={setDmTarget}
                 creatingDm={creatingDm}
@@ -500,31 +507,33 @@ const App: React.FC = () => {
                 onSendMessage={handleSendMessage}
                 sendingMessage={sendingMessage}
                 userMap={userMap}
-                onResolveUsers={resolveUnknownUsers}
+                onResolveUsers={handleResolveUsers}
                 onEditMessage={handleEditMessage}
                 onDeleteMessage={handleDeleteMessage}
                 onToggleReaction={handleToggleReaction}
-              />
+                unreadCounts={unreadCounts}
+            />
             )}
             {currentView === AppView.APPS && (
-              <AppsView />
+            <AppsView />
             )}
             {currentView === AppView.SETTINGS && (
-              <SettingsView 
-                settings={settings}
+            <SettingsView 
+                settings={settings} 
                 updateSettings={updateSettings}
-                onLogin={handleKeychainLogin}
+                onLogin={handleLogin}
                 onLogout={handleLogout}
                 isLoggingIn={isLoggingIn}
                 loginError={loginError}
-              />
+            />
             )}
-          </div>
+        </div>
       </main>
+
       <BottomNav 
         currentView={currentView} 
         setCurrentView={setCurrentView} 
-        unreadMessages={totalUnreadMessages} 
+        unreadMessages={totalUnreadMessages}
       />
     </div>
   );

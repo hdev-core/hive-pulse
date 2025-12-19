@@ -103,19 +103,33 @@ const App: React.FC = () => {
     const totalUnread = Object.values(unreads).reduce((sum, count) => sum + count, 0);
 
     if (totalUnread > 0) {
-      const text = totalUnread > 99 ? '99+' : totalUnread.toString();
+      const text = totalUnread > 9 ? `💬9+` : `💬${totalUnread}`;
       chrome.action.setBadgeText({ text });
       chrome.action.setBadgeBackgroundColor({ color: '#3b82f6' }); // Blue for chat
     } else if (stats) {
       const metric = settings.badgeMetric || 'VP';
       const percent = metric === 'RC' ? stats.rc.percentage : stats.vp.percentage;
       const rounded = Math.round(percent);
-      chrome.action.setBadgeText({ text: `${rounded}%` });
+      const isLow = rounded < 20;
+      const icon = metric === 'RC' ? '⚡' : '👍';
       
-      let color = '#22c55e';
-      if (rounded < 20) color = '#ef4444';
-      else if (rounded < 50) color = '#f97316';
-      chrome.action.setBadgeBackgroundColor({ color });
+      // Chrome badge text is limited to ~4 characters.
+      // Emoji + 100 + % = 5 chars (cutoff). 
+      // Emoji + 99 + % = 4 chars (ok).
+      let text = `${icon}${rounded}%`;
+      if (rounded === 100) {
+        text = `${icon}${rounded}`; // Drop % at 100 to fit icon
+      }
+      
+      chrome.action.setBadgeText({ text });
+      
+      if (isLow) {
+        chrome.action.setBadgeBackgroundColor({ color: '#ef4444' }); // Red for low
+      } else {
+        // Distinct colors for VP vs RC
+        const color = metric === 'RC' ? '#a855f7' : '#10b981'; // Purple for RC, Green for VP
+        chrome.action.setBadgeBackgroundColor({ color });
+      }
     } else {
       chrome.action.setBadgeText({ text: '' });
     }
@@ -152,6 +166,7 @@ const App: React.FC = () => {
             const counts: Record<string, number> = {};
             const newReadState = { ...channelReadState };
             const currentTotals: Record<string, number> = {};
+            let stateChanged = false;
             
             unreadResp.channels.forEach(u => {
               if (u.channelId) {
@@ -161,6 +176,7 @@ const App: React.FC = () => {
                 if (newReadState[u.channelId] === undefined) {
                     newReadState[u.channelId] = currentTotal;
                     counts[u.channelId] = 0;
+                    stateChanged = true;
                 } else {
                     const diff = Math.max(0, currentTotal - newReadState[u.channelId]);
                     counts[u.channelId] = diff;
@@ -169,11 +185,14 @@ const App: React.FC = () => {
             });
 
             setUnreadCounts(counts);
-            chrome.storage.local.set({ 
+            const storagePayload: any = { 
                 unreadCounts: counts, 
-                channelReadState: newReadState,
                 channelTotals: currentTotals
-            });
+            };
+            if (stateChanged) {
+                storagePayload.channelReadState = newReadState;
+            }
+            chrome.storage.local.set(storagePayload);
           });
         }
       }
@@ -477,7 +496,6 @@ const App: React.FC = () => {
       loadActiveMessages(channel.id);
       
       if (typeof chrome !== 'undefined' && chrome.storage) {
-        // Optimistically update the UI unread state for instant feedback
         const newUnreads = { ...unreadCounts, [channel.id]: 0 };
         setUnreadCounts(newUnreads);
 

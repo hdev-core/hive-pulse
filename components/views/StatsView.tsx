@@ -51,14 +51,14 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
     }
   };
 
-  const renderGauge = (percentage: number, isLow: boolean, label: string, icon: React.ReactNode, subValue?: string) => (
+  const renderGauge = (percentage: number, isLow: boolean, label: string, icon: React.ReactNode, subValue?: string, type: 'VP' | 'RC' = 'VP') => (
     <div className="flex flex-col items-center">
       <div className="relative w-28 h-28 flex items-center justify-center mb-2">
         <svg className="w-full h-full transform -rotate-90">
           <circle cx="56" cy="56" r="48" stroke="#f1f5f9" strokeWidth="8" fill="none" />
           <circle
             cx="56" cy="56" r="48"
-            stroke={isLow ? '#ef4444' : percentage > 50 ? '#10b981' : '#f59e0b'}
+            stroke={isLow ? '#ef4444' : (type === 'RC' ? '#a855f7' : '#10b981')}
             strokeWidth="8"
             fill="none"
             strokeLinecap="round"
@@ -123,21 +123,23 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
                 accountStats.vp.isLow, 
                 'Voting Power', 
                 <ThumbsUp size={20} className={accountStats.vp.isLow ? 'text-red-500' : 'text-slate-400'} />,
-                `${(accountStats.vp.percentage).toFixed(2)}%`
+                `${(accountStats.vp.percentage).toFixed(2)}%`,
+                'VP'
               )}
               {renderGauge(
                 accountStats.rc.percentage, 
                 accountStats.rc.isLow, 
                 'Resource Credits', 
                 <Zap size={20} className={accountStats.rc.isLow ? 'text-red-500' : 'text-slate-400'} fill="currentColor" />,
-                `${formatRCNumber(accountStats.rc.current)} Mana`
+                `${formatRCNumber(accountStats.rc.current)} Mana`,
+                'RC'
               )}
             </div>
             <div className="w-full bg-slate-50 p-2 rounded-lg border border-slate-100 flex items-center justify-between">
               <span className="text-xs text-slate-500 font-medium">Extension Badge</span>
               <div className="flex bg-slate-200 rounded p-0.5">
-                 <button onClick={() => updateSettings({ badgeMetric: 'RC' })} className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${settings.badgeMetric === 'RC' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}>RC</button>
                  <button onClick={() => updateSettings({ badgeMetric: 'VP' })} className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${settings.badgeMetric === 'VP' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}>VP</button>
+                 <button onClick={() => updateSettings({ badgeMetric: 'RC' })} className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${settings.badgeMetric === 'RC' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}>RC</button>
               </div>
             </div>
           </div>

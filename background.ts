@@ -131,9 +131,19 @@ const checkStatus = async () => {
 
          const unreadMap: Record<string, number> = {};
          let totalUnread = 0;
+         const updatedReadState = { ...channelReadState };
+         let stateChanged = false;
+
          for (const ch of channels) {
             const currentTotal = currentChannelTotals[ch.id] || 0;
-            const readTotal = channelReadState[ch.id] || currentTotal;
+            
+            // Initialization baseline if not yet present in storage
+            if (updatedReadState[ch.id] === undefined) {
+               updatedReadState[ch.id] = currentTotal;
+               stateChanged = true;
+            }
+
+            const readTotal = updatedReadState[ch.id];
             const unreadCount = Math.max(0, currentTotal - readTotal);
             
             if (unreadCount > 0) {
@@ -142,10 +152,12 @@ const checkStatus = async () => {
             }
          }
          
-         await chrome.storage.local.set({ 
+         const storageUpdate: any = { 
             unreadCounts: unreadMap,
             channelTotals: currentChannelTotals
-         });
+         };
+         if (stateChanged) storageUpdate.channelReadState = updatedReadState;
+         await chrome.storage.local.set(storageUpdate);
          
          const currentMap: Record<string, number> = {};
          const notificationChannels: Channel[] = [];
@@ -180,7 +192,7 @@ const checkStatus = async () => {
          await chrome.storage.local.set({ channelState: currentMap, channels });
 
          if (totalUnread > 0) {
-           const text = totalUnread > 99 ? '99+' : totalUnread.toString();
+           const text = totalUnread > 9 ? `💬9+` : `💬${totalUnread}`;
            chrome.action.setBadgeText({ text });
            chrome.action.setBadgeBackgroundColor({ color: '#3b82f6' });
            badgeSet = true;
@@ -203,14 +215,22 @@ const checkStatus = async () => {
             const metric = settings.badgeMetric || 'VP';
             const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
             const rounded = Math.round(percent);
+            const isLow = rounded < 20;
+            const icon = metric === 'RC' ? '⚡' : '👍';
             
-            chrome.action.setBadgeText({ text: `${rounded}%` });
+            let text = `${icon}${rounded}%`;
+            if (rounded === 100) {
+                text = `${icon}${rounded}`;
+            }
             
-            let color = '#22c55e';
-            if (rounded < 20) color = '#ef4444';
-            else if (rounded < 50) color = '#f97316';
+            chrome.action.setBadgeText({ text });
             
-            chrome.action.setBadgeBackgroundColor({ color });
+            if (isLow) {
+              chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
+            } else {
+              const color = metric === 'RC' ? '#a855f7' : '#10b981';
+              chrome.action.setBadgeBackgroundColor({ color });
+            }
             badgeSet = true;
           }
       }
@@ -277,12 +297,10 @@ chrome.alarms.onAlarm.addListener((alarm: any) => {
 
 chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
   if (areaName === 'local') {
-    // If settings change (including badgeMetric), refresh immediately
     if (changes.settings) {
         setupAlarm();
         checkStatus();
     }
-    // If channelReadState or unreadCounts change, refresh badge immediately
     if (changes.channelReadState || changes.unreadCounts) {
         checkStatus();
     }

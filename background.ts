@@ -218,10 +218,8 @@ const checkStatus = async () => {
             const isLow = rounded < 20;
             const icon = metric === 'RC' ? '⚡' : '👍';
             
-            let text = `${icon}${rounded}%`;
-            if (rounded === 100) {
-                text = `${icon}${rounded}`;
-            }
+            // Remove '%' to prevent visual cutoff, icon serves as metric indicator
+            const text = `${icon}${rounded}`;
             
             chrome.action.setBadgeText({ text });
             

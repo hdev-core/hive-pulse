@@ -113,21 +113,19 @@ const App: React.FC = () => {
       const isLow = rounded < 20;
       const icon = metric === 'RC' ? '⚡' : '👍';
       
-      // Chrome badge text is limited to ~4 characters.
-      // Emoji + 100 + % = 5 chars (cutoff). 
-      // Emoji + 99 + % = 4 chars (ok).
-      let text = `${icon}${rounded}%`;
-      if (rounded === 100) {
-        text = `${icon}${rounded}`; // Drop % at 100 to fit icon
-      }
+      /**
+       * Chrome badge width is fixed. Emojis occupy a lot of space.
+       * Icon + 3 digits is the maximum reliable length (e.g., 👍100).
+       * We remove the '%' symbol to ensure the number and icon are always fully visible.
+       */
+      const text = `${icon}${rounded}`;
       
       chrome.action.setBadgeText({ text });
       
       if (isLow) {
-        chrome.action.setBadgeBackgroundColor({ color: '#ef4444' }); // Red for low
+        chrome.action.setBadgeBackgroundColor({ color: '#ef4444' }); 
       } else {
-        // Distinct colors for VP vs RC
-        const color = metric === 'RC' ? '#a855f7' : '#10b981'; // Purple for RC, Green for VP
+        const color = metric === 'RC' ? '#a855f7' : '#10b981'; 
         chrome.action.setBadgeBackgroundColor({ color });
       }
     } else {

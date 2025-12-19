@@ -96,6 +96,36 @@ const App: React.FC = () => {
   // Polling Reference
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // --- BADGE LOGIC ---
+  const updateBadge = useCallback((stats: AccountStats | null, unreads: Record<string, number>) => {
+    if (typeof chrome === 'undefined' || !chrome.action) return;
+
+    const totalUnread = Object.values(unreads).reduce((sum, count) => sum + count, 0);
+
+    if (totalUnread > 0) {
+      const text = totalUnread > 99 ? '99+' : totalUnread.toString();
+      chrome.action.setBadgeText({ text });
+      chrome.action.setBadgeBackgroundColor({ color: '#3b82f6' }); // Blue for chat
+    } else if (stats) {
+      const metric = settings.badgeMetric || 'VP';
+      const percent = metric === 'RC' ? stats.rc.percentage : stats.vp.percentage;
+      const rounded = Math.round(percent);
+      chrome.action.setBadgeText({ text: `${rounded}%` });
+      
+      let color = '#22c55e';
+      if (rounded < 20) color = '#ef4444';
+      else if (rounded < 50) color = '#f97316';
+      chrome.action.setBadgeBackgroundColor({ color });
+    } else {
+      chrome.action.setBadgeText({ text: '' });
+    }
+  }, [settings.badgeMetric]);
+
+  // Reactive badge update effect
+  useEffect(() => {
+    updateBadge(accountStats, unreadCounts);
+  }, [accountStats, unreadCounts, updateBadge]);
+
   // --- REFRESH CHAT ---
   const refreshChat = async () => {
     if (!settings.ecencyUsername) return;
@@ -288,19 +318,6 @@ const App: React.FC = () => {
   };
 
   const updateBadgeFromData = (data: AccountStats) => {
-    if (typeof chrome !== 'undefined' && chrome.action) {
-       // Only update badge if there are no chat unreads
-       if (totalUnreadMessages === 0) {
-           const metric = settings.badgeMetric || 'VP';
-           const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
-           const rounded = Math.round(percent);
-           chrome.action.setBadgeText({ text: `${rounded}%` });
-           let color = '#22c55e';
-           if (rounded < 20) color = '#ef4444';
-           else if (rounded < 50) color = '#f97316';
-           chrome.action.setBadgeBackgroundColor({ color });
-       }
-    }
     setAccountStats(data);
   };
 
@@ -460,35 +477,20 @@ const App: React.FC = () => {
       loadActiveMessages(channel.id);
       
       if (typeof chrome !== 'undefined' && chrome.storage) {
+        // Optimistically update the UI unread state for instant feedback
+        const newUnreads = { ...unreadCounts, [channel.id]: 0 };
+        setUnreadCounts(newUnreads);
+
         chrome.storage.local.get(['channelTotals', 'channelReadState'], (result: any) => {
           const totals = result.channelTotals || {};
           const readState = result.channelReadState || {};
-          
-          // Get current absolute total from recently fetched state or channel object
           const currentTotal = totals[channel.id] || channel.total_msg_count || 0;
-          
-          // Commit new read point to storage so background script sees it as read
           const updatedReadState = { ...readState, [channel.id]: currentTotal };
-          
-          // Optimistically clear unreads for this channel in UI
-          const newUnreads = { ...unreadCounts, [channel.id]: 0 };
-          setUnreadCounts(newUnreads);
-
-          // Calculate total remaining across all channels
-          const totalRemaining = Object.values(newUnreads).reduce((a, b) => a + b, 0);
           
           chrome.storage.local.set({ 
               channelReadState: updatedReadState,
               unreadCounts: newUnreads
           });
-
-          // Immediate badge cleanup if everything is read
-          if (totalRemaining === 0) {
-              chrome.action.setBadgeText({ text: '' });
-          } else {
-              const text = totalRemaining > 99 ? '99+' : totalRemaining.toString();
-              chrome.action.setBadgeText({ text });
-          }
         });
       }
     }

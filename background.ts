@@ -59,16 +59,10 @@ const checkStatus = async () => {
     const lastChannelState: Record<string, number> = stored.channelState || {};
     const channelReadState: Record<string, number> = stored.channelReadState || {};
 
-    if (!settings.notificationsEnabled) {
-      await chrome.storage.local.set({ unreadCounts: {} });
-      chrome.action.setBadgeText({ text: '' });
-      return;
-    };
-
     let badgeSet = false;
     let authFailed = false;
 
-    if (settings.ecencyUsername) {
+    if (settings.notificationsEnabled && settings.ecencyUsername) {
        let tokenToUse = settings.ecencyChatToken;
        
        let channels = await fetchChannels(tokenToUse);
@@ -166,7 +160,6 @@ const checkStatus = async () => {
              if (ch.last_post_at > prevLastPost) {
                  currentMap[ch.id] = ch.last_post_at;
 
-                 // Only notify if we have new unreads since last check and it's not our own msg
                  if (!isFirstRun && count > 0) {
                      try {
                          const { messages } = await fetchChannelPosts(ch.id, tokenToUse, 1);
@@ -284,16 +277,13 @@ chrome.alarms.onAlarm.addListener((alarm: any) => {
 
 chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
   if (areaName === 'local') {
+    // If settings change (including badgeMetric), refresh immediately
     if (changes.settings) {
-        const oldEn = changes.settings.oldValue?.notificationsEnabled;
-        const newEn = changes.settings.newValue?.notificationsEnabled;
-        if (oldEn !== newEn) {
-            setupAlarm();
-            if (newEn) checkStatus();
-        }
+        setupAlarm();
+        checkStatus();
     }
-    // If channelReadState changes (meaning user read messages in popup), trigger a status refresh
-    if (changes.channelReadState) {
+    // If channelReadState or unreadCounts change, refresh badge immediately
+    if (changes.channelReadState || changes.unreadCounts) {
         checkStatus();
     }
   }

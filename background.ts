@@ -1,6 +1,6 @@
+
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
 import { fetchAccountStats } from './utils/hiveHelpers';
-// Fixed error: Removed fetchMyChannelMembers as it is not exported from ecencyHelpers and is unused
 import { 
   fetchChannels, 
   bootstrapEcencyChat, 
@@ -139,7 +139,7 @@ const checkStatus = async () => {
          let totalUnread = 0;
          for (const ch of channels) {
             const currentTotal = currentChannelTotals[ch.id] || 0;
-            const readTotal = channelReadState[ch.id] || currentTotal; // On first run, assume all are read
+            const readTotal = channelReadState[ch.id] || currentTotal;
             const unreadCount = Math.max(0, currentTotal - readTotal);
             
             if (unreadCount > 0) {
@@ -154,42 +154,33 @@ const checkStatus = async () => {
          });
          
          const currentMap: Record<string, number> = {};
-         const updates: Channel[] = [];
+         const notificationChannels: Channel[] = [];
 
          for (const ch of channels) {
              const count = unreadMap[ch.id] || 0;
              ch.unread_count = count;
 
-             const prev = lastChannelState[ch.id] || 0;
-             const isFirstRunOrMigration = prev < 1000000000000;
+             const prevLastPost = lastChannelState[ch.id] || 0;
+             const isFirstRun = prevLastPost < 1000000;
 
-             if (ch.last_post_at > prev) {
+             if (ch.last_post_at > prevLastPost) {
                  currentMap[ch.id] = ch.last_post_at;
 
-                 if (!isFirstRunOrMigration && count > 0) {
+                 // Only notify if we have new unreads since last check and it's not our own msg
+                 if (!isFirstRun && count > 0) {
                      try {
                          const { messages } = await fetchChannelPosts(ch.id, tokenToUse, 1);
-                         
                          if (messages && messages.length > 0) {
                              const lastMsg = messages[messages.length - 1]; 
-                             
-                             let isMe = false;
-                             if (settings.ecencyUserId && lastMsg.user_id === settings.ecencyUserId) {
-                                isMe = true;
-                             }
-
-                             if (!isMe) {
-                                 updates.push(ch);
-                             }
-                         } else {
-                             updates.push(ch);
+                             const isMe = settings.ecencyUserId === lastMsg.user_id;
+                             if (!isMe) notificationChannels.push(ch);
                          }
                      } catch (e) {
-                         updates.push(ch);
+                         notificationChannels.push(ch);
                      }
                  }
              } else {
-                 currentMap[ch.id] = Math.max(prev, ch.last_post_at);
+                 currentMap[ch.id] = prevLastPost;
              }
          }
 
@@ -202,8 +193,8 @@ const checkStatus = async () => {
            badgeSet = true;
          }
 
-         if (updates.length > 0) {
-             handleNotifications(updates, settings.ecencyUserId);
+         if (notificationChannels.length > 0) {
+             handleNotifications(notificationChannels, settings.ecencyUserId);
          }
        }
     }
@@ -261,8 +252,6 @@ const getChannelName = (channel: Channel, myId?: string) => {
 
 const handleNotifications = (channels: Channel[], myId?: string) => {
     const iconPath = chrome.runtime.getURL('icon.png');
-    console.log('[HivePulse] Triggering Notification with icon:', iconPath);
-
     if (channels.length === 1) {
         const ch = channels[0];
         const name = getChannelName(ch, myId);
@@ -274,10 +263,6 @@ const handleNotifications = (channels: Channel[], myId?: string) => {
             message: `You have new messages from ${name}.`,
             priority: 2,
             requireInteraction: true 
-        }, (id) => {
-           if (chrome.runtime.lastError) {
-             console.error("Notification Error:", chrome.runtime.lastError);
-           }
         });
     } else {
         chrome.notifications.create(`chat:group:${Date.now()}`, {
@@ -298,15 +283,18 @@ chrome.alarms.onAlarm.addListener((alarm: any) => {
 });
 
 chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
-  if (areaName === 'local' && changes.settings) {
-    const oldInt = changes.settings.oldValue?.notificationInterval;
-    const newInt = changes.settings.newValue?.notificationInterval;
-    const oldEn = changes.settings.oldValue?.notificationsEnabled;
-    const newEn = changes.settings.newValue?.notificationsEnabled;
-
-    if (oldInt !== newInt || oldEn !== newEn) {
-        setupAlarm();
-        if (newEn && !oldEn) checkStatus();
+  if (areaName === 'local') {
+    if (changes.settings) {
+        const oldEn = changes.settings.oldValue?.notificationsEnabled;
+        const newEn = changes.settings.newValue?.notificationsEnabled;
+        if (oldEn !== newEn) {
+            setupAlarm();
+            if (newEn) checkStatus();
+        }
+    }
+    // If channelReadState changes (meaning user read messages in popup), trigger a status refresh
+    if (changes.channelReadState) {
+        checkStatus();
     }
   }
 });
@@ -340,7 +328,6 @@ chrome.tabs.onUpdated.addListener(async (tabId: number, changeInfo: any, tab: an
       );
 
       if (newUrl && newUrl !== tab.url) {
-        console.log(`[HivePulse] Redirecting to ${settings.preferredFrontendId}`);
         chrome.tabs.update(tabId, { url: newUrl });
       }
     }

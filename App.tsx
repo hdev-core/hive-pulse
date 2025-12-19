@@ -121,10 +121,13 @@ const App: React.FC = () => {
             const channelReadState = result.channelReadState || {};
             const counts: Record<string, number> = {};
             const newReadState = { ...channelReadState };
+            const currentTotals: Record<string, number> = {};
             
             unreadResp.channels.forEach(u => {
               if (u.channelId) {
                 const currentTotal = u.message_count || 0;
+                currentTotals[u.channelId] = currentTotal;
+
                 if (newReadState[u.channelId] === undefined) {
                     newReadState[u.channelId] = currentTotal;
                     counts[u.channelId] = 0;
@@ -138,7 +141,8 @@ const App: React.FC = () => {
             setUnreadCounts(counts);
             chrome.storage.local.set({ 
                 unreadCounts: counts, 
-                channelReadState: newReadState
+                channelReadState: newReadState,
+                channelTotals: currentTotals
             });
           });
         }
@@ -198,7 +202,6 @@ const App: React.FC = () => {
           }
           
           setActiveMessages(prev => {
-            // Only trigger a state update if the data has actually changed
             if (prev.length === messages.length && 
                 prev.length > 0 && 
                 prev[prev.length - 1].id === messages[messages.length - 1].id &&
@@ -286,14 +289,17 @@ const App: React.FC = () => {
 
   const updateBadgeFromData = (data: AccountStats) => {
     if (typeof chrome !== 'undefined' && chrome.action) {
-       const metric = settings.badgeMetric || 'VP';
-       const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
-       const rounded = Math.round(percent);
-       chrome.action.setBadgeText({ text: `${rounded}%` });
-       let color = '#22c55e';
-       if (rounded < 20) color = '#ef4444';
-       else if (rounded < 50) color = '#f97316';
-       chrome.action.setBadgeBackgroundColor({ color });
+       // Only update badge if there are no chat unreads
+       if (totalUnreadMessages === 0) {
+           const metric = settings.badgeMetric || 'VP';
+           const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
+           const rounded = Math.round(percent);
+           chrome.action.setBadgeText({ text: `${rounded}%` });
+           let color = '#22c55e';
+           if (rounded < 20) color = '#ef4444';
+           else if (rounded < 50) color = '#f97316';
+           chrome.action.setBadgeBackgroundColor({ color });
+       }
     }
     setAccountStats(data);
   };
@@ -365,6 +371,9 @@ const App: React.FC = () => {
     setChannels([]);
     setActiveChannel(null);
     setActiveMessages([]);
+    if (typeof chrome !== 'undefined' && chrome.action) {
+        chrome.action.setBadgeText({ text: '' });
+    }
   };
 
   const handleSendMessage = async (text: string) => {
@@ -447,16 +456,39 @@ const App: React.FC = () => {
   const handleSelectChannel = (channel: Channel | null) => {
     setActiveChannel(channel);
     if (channel) {
-      // Clear previous messages immediately to avoid flicker and show loader
       setActiveMessages([]);
       loadActiveMessages(channel.id);
       
       if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.get(['channelReadState'], (result: any) => {
+        chrome.storage.local.get(['channelTotals', 'channelReadState'], (result: any) => {
+          const totals = result.channelTotals || {};
           const readState = result.channelReadState || {};
-          // We don't have the current message count here easily, but heartbeat will sync it
-          // Setting unread count locally for immediate feedback
-          setUnreadCounts(prev => ({ ...prev, [channel.id]: 0 }));
+          
+          // Get current absolute total from recently fetched state or channel object
+          const currentTotal = totals[channel.id] || channel.total_msg_count || 0;
+          
+          // Commit new read point to storage so background script sees it as read
+          const updatedReadState = { ...readState, [channel.id]: currentTotal };
+          
+          // Optimistically clear unreads for this channel in UI
+          const newUnreads = { ...unreadCounts, [channel.id]: 0 };
+          setUnreadCounts(newUnreads);
+
+          // Calculate total remaining across all channels
+          const totalRemaining = Object.values(newUnreads).reduce((a, b) => a + b, 0);
+          
+          chrome.storage.local.set({ 
+              channelReadState: updatedReadState,
+              unreadCounts: newUnreads
+          });
+
+          // Immediate badge cleanup if everything is read
+          if (totalRemaining === 0) {
+              chrome.action.setBadgeText({ text: '' });
+          } else {
+              const text = totalRemaining > 99 ? '99+' : totalRemaining.toString();
+              chrome.action.setBadgeText({ text });
+          }
         });
       }
     }

@@ -581,21 +581,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </button>
       </div>
 
-      <div className="mb-4 flex items-center gap-3 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
-          <div className="relative">
-             <Avatar 
-                url={getAvatarUrl(currentUsername)} 
-                alt={currentUsername || ''} 
-                className="w-10 h-10 rounded-full bg-white shadow-sm object-cover" 
-             />
-             <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full shadow-sm"></div>
-          </div>
-          <div className="flex-1">
-             <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-600/80">Logged In As</span>
-             <div className="font-bold text-slate-900 text-sm">@{currentUsername}</div>
-          </div>
-      </div>
-
       {chatSessionExpired && (
          <div className="mb-4 bg-red-50 border border-red-100 p-3 rounded-lg flex flex-col gap-2">
             <p className="text-xs text-red-600 font-medium">Session expired. Please re-verify.</p>

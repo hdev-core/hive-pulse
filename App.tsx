@@ -356,41 +356,101 @@ const App: React.FC = () => {
     }
     setIsLoggingIn(true);
     setLoginError(null);
+
     try {
       const payload = createEcencyLoginPayload(settings.ecencyUsername);
-      if (typeof window.hive_keychain !== 'undefined') {
-        window.hive_keychain.requestSignBuffer(
-          settings.ecencyUsername,
-          JSON.stringify(payload),
-          'Posting',
-          async (response: any) => {
-            if (response.success) {
-              const token = createEcencyToken(payload, response.result);
-              const bootstrap = await bootstrapEcencyChat(settings.ecencyUsername, token);
-              if (bootstrap && bootstrap.token) {
-                updateSettings({
-                  ecencyAccessToken: token,
-                  ecencyChatToken: bootstrap.token,
-                  ecencyUserId: bootstrap.userId,
-                  ecencyRefreshToken: bootstrap.refreshToken
-                });
-                setChatSessionExpired(false);
-                refreshChat();
-              } else {
-                setLoginError("Failed to bootstrap chat session.");
-              }
-            } else {
-              setLoginError(response.message || "Login failed");
-            }
-            setIsLoggingIn(false);
-          }
-        );
-      } else {
-        setLoginError("Hive Keychain not found.");
-        setIsLoggingIn(false);
+      const messageStr = JSON.stringify(payload);
+
+      // Helper to try login via Script Injection (Extension) or direct (Web)
+      const performLogin = () => new Promise<any>((resolve, reject) => {
+         if (typeof chrome !== 'undefined' && chrome.scripting) {
+            chrome.tabs.query({ active: true, currentWindow: true }, async (tabs: any[]) => {
+               if (!tabs || tabs.length === 0 || !tabs[0].id) {
+                  reject("No active tab found. Please open a website.");
+                  return;
+               }
+               try {
+                   // Inject script into MAIN world to access window.hive_keychain
+                   const results = await chrome.scripting.executeScript({
+                       target: { tabId: tabs[0].id },
+                       world: 'MAIN',
+                       func: (u: string, m: string) => {
+                           return new Promise((res) => {
+                               const win = window as any;
+                               if (typeof win.hive_keychain === 'undefined') {
+                                   res({ success: false, error: 'KEYCHAIN_NOT_FOUND' });
+                                   return;
+                               }
+                               try {
+                                   win.hive_keychain.requestSignBuffer(
+                                       u, m, 'Posting',
+                                       (resp: any) => res({ success: true, result: resp })
+                                   );
+                               } catch (err: any) {
+                                   res({ success: false, error: err.message || 'KEYCHAIN_EXCEPTION' });
+                               }
+                           });
+                       },
+                       args: [settings.ecencyUsername!, messageStr]
+                   });
+                   
+                   if (results && results[0] && results[0].result) {
+                       resolve(results[0].result);
+                   } else {
+                       // If result is null/undefined, it usually means the script returned undefined or failed silently
+                       reject("Script execution returned no result. Refresh page?");
+                   }
+               } catch (e: any) {
+                   reject(e.message || "Script injection failed.");
+               }
+            });
+         } else if (typeof window.hive_keychain !== 'undefined') {
+            // Fallback for Web Mode
+            window.hive_keychain.requestSignBuffer(
+               settings.ecencyUsername,
+               messageStr,
+               'Posting',
+               (resp: any) => resolve({ success: true, result: resp })
+            );
+         } else {
+            reject("Hive Keychain not found.");
+         }
+      });
+
+      const wrapperResp = await performLogin();
+
+      if (!wrapperResp.success) {
+         if (wrapperResp.error === 'KEYCHAIN_NOT_FOUND') {
+            setLoginError("Hive Keychain not detected. Is it installed and unlocked?");
+         } else {
+            setLoginError(wrapperResp.error || "Login communication failed.");
+         }
+         return;
       }
-    } catch (e) {
-      setLoginError("An unexpected error occurred.");
+
+      const response = wrapperResp.result;
+
+      if (response.success) {
+        const token = createEcencyToken(payload, response.result);
+        const bootstrap = await bootstrapEcencyChat(settings.ecencyUsername, token);
+        if (bootstrap && bootstrap.token) {
+          updateSettings({
+            ecencyAccessToken: token,
+            ecencyChatToken: bootstrap.token,
+            ecencyUserId: bootstrap.userId,
+            ecencyRefreshToken: bootstrap.refreshToken
+          });
+          setChatSessionExpired(false);
+          refreshChat();
+        } else {
+          setLoginError("Failed to bootstrap chat session.");
+        }
+      } else {
+        setLoginError(response.message || "Login failed");
+      }
+    } catch (e: any) {
+      setLoginError(typeof e === 'string' ? e : "An unexpected error occurred.");
+    } finally {
       setIsLoggingIn(false);
     }
   };
@@ -522,7 +582,11 @@ const App: React.FC = () => {
 
   return (
     <div className="w-[380px] h-[600px] flex flex-col bg-slate-50 overflow-hidden font-sans border border-slate-200">
-      <Header />
+      <Header 
+        username={settings.ecencyAccessToken ? settings.ecencyUsername : null}
+        onLoginClick={() => setCurrentView(AppView.SETTINGS)}
+        onLogoutClick={handleLogout}
+      />
       
       <main className="flex-1 overflow-hidden relative flex flex-col">
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4">

@@ -50,7 +50,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   ecencyAccessToken: '',
   ecencyChatToken: '',
   ecencyUserId: '',
-  ecencyRefreshToken: ''
+  ecencyRefreshToken: '',
+  overrideBadgeWithUnreadMessages: true
 };
 
 const App: React.FC = () => {
@@ -102,7 +103,9 @@ const App: React.FC = () => {
 
     const totalUnread = Object.values(unreads).reduce((sum, count) => sum + count, 0);
 
-    if (totalUnread > 0) {
+    // If overrideBadgeWithUnreadMessages is true, prioritize unread messages
+    // Otherwise, skip message badge and go straight to stats badge logic
+    if (settings.overrideBadgeWithUnreadMessages && totalUnread > 0) {
       const text = totalUnread > 9 ? `💬9+` : `💬${totalUnread}`;
       chrome.action.setBadgeText({ text });
       chrome.action.setBadgeBackgroundColor({ color: '#3b82f6' }); // Blue for chat
@@ -131,7 +134,7 @@ const App: React.FC = () => {
     } else {
       chrome.action.setBadgeText({ text: '' });
     }
-  }, [settings.badgeMetric]);
+  }, [settings.badgeMetric, settings.overrideBadgeWithUnreadMessages]);
 
   // Reactive badge update effect
   useEffect(() => {

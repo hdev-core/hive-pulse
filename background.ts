@@ -26,7 +26,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   ecencyUsername: '',
   ecencyAccessToken: '',
   ecencyChatToken: '',
-  ecencyRefreshToken: ''
+  ecencyRefreshToken: '',
+  overrideBadgeWithUnreadMessages: true
 };
 
 const setupAlarm = async () => {
@@ -191,7 +192,7 @@ const checkStatus = async () => {
 
          await chrome.storage.local.set({ channelState: currentMap, channels });
 
-         if (totalUnread > 0) {
+         if (settings.overrideBadgeWithUnreadMessages && totalUnread > 0) {
            const text = totalUnread > 9 ? `💬9+` : `💬${totalUnread}`;
            chrome.action.setBadgeText({ text });
            chrome.action.setBadgeBackgroundColor({ color: '#3b82f6' });

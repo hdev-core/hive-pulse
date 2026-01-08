@@ -174,24 +174,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* General Behavior */}
       <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
         <span className="font-semibold text-sm text-slate-800 block mb-3">General Behavior</span>
-        <label className="flex items-center justify-between cursor-pointer mb-3">
-          <span className="text-sm text-slate-600">Open links in new tab</span>
-          <input 
-            type="checkbox" 
-            checked={settings.openInNewTab} 
-            onChange={(e) => updateSettings({ openInNewTab: e.target.checked })}
-            className="accent-emerald-500 w-4 h-4"
-          />
-        </label>
-        
-        {/* Show saved RC user in settings */}
-        <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-           <span className="text-sm text-slate-600">Monitored User (Stats)</span>
-           <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
-             {settings.rcUser || 'None'}
-           </span>
-        </div>
-      </section>
+                <label className="flex items-center justify-between cursor-pointer mb-3">
+                  <span className="text-sm text-slate-600">Open links in new tab</span>
+                  <input
+                    type="checkbox"
+                    checked={settings.openInNewTab}
+                    onChange={(e) => updateSettings({ openInNewTab: e.target.checked })}
+                    className="accent-emerald-500 w-4 h-4"
+                  />
+                </label>
+                
+                <label className="flex items-center justify-between cursor-pointer mb-3">
+                  <span className="text-sm text-slate-600">Prioritize unread message badge</span>
+                  <input 
+                    type="checkbox" 
+                    checked={settings.overrideBadgeWithUnreadMessages} 
+                    onChange={(e) => updateSettings({ overrideBadgeWithUnreadMessages: e.target.checked })}
+                    className="accent-emerald-500 w-4 h-4"
+                  />
+                </label>
+                
+                {/* Show saved RC user in settings */}
+                <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                   <span className="text-sm text-slate-600">Monitored User (Stats)</span>
+                   <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                     {settings.rcUser || 'None'}
+                   </span>
+                </div>      </section>
 
     </div>
   );

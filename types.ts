@@ -73,6 +73,7 @@ export interface AppSettings {
   ecencyChatToken?: string;   // Mattermost token (for chat)
   ecencyUserId?: string;      // Internal Mattermost User ID (for reliable 'isMe' check)
   ecencyRefreshToken?: string;
+  overrideBadgeWithUnreadMessages: boolean;
 }
 
 export interface AccountStats {

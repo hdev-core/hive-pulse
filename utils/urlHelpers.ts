@@ -1,32 +1,42 @@
 
 import { FRONTENDS, GENERIC_HIVE_PATH_REGEX, USERNAME_REGEX } from '../constants';
-import { FrontendId, CurrentTabState, ActionMode } from '../types';
+import { FrontendId, CurrentTabState, ActionMode, FrontendConfig } from '../types';
+
+// Regex to extract author and permlink from a Hive post URL (e.g., /@author/permlink)
+export const AUTHOR_PERMLINK_REGEX = /\/@([a-z0-9.-]+)\/([a-z0-9-]+)/;
 
 /**
  * Parses a URL string to determine if it belongs to a known Hive frontend
- * and extracts the relevant path and username.
+ * and extracts the relevant path, username, author, and permlink.
  */
 export const parseUrl = (urlString: string): CurrentTabState => {
   try {
     const url = new URL(urlString);
     const hostname = url.hostname.replace('www.', '');
 
+    // Note: We cannot rely on FRONTENDS here because custom frontends are dynamic.
+    // This function focuses on parsing the URL structure itself.
     const detectedFrontend = FRONTENDS.find(
       (f) => f.domain === hostname || f.aliases.includes(hostname)
     );
 
-    const matchesHivePath = GENERIC_HIVE_PATH_REGEX.test(url.pathname);
-    
     // Extract username if present (e.g. /@alice/...)
     const userMatch = url.pathname.match(USERNAME_REGEX);
     const username = userMatch ? userMatch[1] : null;
+
+    // Extract author and permlink if present (e.g. /@author/permlink)
+    const postMatch = url.pathname.match(AUTHOR_PERMLINK_REGEX);
+    const author = postMatch ? postMatch[1] : null;
+    const permlink = postMatch ? postMatch[2] : null;
     
     return {
       url: urlString,
-      isHiveUrl: !!detectedFrontend,
+      isHiveUrl: !!detectedFrontend || (!!username || (!!author && !!permlink)), // Consider it a Hive URL if a user or post is detected
       detectedFrontendId: detectedFrontend ? detectedFrontend.id : null,
       path: url.pathname + url.search + url.hash,
-      username
+      username,
+      author,
+      permlink,
     };
   } catch (e) {
     return {
@@ -34,51 +44,110 @@ export const parseUrl = (urlString: string): CurrentTabState => {
       isHiveUrl: false,
       detectedFrontendId: null,
       path: '',
-      username: null
+      username: null,
+      author: null,
+      permlink: null,
     };
   }
+};
+
+interface LinkTemplateArgs {
+  author?: string | null;
+  permlink?: string | null;
+  username?: string | null;
+}
+
+/**
+ * Resolves placeholders in a link template string.
+ */
+const resolveLinkTemplate = (template: string, args: LinkTemplateArgs): string => {
+  let resolved = template;
+  if (args.author) resolved = resolved.replace(/{{author}}/g, args.author);
+  if (args.permlink) resolved = resolved.replace(/{{permlink}}/g, args.permlink);
+  if (args.username) resolved = resolved.replace(/{{username}}/g, args.username);
+  return resolved;
 };
 
 /**
  * Generates a new URL for the target frontend based on mode.
  */
 export const getTargetUrl = (
-  targetId: FrontendId, 
-  currentPath: string, 
+  targetId: FrontendId | string,
+  currentPath: string, // Not directly used for custom frontends, but kept for compatibility
   mode: ActionMode,
-  username: string | null
+  username: string | null,
+  author: string | null, // New parameter
+  permlink: string | null, // New parameter
+  allFrontends: FrontendConfig[] // New parameter to include custom frontends
 ): string => {
-  const targetConfig = FRONTENDS.find((f) => f.id === targetId);
+  const targetConfig = allFrontends.find((f) => f.id === targetId);
   
   if (!targetConfig) {
-    return '#';
+    return '#'; // Fallback for unknown frontend
   }
 
-  let finalPath = currentPath;
+  let finalPath = '';
+  let targetDomain = targetConfig.domain;
 
-  if (mode === ActionMode.COMPOSE) {
-    finalPath = targetConfig.paths.compose;
-  } else if (mode === ActionMode.WALLET) {
-    // If we detected a username in the current URL, use it.
-    // Otherwise, generate a generic wallet link (which usually prompts login or goes to own wallet)
-    finalPath = targetConfig.paths.wallet(username || undefined);
-  }
+  if (targetConfig.isCustom && targetConfig.linkStructure) {
+    targetDomain = targetConfig.customDomain || targetConfig.domain; // Use customDomain if available
 
-  // Ensure no double slashes if path starts with /
-  if (finalPath.startsWith('/') && targetConfig.domain.endsWith('/')) {
-    finalPath = finalPath.substring(1);
-  }
+    const templateArgs = { author, permlink, username };
 
-  // Special handling for Hive.blog's dedicated wallet subdomain
-  if (targetId === FrontendId.HIVEBLOG) {
-    const isWalletAction = mode === ActionMode.WALLET;
-    // Check for common wallet-related paths if doing a same-page switch
-    const isWalletPath = /\/@[\w.-]+\/(transfers|permissions|password|wallet)/.test(finalPath);
-    
-    if (isWalletAction || isWalletPath) {
-      return `https://wallet.hive.blog${finalPath}`;
+    switch (mode) {
+      case ActionMode.COMPOSE:
+        finalPath = targetConfig.paths.compose; // Custom frontends might not have custom compose paths
+        break;
+      case ActionMode.WALLET:
+        finalPath = resolveLinkTemplate(targetConfig.linkStructure.wallet, templateArgs);
+        break;
+      case ActionMode.SAME_PAGE:
+        // Attempt to convert current path using custom link structure
+        // This is a simplified approach; a more robust solution would involve
+        // parsing the current path and matching it against *all* known link structures
+        // to determine if it's a post, profile, etc., and then reconstructing.
+        // For now, if we have author/permlink, assume it's a post.
+        if (author && permlink && targetConfig.linkStructure.post) {
+            finalPath = resolveLinkTemplate(targetConfig.linkStructure.post, templateArgs);
+        } else if (username && targetConfig.linkStructure.profile) {
+            finalPath = resolveLinkTemplate(targetConfig.linkStructure.profile, templateArgs);
+        } else {
+            // Fallback to original path if not a recognized post/profile structure
+            finalPath = currentPath;
+        }
+        break;
+      default:
+        finalPath = currentPath;
+        break;
+    }
+  } else {
+    // Existing logic for predefined frontends
+    if (mode === ActionMode.COMPOSE) {
+      finalPath = targetConfig.paths.compose;
+    } else if (mode === ActionMode.WALLET) {
+      finalPath = targetConfig.paths.wallet(username || undefined);
+    } else { // ActionMode.SAME_PAGE
+      finalPath = currentPath;
+    }
+
+    // Special handling for Hive.blog's dedicated wallet subdomain
+    if (targetConfig.id === FrontendId.HIVEBLOG) {
+      const isWalletAction = mode === ActionMode.WALLET;
+      const isWalletPath = /\/@[\w.-]+\/(transfers|permissions|password|wallet)/.test(finalPath);
+      
+      if (isWalletAction || isWalletPath) {
+        return `https://wallet.hive.blog${finalPath}`;
+      }
     }
   }
 
-  return `https://${targetConfig.domain}${finalPath}`;
+  // Ensure no double slashes if path starts with /
+  if (finalPath.startsWith('/') && targetDomain.endsWith('/')) {
+    finalPath = finalPath.substring(1);
+  } else if (!finalPath.startsWith('/') && !targetDomain.endsWith('/')) {
+    finalPath = `/${finalPath}`; // Add leading slash if missing for a clean URL
+  }
+
+
+  return `https://${targetDomain}${finalPath}`;
 };

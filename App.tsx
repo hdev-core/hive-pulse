@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
 import { fetchAccountStats } from './utils/hiveHelpers';
 import { 
@@ -53,7 +53,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   ecencyUserId: '',
   ecencyRefreshToken: '',
   overrideBadgeWithUnreadMessages: true,
-  activeFrontendIds: FRONTENDS.map(f => f.id) // Initialize with all frontend IDs
+  activeFrontendIds: FRONTENDS.map(f => f.id), // Initialize with all frontend IDs
+  customFrontends: [], // Initialize with an empty array for custom frontends
 };
 
 const App: React.FC = () => {
@@ -343,8 +344,18 @@ const App: React.FC = () => {
     setAccountStats(data);
   };
 
-  const handleSwitch = (id: FrontendId, mode: ActionMode) => {
-    const url = getTargetUrl(id, tabState.path, mode, tabState.username);
+  const allFrontends = useMemo(() => [...FRONTENDS, ...settings.customFrontends], [settings.customFrontends]);
+
+  const handleSwitch = (id: FrontendId | string, mode: ActionMode) => {
+    const url = getTargetUrl(
+      id,
+      tabState.path,
+      mode,
+      tabState.username,
+      tabState.author, // New parameter
+      tabState.permlink, // New parameter
+      allFrontends // New parameter
+    );
     if (settings.openInNewTab) {
       window.open(url, '_blank');
     } else if (typeof chrome !== 'undefined' && chrome.tabs) {
@@ -619,11 +630,9 @@ const App: React.FC = () => {
             <SwitcherView 
               tabState={tabState} 
               onSwitch={handleSwitch} 
-              frontendsList={settings.activeFrontendIds
-                .map(id => FRONTENDS.find(f => f.id === id))
-                .filter(Boolean)
-              }
-              updateSettings={updateSettings} // Pass updateSettings to SwitcherView
+              allFrontends={allFrontends} // Pass all frontends
+              updateSettings={updateSettings}
+              settings={settings} // Pass settings for filtering active frontends
             />
             )}
             {currentView === AppView.SHARE && (
@@ -672,7 +681,7 @@ const App: React.FC = () => {
                 onLogout={handleLogout}
                 isLoggingIn={isLoggingIn}
                 loginError={loginError}
-                allFrontends={FRONTENDS} // Pass the full FRONTENDS array
+                allFrontends={[...FRONTENDS, ...settings.customFrontends]} // Combine predefined and custom frontends
             />
             )}
         </div>

@@ -6,15 +6,19 @@ import { Link as LinkIcon, Wallet, PenLine } from 'lucide-react';
 
 interface SwitcherViewProps {
   tabState: CurrentTabState;
-  onSwitch: (id: FrontendId, mode: ActionMode) => void;
-  frontendsList: FrontendConfig[]; // New prop for filtered/ordered frontends
-  updateSettings: (s: Partial<AppSettings>) => void; // New prop for updating settings
+  onSwitch: (id: FrontendId | string, mode: ActionMode) => void; // Updated id type
+  allFrontends: FrontendConfig[]; // Changed from frontendsList
+  updateSettings: (s: Partial<AppSettings>) => void;
+  settings: AppSettings; // Added settings prop
 }
 
-export const SwitcherView: React.FC<SwitcherViewProps> = ({ tabState, onSwitch, frontendsList, updateSettings }) => {
+export const SwitcherView: React.FC<SwitcherViewProps> = ({ tabState, onSwitch, allFrontends, updateSettings, settings }) => {
   const [actionMode, setActionMode] = useState<ActionMode>(ActionMode.SAME_PAGE);
 
-  const detectedFrontend = frontendsList.find(f => f.id === tabState.detectedFrontendId);
+  // Filter allFrontends based on activeFrontendIds from settings
+  const displayFrontends = allFrontends.filter(f => settings.activeFrontendIds.includes(f.id));
+
+  const detectedFrontend = displayFrontends.find(f => f.id === tabState.detectedFrontendId);
   const detectedName = detectedFrontend ? detectedFrontend.name : 'Unknown';
 
   const MODES = [
@@ -89,7 +93,7 @@ export const SwitcherView: React.FC<SwitcherViewProps> = ({ tabState, onSwitch, 
       </div>
 
       <div className="flex flex-col gap-2">
-        {frontendsList.map((frontend) => (
+        {displayFrontends.map((frontend) => (
           <FrontendCard 
             key={frontend.id}
             config={frontend}

@@ -30,8 +30,15 @@ export interface PathConfig {
   wallet: (username?: string) => string;
 }
 
+export interface LinkStructureConfig {
+  post: string; // e.g., "/@{{author}}/{{permlink}}"
+  profile: string; // e.g., "/@{{username}}"
+  wallet: string; // e.g., "/@{{username}}/wallet"
+  // Add other link types as needed
+}
+
 export interface FrontendConfig {
-  id: FrontendId;
+  id: FrontendId | string; // Allow string for custom frontend IDs
   name: string;
   domain: string;
   aliases: string[];
@@ -40,14 +47,20 @@ export interface FrontendConfig {
   description: string;
   paths: PathConfig;
   active: boolean; // Added active property
+  isCustom?: boolean; // Flag for custom frontends
+  logoUrl?: string; // URL for custom logo
+  customDomain?: string; // Optional custom domain for custom frontends
+  linkStructure?: LinkStructureConfig; // Link structure for custom frontends
 }
 
 export interface CurrentTabState {
   url: string;
   isHiveUrl: boolean;
-  detectedFrontendId: FrontendId | null;
+  detectedFrontendId: FrontendId | string | null; // Allow string for custom frontend IDs
   path: string;
   username: string | null;
+  author: string | null;
+  permlink: string | null;
 }
 
 export interface DAppConfig {
@@ -60,7 +73,7 @@ export interface DAppConfig {
 
 export interface AppSettings {
   autoRedirect: boolean;
-  preferredFrontendId: FrontendId;
+  preferredFrontendId: FrontendId | string; // Allow string for custom frontend IDs
   openInNewTab: boolean;
   
   // Notification Settings
@@ -75,7 +88,8 @@ export interface AppSettings {
   ecencyUserId?: string;      // Internal Mattermost User ID (for reliable 'isMe' check)
   ecencyRefreshToken?: string;
   overrideBadgeWithUnreadMessages: boolean;
-  activeFrontendIds: FrontendId[]; // Added for ordered and active frontend IDs
+  activeFrontendIds: (FrontendId | string)[]; // Added for ordered and active frontend IDs
+  customFrontends: FrontendConfig[]; // New property to store custom frontends
 }
 
 export interface AccountStats {

@@ -1,11 +1,10 @@
 
-import React from 'react';
-import { AppSettings, FrontendId } from '../../types';
-import { FRONTENDS } from '../../constants';
+import React, { useState, useEffect, useRef } from 'react';
+import { AppSettings, FrontendId, FrontendConfig } from '../../types';
 import { FrontendIcon } from '../FrontendIcon';
 import { 
-  ShieldCheck, User, Activity, KeyRound, LogOut, Check, Bell 
-} from 'lucide-react';
+  ShieldCheck, User, Activity, KeyRound, LogOut, Check, Bell, GripVertical, Grid 
+} from 'lucide-react'; // Added GripVertical for drag handle
 
 interface SettingsViewProps {
   settings: AppSettings;
@@ -14,11 +13,88 @@ interface SettingsViewProps {
   onLogout: () => void;
   isLoggingIn: boolean;
   loginError: string | null;
+  allFrontends: FrontendConfig[]; // New prop
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ 
-  settings, updateSettings, onLogin, onLogout, isLoggingIn, loginError 
+export const SettingsView: React.FC<SettingsViewProps> = ({
+  settings, updateSettings, onLogin, onLogout, isLoggingIn, loginError, allFrontends
 }) => {
+  const [orderedFrontends, setOrderedFrontends] = useState<FrontendConfig[]>([]);
+  const dragItem = useRef<FrontendId | null>(null);
+  const dragOverItem = useRef<FrontendId | null>(null);
+
+  // Initialize orderedFrontends based on activeFrontendIds and allFrontends
+  useEffect(() => {
+    const activeMap = new Map(allFrontends.map(f => [f.id, f]));
+    const newOrdered: FrontendConfig[] = [];
+
+    // Add active frontends in their saved order
+    settings.activeFrontendIds.forEach(id => {
+      const frontend = activeMap.get(id);
+      if (frontend) {
+        newOrdered.push({ ...frontend, active: true });
+        activeMap.delete(id); // Remove from map
+      }
+    });
+
+    // Add inactive frontends (those not in activeFrontendIds) at the end
+    // Preserve original order for inactive ones
+    allFrontends.forEach(f => {
+      if (activeMap.has(f.id)) {
+        newOrdered.push({ ...f, active: false });
+      }
+    });
+
+    setOrderedFrontends(newOrdered);
+  }, [allFrontends, settings.activeFrontendIds]);
+
+  const isFrontendActive = (id: FrontendId) => settings.activeFrontendIds.includes(id);
+
+  const handleToggleActive = (id: FrontendId) => {
+    let newActiveFrontendIds: FrontendId[];
+    if (isFrontendActive(id)) {
+      newActiveFrontendIds = settings.activeFrontendIds.filter(fId => fId !== id);
+    } else {
+      // Add to the end of the active list when activating
+      newActiveFrontendIds = [...settings.activeFrontendIds, id];
+    }
+    updateSettings({ activeFrontendIds: newActiveFrontendIds });
+  };
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: FrontendId) => {
+    dragItem.current = id;
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, id: FrontendId) => {
+    e.preventDefault();
+    dragOverItem.current = id;
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropId: FrontendId) => {
+    e.preventDefault();
+    const draggedId = dragItem.current;
+    
+    if (draggedId === null || draggedId === dropId) return;
+
+    const newOrderedIds = [...settings.activeFrontendIds];
+    const draggedIndex = newOrderedIds.indexOf(draggedId);
+    const droppedIndex = newOrderedIds.indexOf(dropId);
+
+    // Only reorder if both are currently active
+    if (draggedIndex !== -1 && droppedIndex !== -1) {
+      const [removed] = newOrderedIds.splice(draggedIndex, 1);
+      newOrderedIds.splice(droppedIndex, 0, removed);
+      updateSettings({ activeFrontendIds: newOrderedIds });
+    }
+    dragItem.current = null;
+    dragOverItem.current = null;
+  };
+
+  const handleDragEnd = () => {
+    dragItem.current = null;
+    dragOverItem.current = null;
+  };
   return (
     <div className="flex flex-col gap-6">
       
@@ -169,6 +245,55 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
              </div>
            </div>
         )}
+      </section>
+
+      {/* Frontend Display Order Section */}
+      <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+            <Grid size={18} className="text-slate-500" />
+            <span className="font-semibold text-sm text-slate-800">Frontend Display Order</span>
+        </div>
+        <p className="text-xs text-slate-500 mb-4">
+          Drag and drop to reorder active frontends. Toggle to activate/deactivate.
+        </p>
+
+        <div className="flex flex-col gap-2">
+          {orderedFrontends.map((frontend, index) => (
+            <div
+              key={frontend.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, frontend.id)}
+              onDragOver={(e) => handleDragOver(e, frontend.id)}
+              onDrop={(e) => handleDrop(e, frontend.id)}
+              onDragEnd={handleDragEnd}
+              className={`
+                flex items-center justify-between p-2 rounded-lg border transition-all
+                ${isFrontendActive(frontend.id) ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-100 opacity-60'}
+              `}
+            >
+              <div className="flex items-center gap-3">
+                <button className="cursor-grab text-slate-400 hover:text-slate-600">
+                  <GripVertical size={16} />
+                </button>
+                <FrontendIcon id={frontend.id} color={frontend.color} size={18} />
+                <span className="text-sm font-medium">{frontend.name}</span>
+              </div>
+
+              <button
+                onClick={() => handleToggleActive(frontend.id)}
+                className={`
+                  w-11 h-6 rounded-full transition-colors relative
+                  ${isFrontendActive(frontend.id) ? 'bg-emerald-500' : 'bg-slate-200'}
+                `}
+              >
+                <div className={`
+                  w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm
+                  ${isFrontendActive(frontend.id) ? 'left-6' : 'left-1'}
+                `} />
+              </button>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* General Behavior */}

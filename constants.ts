@@ -13,7 +13,8 @@ export const FRONTENDS: FrontendConfig[] = [
     paths: {
       compose: '/publish',
       wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
-    }
+    },
+    active: true
   },
   {
     id: FrontendId.ECENCY,
@@ -26,7 +27,8 @@ export const FRONTENDS: FrontendConfig[] = [
     paths: {
       compose: '/submit',
       wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
-    }
+    },
+    active: true
   },
   {
     id: FrontendId.HIVEBLOG,
@@ -39,7 +41,8 @@ export const FRONTENDS: FrontendConfig[] = [
     paths: {
       compose: '/submit.html',
       wallet: (user) => user ? `/@${user}/transfers` : '/transfers'
-    }
+    },
+    active: true
   },
   {
     id: FrontendId.INLEO,
@@ -52,7 +55,8 @@ export const FRONTENDS: FrontendConfig[] = [
     paths: {
       compose: '/publish',
       wallet: (user) => user ? `/${user}` : '/wallet'
-    }
+    },
+    active: true
   },
   {
     id: FrontendId.ACTIFIT,
@@ -65,7 +69,8 @@ export const FRONTENDS: FrontendConfig[] = [
     paths: {
       compose: '/blog/new',
       wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
-    }
+    },
+    active: true
   },
   {
     id: FrontendId.WAIVIO,
@@ -78,7 +83,8 @@ export const FRONTENDS: FrontendConfig[] = [
     paths: {
       compose: '/editor',
       wallet: (user) => user ? `/@${user}/transfers` : '/wallet'
-    }
+    },
+    active: true
   },
   {
     id: FrontendId.LIKETU,
@@ -91,7 +97,8 @@ export const FRONTENDS: FrontendConfig[] = [
     paths: {
       compose: '/submit',
       wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
-    }
+    },
+    active: true
   },
   {
     id: FrontendId.HIVESCAN,
@@ -104,7 +111,8 @@ export const FRONTENDS: FrontendConfig[] = [
     paths: {
       compose: '/', // Explorers don't support composing
       wallet: (user) => user ? `/@${user}` : '/'
-    }
+    },
+    active: true
   }
 ];
 

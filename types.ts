@@ -39,6 +39,7 @@ export interface FrontendConfig {
   textColor: string;
   description: string;
   paths: PathConfig;
+  active: boolean; // Added active property
 }
 
 export interface CurrentTabState {
@@ -74,6 +75,7 @@ export interface AppSettings {
   ecencyUserId?: string;      // Internal Mattermost User ID (for reliable 'isMe' check)
   ecencyRefreshToken?: string;
   overrideBadgeWithUnreadMessages: boolean;
+  activeFrontendIds: FrontendId[]; // Added for ordered and active frontend IDs
 }
 
 export interface AccountStats {

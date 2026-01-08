@@ -18,6 +18,7 @@ import {
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
 import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message } from './types';
+import { FRONTENDS } from './constants'; // Import FRONTENDS
 import { Activity } from 'lucide-react';
 
 // Components
@@ -51,7 +52,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   ecencyChatToken: '',
   ecencyUserId: '',
   ecencyRefreshToken: '',
-  overrideBadgeWithUnreadMessages: true
+  overrideBadgeWithUnreadMessages: true,
+  activeFrontendIds: FRONTENDS.map(f => f.id) // Initialize with all frontend IDs
 };
 
 const App: React.FC = () => {
@@ -614,7 +616,15 @@ const App: React.FC = () => {
       <main className="flex-1 overflow-hidden relative flex flex-col">
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
             {currentView === AppView.SWITCHER && (
-            <SwitcherView tabState={tabState} onSwitch={handleSwitch} />
+            <SwitcherView 
+              tabState={tabState} 
+              onSwitch={handleSwitch} 
+              frontendsList={settings.activeFrontendIds
+                .map(id => FRONTENDS.find(f => f.id === id))
+                .filter(Boolean)
+              }
+              updateSettings={updateSettings} // Pass updateSettings to SwitcherView
+            />
             )}
             {currentView === AppView.SHARE && (
             <ShareView tabState={tabState} />
@@ -662,6 +672,7 @@ const App: React.FC = () => {
                 onLogout={handleLogout}
                 isLoggingIn={isLoggingIn}
                 loginError={loginError}
+                allFrontends={FRONTENDS} // Pass the full FRONTENDS array
             />
             )}
         </div>

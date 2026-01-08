@@ -473,13 +473,20 @@ const App: React.FC = () => {
       ecencyAccessToken: '',
       ecencyChatToken: '',
       ecencyUserId: '',
-      ecencyRefreshToken: ''
+      ecencyRefreshToken: '',
+      rcUser: '' // Clear rcUser as well
     });
     setChannels([]);
+    setUnreadCounts({}); // Clear unread counts
     setActiveChannel(null);
     setActiveMessages([]);
+    setAccountStats(null); // Clear account stats
     if (typeof chrome !== 'undefined' && chrome.action) {
         chrome.action.setBadgeText({ text: '' });
+    }
+    // Clear persisted unread counts and channel states from storage
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.remove(['unreadCounts', 'channelTotals', 'channelReadState']);
     }
   };
 

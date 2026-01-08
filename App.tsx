@@ -369,6 +369,14 @@ const App: React.FC = () => {
                   reject("No active tab found. Please open a website.");
                   return;
                }
+
+               // Check for restricted URLs
+               const url = tabs[0].url || '';
+               if (url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('brave://') || url.startsWith('about:') || url.startsWith('moz-extension://')) {
+                   reject("Login requires an active website tab. Please open any website (e.g. google.com) and try again.");
+                   return;
+               }
+
                try {
                    // Inject script into MAIN world to access window.hive_keychain
                    const results = await chrome.scripting.executeScript({
@@ -401,7 +409,12 @@ const App: React.FC = () => {
                        reject("Script execution returned no result. Refresh page?");
                    }
                } catch (e: any) {
-                   reject(e.message || "Script injection failed.");
+                   const msg = e.message || '';
+                   if (msg.includes('Cannot access a chrome:// URL') || msg.includes('Cannot access contents of url')) {
+                        reject("Login requires an active website tab. Please open a regular website.");
+                   } else {
+                        reject(msg || "Script injection failed.");
+                   }
                }
             });
          } else if (typeof window.hive_keychain !== 'undefined') {

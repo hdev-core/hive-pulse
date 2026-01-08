@@ -9,15 +9,14 @@ export const AUTHOR_PERMLINK_REGEX = /\/@([a-z0-9.-]+)\/([a-z0-9-]+)/;
  * Parses a URL string to determine if it belongs to a known Hive frontend
  * and extracts the relevant path, username, author, and permlink.
  */
-export const parseUrl = (urlString: string): CurrentTabState => {
+export const parseUrl = (urlString: string, allFrontends: FrontendConfig[]): CurrentTabState => {
   try {
     const url = new URL(urlString);
     const hostname = url.hostname.replace('www.', '');
 
-    // Note: We cannot rely on FRONTENDS here because custom frontends are dynamic.
-    // This function focuses on parsing the URL structure itself.
-    const detectedFrontend = FRONTENDS.find(
-      (f) => f.domain === hostname || f.aliases.includes(hostname)
+    // Use allFrontends to find the detectedFrontend
+    const detectedFrontend = allFrontends.find(
+      (f) => f.domain === hostname || f.aliases.includes(hostname) || (f.isCustom && f.customDomain === hostname)
     );
 
     // Extract username if present (e.g. /@alice/...)

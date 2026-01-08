@@ -100,6 +100,8 @@ const App: React.FC = () => {
   // Polling Reference
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const allFrontends = useMemo(() => [...FRONTENDS, ...settings.customFrontends], [settings.customFrontends]);
+
   // --- BADGE LOGIC ---
   const updateBadge = useCallback((stats: AccountStats | null, unreads: Record<string, number>) => {
     if (typeof chrome === 'undefined' || !chrome.action) return;
@@ -303,14 +305,6 @@ const App: React.FC = () => {
            });
         } catch (e) { setInitializing(false); }
       } else { setInitializing(false); }
-
-      if (typeof chrome !== 'undefined' && chrome.tabs) {
-         try {
-           chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
-              if (tabs && tabs.length > 0 && tabs[0].url) setTabState(parseUrl(tabs[0].url));
-           });
-         } catch (e) { }
-      }
     };
     hydrate();
 
@@ -326,6 +320,17 @@ const App: React.FC = () => {
         chrome.storage.onChanged.addListener(storageListener);
     }
   }, []);
+
+  // Effect to parse URL when allFrontends or tab changes
+  useEffect(() => {
+    if (typeof chrome !== 'undefined' && chrome.tabs && allFrontends.length > 0) {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
+        if (tabs && tabs.length > 0 && tabs[0].url) {
+          setTabState(parseUrl(tabs[0].url, allFrontends));
+        }
+      });
+    }
+  }, [allFrontends]); // Depend on allFrontends
 
   const totalUnreadMessages = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
 
@@ -343,8 +348,6 @@ const App: React.FC = () => {
   const updateBadgeFromData = (data: AccountStats) => {
     setAccountStats(data);
   };
-
-  const allFrontends = useMemo(() => [...FRONTENDS, ...settings.customFrontends], [settings.customFrontends]);
 
   const handleSwitch = (id: FrontendId | string, mode: ActionMode) => {
     const url = getTargetUrl(

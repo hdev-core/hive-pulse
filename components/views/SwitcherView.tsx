@@ -15,8 +15,10 @@ interface SwitcherViewProps {
 export const SwitcherView: React.FC<SwitcherViewProps> = ({ tabState, onSwitch, allFrontends, updateSettings, settings }) => {
   const [actionMode, setActionMode] = useState<ActionMode>(ActionMode.SAME_PAGE);
 
-  // Filter allFrontends based on activeFrontendIds from settings
-  const displayFrontends = allFrontends.filter(f => settings.activeFrontendIds.includes(f.id));
+  // Ensure displayFrontends are ordered according to activeFrontendIds from settings
+  const displayFrontends = settings.activeFrontendIds
+    .map(id => allFrontends.find(f => f.id === id))
+    .filter(Boolean) as FrontendConfig[];
 
   const detectedFrontend = displayFrontends.find(f => f.id === tabState.detectedFrontendId);
   const detectedName = detectedFrontend ? detectedFrontend.name : 'Unknown';

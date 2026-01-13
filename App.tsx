@@ -67,7 +67,9 @@ const App: React.FC = () => {
     isHiveUrl: false,
     detectedFrontendId: null,
     path: '/',
-    username: null
+    username: null,
+    author: null,
+    permlink: null
   });
   
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);

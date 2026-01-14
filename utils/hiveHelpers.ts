@@ -1,5 +1,5 @@
 
-import { AccountStats } from '../types';
+import { AccountStats, HiveNotification } from '../types';
 
 const HIVE_RPC_NODE = 'https://api.hive.blog';
 
@@ -17,6 +17,30 @@ interface AccountResponse {
   voting_power: number;
   last_vote_time: string; // "2023-10-27T10:00:00"
 }
+
+/**
+ * Fetches notifications for a user using Hivemind bridge API.
+ */
+export const fetchNotifications = async (username: string, limit: number = 20): Promise<HiveNotification[]> => {
+  try {
+    const response = await fetch(HIVE_RPC_NODE, {
+      method: 'POST',
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'bridge.account_notifications',
+        params: { account: username, limit },
+        id: 1,
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const data = await response.json();
+    return data.result || [];
+  } catch (e) {
+    console.error("Failed to fetch notifications:", e);
+    return [];
+  }
+};
 
 /**
  * Fetches both RC and VP data for a username.

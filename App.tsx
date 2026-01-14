@@ -644,7 +644,7 @@ const App: React.FC = () => {
             <ShareView tabState={tabState} />
             )}
             {currentView === AppView.STATS && (
-            <StatsView settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} />
+            <StatsView settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} allFrontends={allFrontends} />
             )}
             {currentView === AppView.CHAT && (
             <ChatView 

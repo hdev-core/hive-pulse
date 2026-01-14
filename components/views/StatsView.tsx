@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { AppSettings, AccountStats } from '../../types';
 import { fetchAccountStats } from '../../utils/hiveHelpers';
 import { Search, Activity, ThumbsUp, Zap } from 'lucide-react';
+import { NotificationList } from '../NotificationList';
 
 interface StatsViewProps {
   settings: AppSettings;
   updateSettings: (s: Partial<AppSettings>) => void;
   onDataFetched?: (data: AccountStats) => void;
+  allFrontends: any[];
 }
 
-export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, onDataFetched }) => {
+export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, onDataFetched, allFrontends }) => {
   const [prices, setPrices] = useState<{hive: number, hbd: number} | null>(null);
   const [username, setUsername] = useState(settings.rcUser || '');
   const [stats, setStats] = useState<AccountStats | null>(null);
@@ -144,34 +146,45 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
         {error && <div className="py-4 text-center text-sm text-red-500 bg-red-50 rounded-lg border border-red-100">{error}</div>}
 
         {!loading && stats && (
-          <div className="flex flex-col items-center py-2 animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">@{stats.username}</h3>
-            <div className="flex justify-between w-full px-2 mb-4">
-              {renderGauge(
-                stats.vp.percentage, 
-                stats.vp.isLow, 
-                'Voting Power', 
-                <ThumbsUp size={20} className={stats.vp.isLow ? 'text-red-500' : 'text-slate-400'} />,
-                `${(stats.vp.percentage).toFixed(2)}%`,
-                'VP'
-              )}
-              {renderGauge(
-                stats.rc.percentage, 
-                stats.rc.isLow, 
-                'Resource Credits', 
-                <Zap size={20} className={stats.rc.isLow ? 'text-red-500' : 'text-slate-400'} fill="currentColor" />,
-                `${formatRCNumber(stats.rc.current)} Mana`,
-                'RC'
-              )}
+          <>
+            <div className="flex flex-col items-center py-2 animate-in fade-in zoom-in-95 duration-200">
+                <h3 className="text-lg font-bold text-slate-800 mb-4">@{stats.username}</h3>
+                <div className="flex justify-between w-full px-2 mb-4">
+                {renderGauge(
+                    stats.vp.percentage, 
+                    stats.vp.isLow, 
+                    'Voting Power', 
+                    <ThumbsUp size={20} className={stats.vp.isLow ? 'text-red-500' : 'text-slate-400'} />,
+                    `${(stats.vp.percentage).toFixed(2)}%`,
+                    'VP'
+                )}
+                {renderGauge(
+                    stats.rc.percentage, 
+                    stats.rc.isLow, 
+                    'Resource Credits', 
+                    <Zap size={20} className={stats.rc.isLow ? 'text-red-500' : 'text-slate-400'} fill="currentColor" />,
+                    `${formatRCNumber(stats.rc.current)} Mana`,
+                    'RC'
+                )}
+                </div>
+                <div className="w-full bg-slate-50 p-2 rounded-lg border border-slate-100 flex items-center justify-between">
+                <span className="text-xs text-slate-500 font-medium">Extension Badge</span>
+                <div className="flex bg-slate-200 rounded p-0.5">
+                    <button onClick={() => updateSettings({ badgeMetric: 'VP' })} className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${settings.badgeMetric === 'VP' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}>VP</button>
+                    <button onClick={() => updateSettings({ badgeMetric: 'RC' })} className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${settings.badgeMetric === 'RC' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}>RC</button>
+                </div>
+                </div>
             </div>
-            <div className="w-full bg-slate-50 p-2 rounded-lg border border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-500 font-medium">Extension Badge</span>
-              <div className="flex bg-slate-200 rounded p-0.5">
-                 <button onClick={() => updateSettings({ badgeMetric: 'VP' })} className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${settings.badgeMetric === 'VP' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}>VP</button>
-                 <button onClick={() => updateSettings({ badgeMetric: 'RC' })} className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${settings.badgeMetric === 'RC' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}>RC</button>
-              </div>
+            
+            {/* The Pulse Notification Section */}
+            <div className="mt-2">
+                <NotificationList 
+                    username={stats.username} 
+                    settings={settings}
+                    allFrontends={allFrontends}
+                />
             </div>
-          </div>
+          </>
         )}
 
         {!loading && !stats && !error && (

@@ -173,3 +173,26 @@ export interface PostResponse {
   order: string[]; // array of post ids
   posts: Record<string, Message>; // map of id -> Message
 }
+
+export enum HiveNotificationType {
+  REPLY = 'reply',
+  MENTION = 'mention',
+  FOLLOW = 'follow',
+  VOTE = 'vote',
+  REBLOG = 'reblog',
+  TRANSFER = 'transfer',
+  DELEGATIONS = 'delegations'
+}
+
+export interface HiveNotification {
+  id: number;
+  type: HiveNotificationType;
+  score: number;
+  date: string;
+  msg: string;
+  url: string;
+  author: string; // The person who performed the action
+  permlink?: string;
+  amount?: string; // For transfers
+  memo?: string; // For transfers
+}

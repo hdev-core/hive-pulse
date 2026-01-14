@@ -351,14 +351,14 @@ const App: React.FC = () => {
     setAccountStats(data);
   };
 
-  const handleSwitch = (id: FrontendId | string, mode: ActionMode) => {
+  const handleSwitch = (id: FrontendId | string, mode: ActionMode, usernameOverride?: string) => {
     const url = getTargetUrl(
       id,
       tabState.path,
       mode,
-      tabState.username,
-      tabState.author, // New parameter
-      tabState.permlink, // New parameter
+      usernameOverride || tabState.username,
+      usernameOverride ? null : tabState.author, // Clear author if overriding user to avoid invalid post URLs
+      usernameOverride ? null : tabState.permlink, // Clear permlink if overriding user
       allFrontends // New parameter
     );
     if (settings.openInNewTab) {

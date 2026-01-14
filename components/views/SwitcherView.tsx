@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import { CurrentTabState, ActionMode, FrontendId, FrontendConfig, AppSettings } from '../../types';
 import { FrontendCard } from '../FrontendCard';
 import { Link as LinkIcon, Wallet, PenLine } from 'lucide-react';
+import UserSearch from '../../UserSearch';
 
 interface SwitcherViewProps {
   tabState: CurrentTabState;
-  onSwitch: (id: FrontendId | string, mode: ActionMode) => void; // Updated id type
+  onSwitch: (id: FrontendId | string, mode: ActionMode, usernameOverride?: string) => void; // Updated id type
   allFrontends: FrontendConfig[]; // Changed from frontendsList
   updateSettings: (s: Partial<AppSettings>) => void;
   settings: AppSettings; // Added settings prop
@@ -14,6 +15,7 @@ interface SwitcherViewProps {
 
 export const SwitcherView: React.FC<SwitcherViewProps> = ({ tabState, onSwitch, allFrontends, updateSettings, settings }) => {
   const [actionMode, setActionMode] = useState<ActionMode>(ActionMode.SAME_PAGE);
+  const [searchedUser, setSearchedUser] = useState<string | null>(null);
 
   // Ensure displayFrontends are ordered according to activeFrontendIds from settings
   const displayFrontends = settings.activeFrontendIds
@@ -68,6 +70,8 @@ export const SwitcherView: React.FC<SwitcherViewProps> = ({ tabState, onSwitch, 
         )}
       </div>
 
+      <UserSearch onUserSelect={(u) => setSearchedUser(u)} />
+
       <div className="flex flex-col gap-2">
         <div className="bg-slate-200/60 p-1 rounded-lg flex gap-1">
           {MODES.map((item) => (
@@ -99,8 +103,8 @@ export const SwitcherView: React.FC<SwitcherViewProps> = ({ tabState, onSwitch, 
           <FrontendCard 
             key={frontend.id}
             config={frontend}
-            isActive={tabState.detectedFrontendId === frontend.id && actionMode === ActionMode.SAME_PAGE}
-            onSwitch={(id) => onSwitch(id, actionMode)}
+            isActive={!searchedUser && tabState.detectedFrontendId === frontend.id && actionMode === ActionMode.SAME_PAGE}
+            onSwitch={(id) => onSwitch(id, actionMode, searchedUser || undefined)}
           />
         ))}
       </div>

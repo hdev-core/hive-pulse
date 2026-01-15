@@ -323,6 +323,19 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // --- BACKGROUND STATS POLLING ---
+  useEffect(() => {
+    if (!settings.rcUser) return;
+
+    const poll = async () => {
+      const data = await fetchAccountStats(settings.rcUser!);
+      if (data) setAccountStats(data);
+    };
+
+    const interval = setInterval(poll, 30000); // Every 30 seconds
+    return () => clearInterval(interval);
+  }, [settings.rcUser]);
+
   // Effect to parse URL when allFrontends or tab changes
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.tabs && allFrontends.length > 0) {
@@ -627,6 +640,7 @@ const App: React.FC = () => {
         username={settings.ecencyAccessToken ? settings.ecencyUsername : null}
         onLoginClick={() => setCurrentView(AppView.SETTINGS)}
         onLogoutClick={handleLogout}
+        stats={accountStats}
       />
       
       <main className="flex-1 overflow-hidden relative flex flex-col">

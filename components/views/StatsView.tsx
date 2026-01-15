@@ -3,6 +3,7 @@ import { AppSettings, AccountStats } from '../../types';
 import { fetchAccountStats } from '../../utils/hiveHelpers';
 import { Search, Activity, ThumbsUp, Zap } from 'lucide-react';
 import { NotificationList } from '../NotificationList';
+import { Gauge } from '../Gauge';
 
 interface StatsViewProps {
   settings: AppSettings;
@@ -79,34 +80,6 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
     return num.toString();
   };
 
-  const renderGauge = (percentage: number, isLow: boolean, label: string, icon: React.ReactNode, subValue?: string, type: 'VP' | 'RC' = 'VP') => (
-    <div className="flex flex-col items-center">
-      <div className="relative w-28 h-28 flex items-center justify-center mb-2">
-        <svg className="w-full h-full transform -rotate-90">
-          <circle cx="56" cy="56" r="48" stroke="#f1f5f9" strokeWidth="8" fill="none" />
-          <circle
-            cx="56" cy="56" r="48"
-            stroke={isLow ? '#ef4444' : (type === 'RC' ? '#a855f7' : '#10b981')}
-            strokeWidth="8"
-            fill="none"
-            strokeLinecap="round"
-            style={{
-              strokeDasharray: 301.6, 
-              strokeDashoffset: 301.6 - (301.6 * percentage) / 100,
-              transition: 'stroke-dashoffset 1s ease-in-out'
-            }}
-          />
-        </svg>
-        <div className="absolute flex flex-col items-center">
-          {icon}
-          <span className="text-xl font-bold text-slate-800 mt-1">{percentage.toFixed(2)}%</span>
-        </div>
-      </div>
-      <span className="text-sm font-medium text-slate-600">{label}</span>
-      {subValue && <span className="text-xs text-slate-400">{subValue}</span>}
-    </div>
-  );
-
   return (
     <div className="flex flex-col gap-4">
       {prices ? (
@@ -150,22 +123,24 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
             <div className="flex flex-col items-center py-2 animate-in fade-in zoom-in-95 duration-200">
                 <h3 className="text-lg font-bold text-slate-800 mb-4">@{stats.username}</h3>
                 <div className="flex justify-between w-full px-2 mb-4">
-                {renderGauge(
-                    stats.vp.percentage, 
-                    stats.vp.isLow, 
-                    'Voting Power', 
-                    <ThumbsUp size={20} className={stats.vp.isLow ? 'text-red-500' : 'text-slate-400'} />,
-                    `${(stats.vp.percentage).toFixed(2)}%`,
-                    'VP'
-                )}
-                {renderGauge(
-                    stats.rc.percentage, 
-                    stats.rc.isLow, 
-                    'Resource Credits', 
-                    <Zap size={20} className={stats.rc.isLow ? 'text-red-500' : 'text-slate-400'} fill="currentColor" />,
-                    `${formatRCNumber(stats.rc.current)} Mana`,
-                    'RC'
-                )}
+                  <Gauge 
+                    percentage={stats.vp.percentage}
+                    isLow={stats.vp.isLow}
+                    type="VP"
+                    icon={<ThumbsUp size={20} className={stats.vp.isLow ? 'text-red-500' : 'text-slate-400'} />}
+                    label="Voting Power"
+                    subValue={`${(stats.vp.percentage).toFixed(2)}%`}
+                    size={112}
+                  />
+                  <Gauge 
+                    percentage={stats.rc.percentage}
+                    isLow={stats.rc.isLow}
+                    type="RC"
+                    icon={<Zap size={20} className={stats.rc.isLow ? 'text-red-500' : 'text-slate-400'} fill="currentColor" />}
+                    label="Resource Credits"
+                    subValue={`${formatRCNumber(stats.rc.current)} Mana`}
+                    size={112}
+                  />
                 </div>
                 <div className="w-full bg-slate-50 p-2 rounded-lg border border-slate-100 flex items-center justify-between">
                 <span className="text-xs text-slate-500 font-medium">Extension Badge</span>

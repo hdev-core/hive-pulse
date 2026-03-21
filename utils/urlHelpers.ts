@@ -4,6 +4,8 @@ import { FrontendId, CurrentTabState, ActionMode, FrontendConfig } from '../type
 
 // Regex to extract author and permlink from a Hive post URL (e.g., /@author/permlink)
 export const AUTHOR_PERMLINK_REGEX = /\/@([a-z0-9.-]+)\/([a-z0-9-]+)/;
+export const THREESPEAK_WATCH_REGEX = /v=([a-z0-9.-]+)\/([a-z0-9-]+)/;
+export const THREESPEAK_USER_REGEX = /\/user\/([a-z0-9.-]+)/;
 
 /**
  * Parses a URL string to determine if it belongs to a known Hive frontend
@@ -19,14 +21,36 @@ export const parseUrl = (urlString: string, allFrontends: FrontendConfig[]): Cur
       (f) => f.domain === hostname || f.aliases.includes(hostname) || (f.isCustom && f.customDomain === hostname)
     );
 
-    // Extract username if present (e.g. /@alice/...)
-    const userMatch = url.pathname.match(USERNAME_REGEX);
-    const username = userMatch ? userMatch[1] : null;
+    let username: string | null = null;
+    let author: string | null = null;
+    let permlink: string | null = null;
 
-    // Extract author and permlink if present (e.g. /@author/permlink)
-    const postMatch = url.pathname.match(AUTHOR_PERMLINK_REGEX);
-    const author = postMatch ? postMatch[1] : null;
-    const permlink = postMatch ? postMatch[2] : null;
+    if (hostname === '3speak.tv') {
+      const searchParams = new URLSearchParams(url.search);
+      const v = searchParams.get('v');
+      if (v) {
+        // v format is usually 'author/permlink'
+        const parts = v.split('/');
+        if (parts.length >= 2) {
+          author = parts[0];
+          permlink = parts[1];
+        }
+      }
+      
+      if (!author || !permlink) {
+        const userMatch = url.pathname.match(THREESPEAK_USER_REGEX);
+        username = userMatch ? userMatch[1] : null;
+      }
+    } else {
+      // Extract username if present (e.g. /@alice/...)
+      const userMatch = url.pathname.match(USERNAME_REGEX);
+      username = userMatch ? userMatch[1] : null;
+
+      // Extract author and permlink if present (e.g. /@author/permlink)
+      const postMatch = url.pathname.match(AUTHOR_PERMLINK_REGEX);
+      author = postMatch ? postMatch[1] : null;
+      permlink = postMatch ? postMatch[2] : null;
+    }
     
     return {
       url: urlString,
@@ -72,12 +96,12 @@ const resolveLinkTemplate = (template: string, args: LinkTemplateArgs): string =
  */
 export const getTargetUrl = (
   targetId: FrontendId | string,
-  currentPath: string, // Not directly used for custom frontends, but kept for compatibility
+  currentPath: string, // Fallback if no specific entity detected
   mode: ActionMode,
   username: string | null,
-  author: string | null, // New parameter
-  permlink: string | null, // New parameter
-  allFrontends: FrontendConfig[] // New parameter to include custom frontends
+  author: string | null,
+  permlink: string | null,
+  allFrontends: FrontendConfig[]
 ): string => {
   const targetConfig = allFrontends.find((f) => f.id === targetId);
   
@@ -88,30 +112,38 @@ export const getTargetUrl = (
   let finalPath = '';
   let targetDomain = targetConfig.domain;
 
-  if (targetConfig.isCustom && targetConfig.linkStructure) {
-    targetDomain = targetConfig.customDomain || targetConfig.domain; // Use customDomain if available
+  if (targetConfig.id === FrontendId.THREESPEAK) {
+    if (mode === ActionMode.COMPOSE) {
+      finalPath = targetConfig.paths.compose;
+    } else if (mode === ActionMode.WALLET) {
+      finalPath = targetConfig.paths.wallet(username || undefined);
+    } else { // SAME_PAGE
+      if (author && permlink) {
+        finalPath = `/watch?v=${author}/${permlink}`;
+      } else if (username) {
+        finalPath = `/user/${username}`;
+      } else {
+        finalPath = '/';
+      }
+    }
+  } else if (targetConfig.isCustom && targetConfig.linkStructure) {
+    targetDomain = targetConfig.customDomain || targetConfig.domain;
 
     const templateArgs = { author, permlink, username };
 
     switch (mode) {
       case ActionMode.COMPOSE:
-        finalPath = targetConfig.paths.compose; // Custom frontends might not have custom compose paths
+        finalPath = targetConfig.paths.compose;
         break;
       case ActionMode.WALLET:
         finalPath = resolveLinkTemplate(targetConfig.linkStructure.wallet, templateArgs);
         break;
       case ActionMode.SAME_PAGE:
-        // Attempt to convert current path using custom link structure
-        // This is a simplified approach; a more robust solution would involve
-        // parsing the current path and matching it against *all* known link structures
-        // to determine if it's a post, profile, etc., and then reconstructing.
-        // For now, if we have author/permlink, assume it's a post.
         if (author && permlink && targetConfig.linkStructure.post) {
             finalPath = resolveLinkTemplate(targetConfig.linkStructure.post, templateArgs);
         } else if (username && targetConfig.linkStructure.profile) {
             finalPath = resolveLinkTemplate(targetConfig.linkStructure.profile, templateArgs);
         } else {
-            // Fallback to original path if not a recognized post/profile structure
             finalPath = currentPath;
         }
         break;
@@ -120,13 +152,21 @@ export const getTargetUrl = (
         break;
     }
   } else {
-    // Existing logic for predefined frontends
+    // Logic for standard predefined frontends (PeakD, Ecency, etc.)
     if (mode === ActionMode.COMPOSE) {
       finalPath = targetConfig.paths.compose;
     } else if (mode === ActionMode.WALLET) {
       finalPath = targetConfig.paths.wallet(username || undefined);
-    } else { // ActionMode.SAME_PAGE
-      finalPath = currentPath;
+    } else { // SAME_PAGE
+      // If we have author and permlink, reconstruct the traditional path
+      // This handles cases where we are coming FROM a non-standard URL (like 3speak)
+      if (author && permlink) {
+        finalPath = `/@${author}/${permlink}`;
+      } else if (username) {
+        finalPath = `/@${username}`;
+      } else {
+        finalPath = currentPath;
+      }
     }
 
     // Special handling for Hive.blog's dedicated wallet subdomain

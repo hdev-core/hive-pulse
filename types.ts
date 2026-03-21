@@ -7,7 +7,8 @@ export enum FrontendId {
   ACTIFIT = 'ACTIFIT',
   WAIVIO = 'WAIVIO',
   LIKETU = 'LIKETU',
-  HIVESCAN = 'HIVESCAN'
+  HIVESCAN = 'HIVESCAN',
+  THREESPEAK = 'THREESPEAK'
 }
 
 export enum ActionMode {

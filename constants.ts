@@ -113,6 +113,20 @@ export const FRONTENDS: FrontendConfig[] = [
       wallet: (user) => user ? `/@${user}` : '/'
     },
     active: true
+  },
+  {
+    id: FrontendId.THREESPEAK,
+    name: '3Speak',
+    domain: '3speak.tv',
+    aliases: [],
+    color: '#000000',
+    textColor: '#ffffff',
+    description: 'Censorship-resistant video platform.',
+    paths: {
+      compose: '/upload',
+      wallet: (user) => user ? `/user/${user}` : '/'
+    },
+    active: true
   }
 ];
 

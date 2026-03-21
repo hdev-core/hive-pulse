@@ -23,6 +23,7 @@ export const FrontendIcon: React.FC<FrontendIconProps> = ({ id, logoUrl, color, 
       case FrontendId.WAIVIO: return 'waivio.png';
       case FrontendId.LIKETU: return 'liketu.png';
       case FrontendId.HIVESCAN: return 'hivescan.png';
+      case FrontendId.THREESPEAK: return '3speak.png';
       default: return null;
     }
   };

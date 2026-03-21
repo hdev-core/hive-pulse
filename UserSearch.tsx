@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Loader2 } from 'lucide-react';
+import { Search, X, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface UserSearchProps {
   onUserSelect: (username: string | null) => void;
@@ -10,6 +10,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
   const [matches, setMatches] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,7 +27,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
 
   useEffect(() => {
     const searchUser = async () => {
-      if (!query) {
+      if (!query || query === selectedUser) {
         setMatches([]);
         return;
       }
@@ -66,19 +67,23 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
 
     const timeoutId = setTimeout(searchUser, 300);
     return () => clearTimeout(timeoutId);
-  }, [query]);
+  }, [query, selectedUser]);
 
   const handleClear = () => {
     setQuery('');
     setMatches([]);
+    setSelectedUser(null);
     onUserSelect(null);
   };
 
   const handleSelect = (username: string) => {
     setQuery(username);
+    setSelectedUser(username);
     onUserSelect(username);
     setShowDropdown(false);
   };
+
+  const getAvatarUrl = (username: string) => `https://images.ecency.com/u/${username}/avatar/small`;
 
   return (
     <div ref={wrapperRef} className="relative w-full">
@@ -87,25 +92,44 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
           type="text"
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
-            if (e.target.value === '') onUserSelect(null);
+            const val = e.target.value;
+            setQuery(val);
+            if (val === '') {
+              setSelectedUser(null);
+              onUserSelect(null);
+            } else if (selectedUser && val !== selectedUser) {
+              setSelectedUser(null);
+              onUserSelect(null);
+            }
           }}
           placeholder="Search user..."
-          className="w-full pl-9 pr-8 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all"
+          className={`w-full pl-9 pr-8 py-2 text-sm border rounded-lg focus:outline-none focus:ring-1 transition-all
+            ${selectedUser 
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-900 focus:border-emerald-400 focus:ring-emerald-400' 
+              : 'border-slate-200 focus:border-blue-400 focus:ring-blue-400'
+            }`}
           onFocus={() => matches.length > 0 && setShowDropdown(true)}
         />
-        <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
         
-        {loading ? (
-          <Loader2 className="absolute right-3 top-2.5 text-blue-500 animate-spin" size={16} />
-        ) : query ? (
-          <button 
-            onClick={handleClear}
-            className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-          >
-            <X size={16} />
-          </button>
-        ) : null}
+        {selectedUser ? (
+          <CheckCircle2 className="absolute left-3 top-2.5 text-emerald-500" size={16} />
+        ) : (
+          <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+        )}
+        
+        <div className="absolute right-3 top-2.5 flex items-center gap-2">
+          {loading && (
+            <Loader2 className="text-blue-500 animate-spin" size={16} />
+          )}
+          {query && (
+            <button 
+              onClick={handleClear}
+              className="text-slate-400 hover:text-slate-600"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       {showDropdown && matches.length > 0 && (
@@ -113,12 +137,17 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
           {matches.map((username) => (
             <div
               key={username}
-              className="px-4 py-2 text-sm cursor-pointer hover:bg-slate-50 flex items-center gap-2"
+              className="px-4 py-2 text-sm cursor-pointer hover:bg-slate-50 flex items-center gap-3"
               onClick={() => handleSelect(username)}
             >
-              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-bold">
-                {username.charAt(0).toUpperCase()}
-              </div>
+              <img 
+                src={getAvatarUrl(username)} 
+                alt={username}
+                className="w-6 h-6 rounded-full bg-slate-100 object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://images.ecency.com/u/hive-123456/avatar/small`; // Default fallback
+                }}
+              />
               <span className="text-slate-700 font-medium">{username}</span>
             </div>
           ))}

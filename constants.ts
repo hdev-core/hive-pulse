@@ -54,7 +54,7 @@ export const FRONTENDS: FrontendConfig[] = [
     description: 'Tokenized social media & microblogging.',
     paths: {
       compose: '/publish',
-      wallet: (user) => user ? `/${user}` : '/wallet'
+      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
     },
     active: true
   },
@@ -82,7 +82,7 @@ export const FRONTENDS: FrontendConfig[] = [
     description: 'Business & object-oriented social.',
     paths: {
       compose: '/editor',
-      wallet: (user) => user ? `/@${user}/transfers` : '/wallet'
+      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
     },
     active: true
   },
@@ -96,7 +96,7 @@ export const FRONTENDS: FrontendConfig[] = [
     description: 'Visual storytelling & photography.',
     paths: {
       compose: '/submit',
-      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
+      wallet: (user) => user ? `/@${user}` : '/wallet'
     },
     active: true
   },

@@ -29,15 +29,15 @@ export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogout
         {/* Price Ticker Bar */}
         <div className="bg-slate-900 text-white px-4 py-1 flex items-center justify-between text-[10px] font-medium tracking-wide">
             <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5" title="Exchange Price (CoinGecko)">
+                <div className="flex items-center gap-1.5" title="HIVE Exchange Price (CoinGecko)">
                     <TrendingUp size={10} className="text-emerald-400" />
-                    <span className="text-slate-400 uppercase">Binance:</span>
+                    <span className="text-slate-400 uppercase">HIVE Market:</span>
                     <span>${prices?.exchange?.toFixed(3) || '---'}</span>
                 </div>
                 <div className="w-px h-2.5 bg-slate-700" />
-                <div className="flex items-center gap-1.5" title="Internal Market Price (HBD)">
+                <div className="flex items-center gap-1.5" title="HIVE Internal Market Price (HBD)">
                     <BarChart3 size={10} className="text-blue-400" />
-                    <span className="text-slate-400 uppercase">Internal:</span>
+                    <span className="text-slate-400 uppercase">HIVE Internal:</span>
                     <span>${prices?.internal?.toFixed(3) || '---'}</span>
                 </div>
             </div>

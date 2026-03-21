@@ -302,6 +302,13 @@ export const DAPPS: DAppConfig[] = [
     category: 'Tool'
   },
   {
+    name: 'HiveScan',
+    url: 'https://hivescan.info',
+    description: 'Modern Hive block explorer.',
+    logo: 'https://images.ecency.com/u/hiveio/avatar/small',
+    category: 'Tool'
+  },
+  {
     name: 'PeakMonsters',
     url: 'https://peakmonsters.com',
     description: 'Advanced Splinterlands market.',

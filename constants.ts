@@ -131,53 +131,47 @@ export const FRONTENDS: FrontendConfig[] = [
 ];
 
 export const DAPPS: DAppConfig[] = [
+  // --- Social ---
   {
-    name: 'Splinterlands',
-    url: 'https://splinterlands.com',
-    description: 'The #1 Play2Earn card game.',
-    logo: 'splinterlands.png',
-    category: 'Game'
-  },
-  {
-    name: 'Hive-Engine',
-    url: 'https://hive-engine.com',
-    description: 'Smart contracts & sidechain tokens.',
-    logo: 'hive-engine.png',
-    category: 'DeFi'
-  },
-  {
-    name: 'Actifit',
-    url: 'https://actifit.io',
-    description: 'Move-to-earn fitness tracking.',
-    logo: 'actifit.png',
+    name: 'Ecency',
+    url: 'https://ecency.com',
+    description: 'Fast, open-source, mobile-first social.',
+    logo: 'ecency.png',
     category: 'Social'
   },
   {
-    name: 'PeakMonsters',
-    url: 'https://peakmonsters.com',
-    description: 'Advanced Splinterlands market.',
-    logo: 'peakmonsters.png',
-    category: 'Tool'
+    name: 'PeakD',
+    url: 'https://peakd.com',
+    description: 'Feature-rich social media platform.',
+    logo: 'peakd.png',
+    category: 'Social'
   },
   {
-    name: '3Speak',
-    url: 'https://3speak.tv',
-    description: 'Censorship-resistant video platform.',
-    logo: '3speak.png',
-    category: 'Video'
+    name: 'D.Buzz',
+    url: 'https://d.buzz',
+    description: 'Web3 microblogging for short content.',
+    logo: 'https://images.ecency.com/u/dbuzz/avatar/small',
+    category: 'Social'
   },
   {
     name: 'InLeo',
     url: 'https://inleo.io',
-    description: 'Tokenized social media.',
+    description: 'Tokenized social media & finance.',
     logo: 'inleo.png',
     category: 'Social'
   },
   {
-    name: 'Snapie',
-    url: 'https://snapie.net',
-    description: 'Share your moments.',
-    logo: 'snapie.png',
+    name: 'Liketu',
+    url: 'https://liketu.com',
+    description: 'Visual storytelling & photography.',
+    logo: 'liketu.png',
+    category: 'Social'
+  },
+  {
+    name: 'Waivio',
+    url: 'https://waivio.com',
+    description: 'Business-focused social with object indexing.',
+    logo: 'waivio.png',
     category: 'Social'
   },
   {
@@ -188,11 +182,145 @@ export const DAPPS: DAppConfig[] = [
     category: 'Social'
   },
   {
+    name: 'Snapie',
+    url: 'https://snapie.net',
+    description: 'Share your moments.',
+    logo: 'snapie.png',
+    category: 'Social'
+  },
+
+  // --- Games ---
+  {
+    name: 'Splinterlands',
+    url: 'https://splinterlands.com',
+    description: 'The #1 Play2Earn card game.',
+    logo: 'splinterlands.png',
+    category: 'Game'
+  },
+  {
     name: 'HoloZing',
     url: 'https://holozing.com',
-    description: 'Upcoming creature capture game.',
+    description: 'Creature capture and training game.',
     logo: 'holozing.png',
     category: 'Game'
+  },
+  {
+    name: 'DCity',
+    url: 'https://dcity.io',
+    description: 'Simulate and grow your virtual city.',
+    logo: 'https://images.ecency.com/u/dcity/avatar/small',
+    category: 'Game'
+  },
+  {
+    name: 'Rising Star',
+    url: 'https://www.risingstargame.com',
+    description: 'Play to earn music career game.',
+    logo: 'risingstar.png',
+    category: 'Game'
+  },
+  {
+    name: 'TerraCore',
+    url: 'https://terracoregame.com',
+    description: 'Post-apocalyptic strategy game.',
+    logo: 'https://images.ecency.com/u/terracore/avatar/small',
+    category: 'Game'
+  },
+  {
+    name: 'Golem Overlord',
+    url: 'https://golemoverlord.io',
+    description: 'Idle RPG resource management game.',
+    logo: 'https://images.ecency.com/u/golem.overlord/avatar/small',
+    category: 'Game'
+  },
+  {
+    name: 'Rabona',
+    url: 'https://rabona.io',
+    description: 'Soccer manager game on Hive.',
+    logo: 'https://images.ecency.com/u/rabona/avatar/small',
+    category: 'Game'
+  },
+  {
+    name: 'D-Crops',
+    url: 'https://dcrops.com',
+    description: 'Decentralized farming simulator.',
+    logo: 'https://images.ecency.com/u/dcrops/avatar/small',
+    category: 'Game'
+  },
+
+  // --- DeFi ---
+  {
+    name: 'Hive-Engine',
+    url: 'https://hive-engine.com',
+    description: 'Smart contracts & sidechain tokens.',
+    logo: 'hive-engine.png',
+    category: 'DeFi'
+  },
+  {
+    name: 'Tribaldex',
+    url: 'https://tribaldex.com',
+    description: 'DEX for Hive-Engine tokens.',
+    logo: 'https://images.ecency.com/u/tribaldex/avatar/small',
+    category: 'DeFi'
+  },
+  {
+    name: 'BeeSwap',
+    url: 'https://beeswap.dcity.io',
+    description: 'Smart swaps and liquidity for Hive.',
+    logo: 'https://images.ecency.com/u/beeswap/avatar/small',
+    category: 'DeFi'
+  },
+  {
+    name: 'BlockTrades',
+    url: 'https://blocktrades.us',
+    description: 'Fast cryptocurrency exchange service.',
+    logo: 'https://images.ecency.com/u/blocktrades/avatar/small',
+    category: 'DeFi'
+  },
+
+  // --- Video ---
+  {
+    name: '3Speak',
+    url: 'https://3speak.tv',
+    description: 'Censorship-resistant video platform.',
+    logo: '3speak.png',
+    category: 'Video'
+  },
+  {
+    name: 'Vimm',
+    url: 'https://vimm.tv',
+    description: 'Web3 live streaming platform.',
+    logo: 'https://images.ecency.com/u/vimm/avatar/small',
+    category: 'Video'
+  },
+
+  // --- Tools ---
+  {
+    name: 'Hive Keychain',
+    url: 'https://hive-keychain.com',
+    description: 'Secure key management browser extension.',
+    logo: 'https://images.ecency.com/u/keychain/avatar/small',
+    category: 'Tool'
+  },
+  {
+    name: 'PeakMonsters',
+    url: 'https://peakmonsters.com',
+    description: 'Advanced Splinterlands market.',
+    logo: 'peakmonsters.png',
+    category: 'Tool'
+  },
+  {
+    name: 'HiveBuzz',
+    url: 'https://hivebuzz.me',
+    description: 'Gamification, badges & milestones.',
+    logo: 'https://images.ecency.com/u/hivebuzz/avatar/small',
+    category: 'Tool'
+  },
+  {
+    name: 'HiveStats',
+    url: 'https://hivestats.io',
+    description: 'Advanced account analytics.',
+    logo: 'https://images.ecency.com/u/hivestats/avatar/small',
+    category: 'Tool'
   },
   {
     name: 'NFTShowroom',
@@ -207,13 +335,6 @@ export const DAPPS: DAppConfig[] = [
     description: 'Interactive visual map for Hive.',
     logo: 'worldmappin.png',
     category: 'Tool'
-  },
-  {
-    name: 'Rising Star',
-    url: 'https://www.risingstargame.com',
-    description: 'Play to earn music career game.',
-    logo: 'risingstar.png',
-    category: 'Game'
   },
   {
     name: 'Magi',

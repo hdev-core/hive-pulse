@@ -125,6 +125,45 @@ export const fetchAccountStats = async (username: string): Promise<AccountStats 
   }
 };
 
+/**
+ * Fetches the current HIVE price from CoinGecko (Exchange price).
+ */
+export const fetchHivePrice = async (): Promise<number | null> => {
+  try {
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=hive&vs_currencies=usd');
+    const data = await response.json();
+    return data?.hive?.usd || null;
+  } catch (e) {
+    console.error("Failed to fetch HIVE exchange price:", e);
+    return null;
+  }
+};
+
+/**
+ * Fetches the HIVE price from the internal market (HBD/HIVE).
+ */
+export const fetchInternalMarketPrice = async (): Promise<number | null> => {
+  try {
+    const response = await fetch(HIVE_RPC_NODE, {
+      method: 'POST',
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'condenser_api.get_ticker',
+        params: [],
+        id: 1,
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const data = await response.json();
+    // highest_bid is the current market price in HBD
+    return Number(data.result?.highest_bid) || null;
+  } catch (e) {
+    console.error("Failed to fetch HIVE internal market price:", e);
+    return null;
+  }
+};
+
 export const formatRCNumber = (num: number): string => {
   if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
   if (num >= 1e9) return (num / 1e9).toFixed(2) + 'G';

@@ -1,7 +1,5 @@
 
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { parseUrl, getTargetUrl } from './utils/urlHelpers';
-import { fetchAccountStats } from './utils/hiveHelpers';
+import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice } from './utils/hiveHelpers';
 import { 
   bootstrapEcencyChat, 
   fetchChannels, 
@@ -17,7 +15,7 @@ import {
   UnauthorizedError
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
-import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message } from './types';
+import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message, HivePrices } from './types';
 import { FRONTENDS } from './constants'; // Import FRONTENDS
 import { Activity } from 'lucide-react';
 
@@ -77,6 +75,7 @@ const App: React.FC = () => {
 
   // Stats Data
   const [accountStats, setAccountStats] = useState<AccountStats | null>(null);
+  const [hivePrices, setHivePrices] = useState<HivePrices>({ exchange: null, internal: null });
 
   // Chat State
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -103,6 +102,19 @@ const App: React.FC = () => {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const allFrontends = useMemo(() => [...FRONTENDS, ...settings.customFrontends], [settings.customFrontends]);
+
+  // --- PRICE FETCHING ---
+  const refreshPrices = useCallback(async () => {
+    try {
+      const [exchange, internal] = await Promise.all([
+        fetchHivePrice(),
+        fetchInternalMarketPrice()
+      ]);
+      setHivePrices({ exchange, internal });
+    } catch (e) {
+      console.error("Failed to refresh prices", e);
+    }
+  }, []);
 
   // --- BADGE LOGIC ---
   const updateBadge = useCallback((stats: AccountStats | null, unreads: Record<string, number>) => {
@@ -309,6 +321,7 @@ const App: React.FC = () => {
       } else { setInitializing(false); }
     };
     hydrate();
+    refreshPrices(); // Initial price fetch
 
     const storageListener = (changes: any, areaName: string) => {
       if (areaName === 'local') {
@@ -335,6 +348,12 @@ const App: React.FC = () => {
     const interval = setInterval(poll, 30000); // Every 30 seconds
     return () => clearInterval(interval);
   }, [settings.rcUser]);
+
+  // --- PRICE POLLING ---
+  useEffect(() => {
+    const interval = setInterval(refreshPrices, 60000); // Every 60 seconds
+    return () => clearInterval(interval);
+  }, [refreshPrices]);
 
   // Effect to parse URL when allFrontends or tab changes
   useEffect(() => {
@@ -641,6 +660,7 @@ const App: React.FC = () => {
         onLoginClick={() => setCurrentView(AppView.SETTINGS)}
         onLogoutClick={handleLogout}
         stats={accountStats}
+        prices={hivePrices}
       />
       
       <main className="flex-1 overflow-hidden relative flex flex-col">

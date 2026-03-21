@@ -1,6 +1,6 @@
 import React from 'react';
-import { PanelRight, LogOut, LogIn, ThumbsUp, Zap } from 'lucide-react';
-import { AccountStats } from '../types';
+import { PanelRight, LogOut, LogIn, ThumbsUp, Zap, TrendingUp, BarChart3 } from 'lucide-react';
+import { AccountStats, HivePrices } from '../types';
 import { Gauge } from './Gauge';
 
 declare const chrome: any;
@@ -10,9 +10,10 @@ interface HeaderProps {
   onLoginClick?: () => void;
   onLogoutClick?: () => void;
   stats?: AccountStats | null;
+  prices?: HivePrices;
 }
 
-export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogoutClick, stats }) => {
+export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogoutClick, stats, prices }) => {
   const openSidePanel = () => {
     if (typeof chrome !== 'undefined' && chrome.sidePanel) {
       chrome.windows.getCurrent((window: any) => {
@@ -25,6 +26,27 @@ export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogout
 
   return (
     <div className="flex flex-col sticky top-0 z-20 shadow-sm bg-white">
+        {/* Price Ticker Bar */}
+        <div className="bg-slate-900 text-white px-4 py-1 flex items-center justify-between text-[10px] font-medium tracking-wide">
+            <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5" title="Exchange Price (CoinGecko)">
+                    <TrendingUp size={10} className="text-emerald-400" />
+                    <span className="text-slate-400 uppercase">Binance:</span>
+                    <span>${prices?.exchange?.toFixed(3) || '---'}</span>
+                </div>
+                <div className="w-px h-2.5 bg-slate-700" />
+                <div className="flex items-center gap-1.5" title="Internal Market Price (HBD)">
+                    <BarChart3 size={10} className="text-blue-400" />
+                    <span className="text-slate-400 uppercase">Internal:</span>
+                    <span>${prices?.internal?.toFixed(3) || '---'}</span>
+                </div>
+            </div>
+            <div className="flex items-center gap-1">
+                <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-slate-500 uppercase font-bold tracking-tighter">Live</span>
+            </div>
+        </div>
+
         <header className="border-b border-slate-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
             <img 

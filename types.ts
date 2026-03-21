@@ -197,3 +197,8 @@ export interface HiveNotification {
   amount?: string; // For transfers
   memo?: string; // For transfers
 }
+
+export interface HivePrices {
+  exchange: number | null;
+  internal: number | null;
+}

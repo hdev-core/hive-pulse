@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice } from './utils/hiveHelpers';
+import { parseUrl, getTargetUrl } from './utils/urlHelpers';
 import { 
   bootstrapEcencyChat, 
   fetchChannels, 
@@ -504,7 +505,8 @@ const App: React.FC = () => {
             ecencyAccessToken: token,
             ecencyChatToken: bootstrap.token,
             ecencyUserId: bootstrap.userId,
-            ecencyRefreshToken: bootstrap.refreshToken
+            ecencyRefreshToken: bootstrap.refreshToken,
+            rcUser: settings.ecencyUsername // Update rcUser to the logged-in user
           });
           setChatSessionExpired(false);
           refreshChat();
@@ -675,7 +677,7 @@ const App: React.FC = () => {
             />
             )}
             {currentView === AppView.SHARE && (
-            <ShareView tabState={tabState} />
+            <ShareView tabState={tabState} allFrontends={allFrontends} />
             )}
             {currentView === AppView.STATS && (
             <StatsView settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} allFrontends={allFrontends} />

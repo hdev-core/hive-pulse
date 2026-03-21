@@ -1,6 +1,6 @@
 
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
-import { fetchAccountStats } from './utils/hiveHelpers';
+import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice } from './utils/hiveHelpers';
 import { 
   fetchChannels, 
   bootstrapEcencyChat, 
@@ -10,7 +10,8 @@ import {
   fetchUnreads,
   fetchMe
 } from './utils/ecencyHelpers';
-import { ActionMode, AppSettings, FrontendId, Channel } from './types';
+import { ActionMode, AppSettings, FrontendId, Channel, HivePrices } from './types';
+import { FRONTENDS } from './constants';
 
 declare const chrome: any;
 
@@ -27,7 +28,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   ecencyAccessToken: '',
   ecencyChatToken: '',
   ecencyRefreshToken: '',
-  overrideBadgeWithUnreadMessages: true
+  overrideBadgeWithUnreadMessages: true,
+  activeFrontendIds: FRONTENDS.map(f => f.id),
+  customFrontends: []
 };
 
 const setupAlarm = async () => {
@@ -320,7 +323,8 @@ chrome.tabs.onUpdated.addListener(async (tabId: number, changeInfo: any, tab: an
 
     if (!settings.autoRedirect || !settings.preferredFrontendId) return;
 
-    const tabState = parseUrl(tab.url);
+    const allFrontends = [...FRONTENDS, ...(settings.customFrontends || [])];
+    const tabState = parseUrl(tab.url, allFrontends);
 
     if (
       tabState.isHiveUrl && 
@@ -331,7 +335,10 @@ chrome.tabs.onUpdated.addListener(async (tabId: number, changeInfo: any, tab: an
         settings.preferredFrontendId,
         tabState.path,
         ActionMode.SAME_PAGE,
-        tabState.username
+        tabState.username,
+        tabState.author,
+        tabState.permlink,
+        allFrontends
       );
 
       if (newUrl && newUrl !== tab.url) {

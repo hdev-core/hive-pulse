@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { CurrentTabState, ActionMode, FrontendId } from '../../types';
+import { CurrentTabState, ActionMode, FrontendId, FrontendConfig } from '../../types';
 import { FRONTENDS } from '../../constants';
 import { getTargetUrl } from '../../utils/urlHelpers';
 import { FrontendIcon } from '../FrontendIcon';
@@ -8,9 +8,10 @@ import { Link as LinkIcon, Info, Copy, Check } from 'lucide-react';
 
 interface ShareViewProps {
   tabState: CurrentTabState;
+  allFrontends: FrontendConfig[]; // Add this prop
 }
 
-export const ShareView: React.FC<ShareViewProps> = ({ tabState }) => {
+export const ShareView: React.FC<ShareViewProps> = ({ tabState, allFrontends }) => {
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   const handleCopy = (url: string, id: string) => {
@@ -41,8 +42,16 @@ export const ShareView: React.FC<ShareViewProps> = ({ tabState }) => {
       </div>
 
       <div className="flex flex-col gap-2">
-        {FRONTENDS.map((frontend) => {
-           const url = getTargetUrl(frontend.id, tabState.path, ActionMode.SAME_PAGE, tabState.username);
+        {allFrontends.filter(f => f.active).map((frontend) => {
+           const url = getTargetUrl(
+             frontend.id, 
+             tabState.path, 
+             ActionMode.SAME_PAGE, 
+             tabState.username, 
+             tabState.author, 
+             tabState.permlink, 
+             allFrontends
+           );
            const isCopied = copiedLink === frontend.id;
            return (
             <div key={frontend.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200 shadow-sm">

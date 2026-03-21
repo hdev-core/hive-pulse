@@ -1,4 +1,4 @@
-
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice } from './utils/hiveHelpers';
 import { 
   bootstrapEcencyChat, 

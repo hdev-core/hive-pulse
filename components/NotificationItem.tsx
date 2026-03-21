@@ -83,7 +83,16 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
 
   const getMessage = () => {
       // Use the API message if available, otherwise construct it
-      if (notification.msg) return notification.msg;
+      let msg = notification.msg;
+      
+      // If it's a mention and ends with "and 0 others", remove that part
+      if (msg && notification.type === HiveNotificationType.MENTION) {
+          if (msg.endsWith(' and 0 others')) {
+              msg = msg.replace(' and 0 others', '');
+          }
+      }
+
+      if (msg) return msg;
       
       switch(notification.type) {
           case HiveNotificationType.TRANSFER:

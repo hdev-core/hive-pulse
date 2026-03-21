@@ -21,14 +21,19 @@ interface AccountResponse {
 /**
  * Fetches notifications for a user using Hivemind bridge API.
  */
-export const fetchNotifications = async (username: string, limit: number = 20): Promise<HiveNotification[]> => {
+export const fetchNotifications = async (username: string, limit: number = 20, lastId: number | null = null): Promise<HiveNotification[]> => {
   try {
+    const params: any = { account: username, limit };
+    if (lastId !== null) {
+      params.last_id = lastId;
+    }
+
     const response = await fetch(HIVE_RPC_NODE, {
       method: 'POST',
       body: JSON.stringify({
         jsonrpc: '2.0',
         method: 'bridge.account_notifications',
-        params: { account: username, limit },
+        params,
         id: 1,
       }),
       headers: { 'Content-Type': 'application/json' },

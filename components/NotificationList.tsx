@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { AppSettings, HiveNotification, HiveNotificationType } from '../types';
 import { fetchNotifications } from '../utils/hiveHelpers';
 import { NotificationItem } from './NotificationItem';
-import { Bell, RefreshCw } from 'lucide-react';
+import { Bell, RefreshCw, ChevronDown, Activity } from 'lucide-react';
 
 interface NotificationListProps {
   username: string;
@@ -13,39 +13,77 @@ interface NotificationListProps {
 export const NotificationList: React.FC<NotificationListProps> = ({ username, settings, allFrontends }) => {
   const [notifications, setNotifications] = useState<HiveNotification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastId, setLastId] = useState<number | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const loadNotifications = async () => {
+  const PULSE_TYPES = [
+    HiveNotificationType.REPLY, 
+    HiveNotificationType.MENTION, 
+    HiveNotificationType.TRANSFER, 
+    HiveNotificationType.FOLLOW
+  ];
+
+  const loadNotifications = async (isInitial = true) => {
     if (!username) return;
-    setLoading(true);
+    
+    if (isInitial) {
+        setLoading(true);
+        setLastId(null);
+    } else {
+        setLoadingMore(true);
+    }
+    
     setError(null);
     try {
-      // Fetch more to account for filtered items
-      const data = await fetchNotifications(username, 50);
+      // Fetch batch
+      const limit = 40;
+      const data = await fetchNotifications(username, limit, isInitial ? null : lastId);
       
-      // Filter for "Pulse" relevant types (Social + Finance)
-      // Excluding generic votes to reduce noise, unless it's a very specific "witness vote" (which usually comes as 'account_witness_vote' op but simplified in notifications?)
-      // Bridge notification types: reply, mention, follow, reblog, transfer, vote
-      const filtered = data.filter(n => 
-        [
-            HiveNotificationType.REPLY, 
-            HiveNotificationType.MENTION, 
-            HiveNotificationType.TRANSFER, 
-            HiveNotificationType.FOLLOW
-        ].includes(n.type)
-      ).slice(0, 20); // Show top 20 relevant
+      if (data.length < limit) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
 
-      setNotifications(filtered);
+      if (data.length > 0) {
+          const batchLastId = data[data.length - 1].id;
+          setLastId(batchLastId);
+
+          const filtered = data.filter(n => PULSE_TYPES.includes(n.type));
+          
+          if (isInitial) {
+            setNotifications(filtered);
+          } else {
+            setNotifications(prev => [...prev, ...filtered]);
+          }
+      } else if (isInitial) {
+          setNotifications([]);
+          setHasMore(false);
+      }
     } catch (err) {
       setError("Failed to load notifications");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    loadNotifications();
+    loadNotifications(true);
   }, [username]);
+
+  const handleScroll = () => {
+    if (!scrollContainerRef.current || loading || loadingMore || !hasMore) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    if (scrollTop + clientHeight >= scrollHeight - 20) {
+      loadNotifications(false);
+    }
+  };
 
   if (!username) return null;
 
@@ -57,30 +95,59 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
             <h3 className="text-sm font-bold text-slate-700">The Pulse</h3>
         </div>
         <button 
-            onClick={loadNotifications} 
-            disabled={loading}
+            onClick={() => loadNotifications(true)} 
+            disabled={loading || loadingMore}
             className="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition-colors disabled:opacity-50"
         >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={loading || loadingMore ? 'animate-spin' : ''} />
         </button>
       </div>
       
-      <div className="flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex flex-col max-h-[350px] overflow-y-auto custom-scrollbar"
+      >
         {loading && notifications.length === 0 ? (
            <div className="p-8 text-center text-xs text-slate-400">Loading pulse...</div>
-        ) : error ? (
+        ) : error && notifications.length === 0 ? (
            <div className="p-4 text-center text-xs text-red-400">{error}</div>
         ) : notifications.length === 0 ? (
            <div className="p-8 text-center text-xs text-slate-400">No recent notifications</div>
         ) : (
-            notifications.map((n, i) => (
-                <NotificationItem 
-                    key={`${n.id}-${i}`} 
-                    notification={n} 
-                    settings={settings}
-                    allFrontends={allFrontends}
-                />
-            ))
+            <>
+                {notifications.map((n, i) => (
+                    <NotificationItem 
+                        key={`${n.id}-${i}`} 
+                        notification={n} 
+                        settings={settings}
+                        allFrontends={allFrontends}
+                    />
+                ))}
+                
+                {hasMore && (
+                    <button 
+                        onClick={() => loadNotifications(false)}
+                        disabled={loadingMore}
+                        className="flex items-center justify-center gap-2 p-4 text-xs font-medium text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition-all border-t border-slate-50"
+                    >
+                        {loadingMore ? (
+                            <Activity size={14} className="animate-spin" />
+                        ) : (
+                            <>
+                                <ChevronDown size={14} />
+                                <span>Load older pulse</span>
+                            </>
+                        )}
+                    </button>
+                )}
+
+                {!hasMore && notifications.length > 0 && (
+                    <div className="p-4 text-center text-[10px] text-slate-300 uppercase tracking-widest font-bold">
+                        End of Pulse
+                    </div>
+                )}
+            </>
         )}
       </div>
     </div>

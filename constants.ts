@@ -182,6 +182,13 @@ export const DAPPS: DAppConfig[] = [
     category: 'Social'
   },
   {
+    name: 'Actifit',
+    url: 'https://actifit.io',
+    description: 'Move-to-earn fitness tracking.',
+    logo: 'actifit.png',
+    category: 'Social'
+  },
+  {
     name: 'Snapie',
     url: 'https://snapie.net',
     description: 'Share your moments.',
@@ -269,13 +276,6 @@ export const DAPPS: DAppConfig[] = [
     logo: 'https://images.ecency.com/u/beeswap/avatar/small',
     category: 'DeFi'
   },
-  {
-    name: 'BlockTrades',
-    url: 'https://blocktrades.us',
-    description: 'Fast cryptocurrency exchange service.',
-    logo: 'https://images.ecency.com/u/blocktrades/avatar/small',
-    category: 'DeFi'
-  },
 
   // --- Video ---
   {
@@ -305,7 +305,7 @@ export const DAPPS: DAppConfig[] = [
     name: 'PeakMonsters',
     url: 'https://peakmonsters.com',
     description: 'Advanced Splinterlands market.',
-    logo: 'peakmonsters.png',
+    logo: 'https://images.ecency.com/u/peakmonsters/avatar/small',
     category: 'Tool'
   },
   {
@@ -319,7 +319,7 @@ export const DAPPS: DAppConfig[] = [
     name: 'HiveStats',
     url: 'https://hivestats.io',
     description: 'Advanced account analytics.',
-    logo: 'https://images.ecency.com/u/hivestats/avatar/small',
+    logo: 'https://images.ecency.com/u/hivestats.app/avatar/small',
     category: 'Tool'
   },
   {

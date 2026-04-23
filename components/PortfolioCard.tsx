@@ -43,13 +43,14 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
     'hive-engine': false
   });
 
+  const [iconErrors, setIconErrors] = useState<Record<string, boolean>>({});
+
   // Fetch Hive-Engine tokens when expanding the card
   useEffect(() => {
-    if (isExpanded && username && hiveEngineTokens.length === 0 && !loadingHE) {
+    if (isExpanded && username && hiveEngineTokens.length === 0 && !loadingHE && hivePrice > 0) {
       setLoadingHE(true);
-      getHiveEnginePortfolioValue(username)
+      getHiveEnginePortfolioValue(username, hivePrice)
         .then(result => {
-          console.log('Hive-Engine portfolio loaded:', result);
           setHiveEngineTokens(result.tokens);
           setHiveEngineTotal(result.totalUSD);
         })
@@ -60,7 +61,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
         })
         .finally(() => setLoadingHE(false));
     }
-  }, [isExpanded, username]);
+  }, [isExpanded, username, hivePrice]);
 
   const filteredSortedTokens = useMemo(() => {
     let list = hiveEngineTokens;
@@ -391,9 +392,18 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                     {filteredSortedTokens.length > 0 ? filteredSortedTokens.map((token, idx) => (
                       <div key={idx} className="bg-gradient-to-r from-purple-50 to-pink-100 border border-purple-200 rounded-lg p-3 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="text-sm font-bold text-purple-700 bg-purple-200 rounded px-2 py-1">
-                            {token.symbol}
-                          </div>
+                          {token.iconUrl && !iconErrors[token.symbol] ? (
+                            <img
+                              src={token.iconUrl}
+                              alt={token.symbol}
+                              className="w-7 h-7 rounded"
+                              onError={() => setIconErrors(prev => ({ ...prev, [token.symbol]: true }))}
+                            />
+                          ) : (
+                            <div className="text-xs font-bold text-purple-700 bg-purple-200 rounded px-2 py-1 min-w-[28px] text-center">
+                              {token.symbol.length > 4 ? token.symbol.slice(0, 4) : token.symbol}
+                            </div>
+                          )}
                           <div>
                             <p className="text-sm font-medium text-slate-800">{token.name}</p>
                             <p className="text-xs text-slate-600">{token.balance.toFixed(2)} {token.symbol}</p>

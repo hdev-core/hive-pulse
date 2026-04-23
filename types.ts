@@ -22,7 +22,7 @@ export enum AppView {
   SHARE = 'SHARE',
   STATS = 'STATS',
   CHAT = 'CHAT',
-  APPS = 'APPS',
+  WALLET = 'WALLET',
   SETTINGS = 'SETTINGS'
 }
 

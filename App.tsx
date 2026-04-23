@@ -27,7 +27,7 @@ import { SwitcherView } from './components/views/SwitcherView';
 import { ShareView } from './components/views/ShareView';
 import { StatsView } from './components/views/StatsView';
 import { ChatView } from './components/views/ChatView';
-import { AppsView } from './components/views/AppsView';
+import { WalletView } from './components/views/WalletView';
 import { SettingsView } from './components/views/SettingsView';
 
 declare const chrome: any;
@@ -711,8 +711,8 @@ const App: React.FC = () => {
                 unreadCounts={unreadCounts}
             />
             )}
-            {currentView === AppView.APPS && (
-            <AppsView />
+            {currentView === AppView.WALLET && (
+            <WalletView settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} />
             )}
             {currentView === AppView.SETTINGS && (
             <SettingsView 

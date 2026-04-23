@@ -4,7 +4,6 @@ import { fetchAccountStats } from '../../utils/hiveHelpers';
 import { Search, Activity, ThumbsUp, Zap } from 'lucide-react';
 import { NotificationList } from '../NotificationList';
 import { Gauge } from '../Gauge';
-import { PortfolioCard } from '../PortfolioCard';
 
 interface StatsViewProps {
   settings: AppSettings;
@@ -119,7 +118,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
         {loading && <div className="py-8 flex justify-center"><Activity className="animate-spin text-slate-300" size={32} /></div>}
         {error && <div className="py-4 text-center text-sm text-red-500 bg-red-50 rounded-lg border border-red-100">{error}</div>}
 
-        {!loading && stats && (
+{!loading && stats && (
           <>
             <div className="flex flex-col items-center py-2 animate-in fade-in zoom-in-95 duration-200">
                 <h3 className="text-lg font-bold text-slate-800 mb-4">@{stats.username}</h3>
@@ -143,18 +142,6 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
                     size={112}
                   />
                 </div>
-                
-                {/* Portfolio Card */}
-                {stats.balances && prices && (
-                  <div className="w-full mt-4">
-                    <PortfolioCard 
-                      balances={stats.balances}
-                      hivePrice={prices.hive}
-                      hbdPrice={prices.hbd}
-                      username={stats.username}
-                    />
-                  </div>
-                )}
                 
                 <div className="w-full bg-slate-50 p-2 rounded-lg border border-slate-100 flex items-center justify-between">
                 <span className="text-xs text-slate-500 font-medium">Extension Badge</span>

@@ -53,6 +53,8 @@
   "host_permissions": [
     "https://ecency.com/*",
     "https://api.hive.blog/*",
-    "https://images.ecency.com/*"
+    "https://images.ecency.com/*",
+    "https://api.hive-engine.com/*",
+    "https://api.coingecko.com/*"
   ]
 }

@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronDown, TrendingUp, Wallet, Zap, Lock, Clock, Coins, Loader } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ChevronDown, TrendingUp, Wallet, Zap, Lock, Clock, Coins, Loader, Search, ArrowUpDown } from 'lucide-react';
 import { BalanceInfo } from '../types';
 import { formatUSD } from '../utils/hiveHelpers';
 import { getHiveEnginePortfolioValue, HiveEngineToken } from '../utils/hiveEngineHelpers';
+
+type HESortMode = 'value' | 'name' | 'balance';
 
 interface PortfolioCardProps {
   balances: BalanceInfo;
@@ -31,6 +33,8 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   const [hiveEngineTokens, setHiveEngineTokens] = useState<HiveEngineToken[]>([]);
   const [hiveEngineTotal, setHiveEngineTotal] = useState(0);
   const [loadingHE, setLoadingHE] = useState(false);
+  const [heSortMode, setHeSortMode] = useState<HESortMode>('value');
+  const [heFilter, setHeFilter] = useState('');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     liquid: true,
     staked: true,
@@ -57,6 +61,28 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
         .finally(() => setLoadingHE(false));
     }
   }, [isExpanded, username]);
+
+  const filteredSortedTokens = useMemo(() => {
+    let list = hiveEngineTokens;
+    if (heFilter.trim()) {
+      const q = heFilter.trim().toLowerCase();
+      list = list.filter(t => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q));
+    }
+    const sorted = [...list];
+    switch (heSortMode) {
+      case 'name':
+        sorted.sort((a, b) => a.symbol.localeCompare(b.symbol));
+        break;
+      case 'balance':
+        sorted.sort((a, b) => b.balance - a.balance);
+        break;
+      case 'value':
+      default:
+        sorted.sort((a, b) => (b.balance * b.priceUSD) - (a.balance * a.priceUSD));
+        break;
+    }
+    return sorted;
+  }, [hiveEngineTokens, heSortMode, heFilter]);
 
   // Calculate breakdown
   const breakdown = {
@@ -307,7 +333,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
             </div>
           )}
 
-          {/* Hive-Engine Section (Placeholder) */}
+          {/* Hive-Engine Section */}
           <div className="border-b border-slate-200">
             <button
               onClick={() => toggleSection('hive-engine')}
@@ -332,7 +358,37 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                   </div>
                 ) : hiveEngineTokens.length > 0 ? (
                   <div className="space-y-2">
-                    {hiveEngineTokens.map((token, idx) => (
+                    {/* Filter & Sort Controls */}
+                    <div className="flex flex-col gap-1.5 mb-1">
+                      <div className="relative">
+                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          value={heFilter}
+                          onChange={e => setHeFilter(e.target.value)}
+                          placeholder="Filter tokens..."
+                          className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400 focus:border-purple-400 transition-all"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <ArrowUpDown size={12} className="text-slate-400 mr-1" />
+                        {(['value', 'name', 'balance'] as HESortMode[]).map(mode => (
+                          <button
+                            key={mode}
+                            onClick={() => setHeSortMode(mode)}
+                            className={`px-2 py-0.5 text-[10px] font-semibold rounded transition-all ${
+                              heSortMode === mode
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {mode === 'value' ? 'Value' : mode === 'name' ? 'A-Z' : 'Balance'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {filteredSortedTokens.length > 0 ? filteredSortedTokens.map((token, idx) => (
                       <div key={idx} className="bg-gradient-to-r from-purple-50 to-pink-100 border border-purple-200 rounded-lg p-3 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="text-sm font-bold text-purple-700 bg-purple-200 rounded px-2 py-1">
@@ -345,7 +401,9 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                         </div>
                         <span className="text-sm font-semibold text-slate-900">{formatUSD(token.balance * token.priceUSD)}</span>
                       </div>
-                    ))}
+                    )) : (
+                      <p className="text-xs text-slate-500 text-center py-2">No tokens match your filter.</p>
+                    )}
                     <div className="border-t border-purple-200 pt-2 flex justify-between items-center text-sm">
                       <span className="font-semibold text-slate-800">Hive-Engine Total</span>
                       <span className="font-bold text-purple-600">{formatUSD(hiveEngineTotal)}</span>
@@ -353,12 +411,12 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                   </div>
                 ) : (
                   <div className="bg-slate-100/50 border border-slate-300 rounded-lg p-4 text-center space-y-2">
-                    <p className="text-xs text-slate-700 font-medium">✓ No Hive-Engine tokens in wallet</p>
+                    <p className="text-xs text-slate-700 font-medium">No Hive-Engine tokens in wallet</p>
                     <p className="text-xs text-slate-600">You can buy tokens on:</p>
                     <ul className="text-xs text-slate-600 space-y-1">
-                      <li>• Hive-Engine: https://hive-engine.com</li>
-                      <li>• Splinterlands.com (for DEC)</li>
-                      <li>• InLeo.io (for LEO)</li>
+                      <li>Hive-Engine: https://hive-engine.com</li>
+                      <li>Splinterlands.com (for DEC)</li>
+                      <li>InLeo.io (for LEO)</li>
                     </ul>
                   </div>
                 )}

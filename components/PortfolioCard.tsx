@@ -45,6 +45,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
       setLoadingHE(true);
       getHiveEnginePortfolioValue(username)
         .then(result => {
+          console.log('Hive-Engine portfolio loaded:', result);
           setHiveEngineTokens(result.tokens);
           setHiveEngineTotal(result.totalUSD);
         })
@@ -327,7 +328,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                 {loadingHE ? (
                   <div className="flex items-center justify-center gap-2 py-4">
                     <Loader size={16} className="animate-spin text-slate-400" />
-                    <p className="text-xs text-slate-600">Fetching tokens...</p>
+                    <p className="text-xs text-slate-600">Fetching tokens from Hive-Engine...</p>
                   </div>
                 ) : hiveEngineTokens.length > 0 ? (
                   <div className="space-y-2">
@@ -351,9 +352,14 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-slate-100/50 border border-slate-300 rounded-lg p-3 text-center">
-                    <p className="text-xs text-slate-600">No Hive-Engine tokens found</p>
-                    <p className="text-xs text-slate-500 mt-1">Or prices not available</p>
+                  <div className="bg-slate-100/50 border border-slate-300 rounded-lg p-4 text-center space-y-2">
+                    <p className="text-xs text-slate-700 font-medium">✓ No Hive-Engine tokens in wallet</p>
+                    <p className="text-xs text-slate-600">You can buy tokens on:</p>
+                    <ul className="text-xs text-slate-600 space-y-1">
+                      <li>• Hive-Engine: https://hive-engine.com</li>
+                      <li>• Splinterlands.com (for DEC)</li>
+                      <li>• InLeo.io (for LEO)</li>
+                    </ul>
                   </div>
                 )}
               </div>

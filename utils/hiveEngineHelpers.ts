@@ -12,10 +12,26 @@ export interface HiveEngineToken {
 
 const HIVE_ENGINE_API = 'https://api.hive-engine.com/rpc';
 
+// Mapping of Hive-Engine symbols to CoinGecko IDs
+const TOKEN_COINGECKO_MAP: Record<string, string> = {
+  'SWAP': 'swapfifty',
+  'BEE': 'bee-crypto',
+  'STEM': 'stem',
+  'LEO': 'leo',
+  'ONEUP': 'oneup',
+  'PAL': 'pal-crypto',
+  'POSH': 'posh',
+  'LASSECASH': 'lasse-cash',
+  'DEC': 'splinterlands',
+  'HKOIN': 'hokkaido-inu',
+  'SIM': 'splinterlands',
+  'ARCHON': 'archon'
+};
+
 /**
  * Fetches user's Hive-Engine token balances
  */
-export const fetchHiveEngineBalances = async (username: string): Promise<HiveEngineToken[]> => {
+export const fetchHiveEngineBalances = async (username: string): Promise<any[]> => {
   try {
     const response = await fetch(HIVE_ENGINE_API, {
       method: 'POST',
@@ -34,7 +50,12 @@ export const fetchHiveEngineBalances = async (username: string): Promise<HiveEng
     });
 
     const data = await response.json();
-    return data.result || [];
+    console.log('Hive-Engine balances response:', data);
+    
+    if (data.result && Array.isArray(data.result)) {
+      return data.result;
+    }
+    return [];
   } catch (error) {
     console.error('Failed to fetch Hive-Engine balances:', error);
     return [];
@@ -43,28 +64,37 @@ export const fetchHiveEngineBalances = async (username: string): Promise<HiveEng
 
 /**
  * Fetches Hive-Engine token prices from CoinGecko
- * Popular tokens: SWAP, BEE, STEM, LEO, etc.
+ * Supports: SWAP, BEE, STEM, LEO, ONEUP, PAL, POSH, DEC, etc.
  */
 export const fetchHiveEngineTokenPrices = async (): Promise<Record<string, number>> => {
   try {
-    const tokens = ['swapfifty', 'bee-crypto', 'stem', 'leo'];
-    const ids = tokens.join(',');
+    // Get all unique CoinGecko IDs from our mapping
+    const coingeckoIds = Object.values(TOKEN_COINGECKO_MAP);
+    const uniqueIds = [...new Set(coingeckoIds)]; // Remove duplicates
+    
+    if (uniqueIds.length === 0) return {};
+    
+    const ids = uniqueIds.join(',');
     
     const response = await fetch(
       `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`
     );
 
-    if (!response.ok) return {};
+    if (!response.ok) {
+      console.error('CoinGecko API error:', response.status);
+      return {};
+    }
 
     const data = await response.json();
+    console.log('CoinGecko prices:', data);
     
-    // Map CoinGecko IDs back to symbols
+    // Map CoinGecko responses back to symbols
     const priceMap: Record<string, number> = {};
-    priceMap['SWAP'] = data['swapfifty']?.usd || 0;
-    priceMap['BEE'] = data['bee-crypto']?.usd || 0;
-    priceMap['STEM'] = data['stem']?.usd || 0;
-    priceMap['LEO'] = data['leo']?.usd || 0;
+    for (const [symbol, coingeckoId] of Object.entries(TOKEN_COINGECKO_MAP)) {
+      priceMap[symbol] = data[coingeckoId]?.usd || 0;
+    }
     
+    console.log('Price map:', priceMap);
     return priceMap;
   } catch (error) {
     console.error('Failed to fetch Hive-Engine prices:', error);
@@ -79,15 +109,26 @@ export const enrichHiveEngineTokens = async (
   balances: any[],
   prices: Record<string, number>
 ): Promise<HiveEngineToken[]> => {
+  console.log('Enriching tokens. Balances:', balances, 'Prices:', prices);
+  
   return balances
-    .filter(b => b.balance > 0) // Only include non-zero balances
-    .map(b => ({
-      symbol: b.symbol,
-      name: b.symbol, // Placeholder - could fetch from metadata
-      balance: parseFloat(b.balance),
-      priceUSD: prices[b.symbol] || 0
-    }))
-    .filter(t => t.priceUSD > 0) // Only include tokens with known prices
+    .filter(b => {
+      // Parse balance value
+      const balanceValue = typeof b.balance === 'string' ? parseFloat(b.balance) : b.balance;
+      return balanceValue > 0;
+    })
+    .map(b => {
+      const symbol = b.symbol?.toUpperCase() || b.token?.toUpperCase() || '';
+      const balanceValue = typeof b.balance === 'string' ? parseFloat(b.balance) : b.balance;
+      
+      return {
+        symbol,
+        name: symbol,
+        balance: balanceValue,
+        priceUSD: prices[symbol] || 0
+      };
+    })
+    .filter(t => t.symbol && t.balance > 0) // Only include valid tokens with balance
     .sort((a, b) => (b.balance * b.priceUSD) - (a.balance * a.priceUSD)); // Sort by value
 };
 
@@ -98,12 +139,20 @@ export const getHiveEnginePortfolioValue = async (
   username: string
 ): Promise<{ tokens: HiveEngineToken[]; totalUSD: number }> => {
   try {
+    console.log('Fetching Hive-Engine portfolio for:', username);
+    
     const [balances, prices] = await Promise.all([
       fetchHiveEngineBalances(username),
       fetchHiveEngineTokenPrices()
     ]);
 
+    console.log('Raw balances:', balances);
+    console.log('Prices fetched:', prices);
+
     const tokens = await enrichHiveEngineTokens(balances, prices);
+    
+    console.log('Enriched tokens:', tokens);
+    
     const totalUSD = tokens.reduce((sum, token) => sum + (token.balance * token.priceUSD), 0);
 
     return { tokens, totalUSD };

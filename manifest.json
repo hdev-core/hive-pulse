@@ -55,6 +55,10 @@
     "https://api.hive.blog/*",
     "https://images.ecency.com/*",
     "https://api.hive-engine.com/*",
-    "https://api.coingecko.com/*"
+    "https://api.coingecko.com/*",
+    "https://images.hive.blog/*",
+    "https://files.peakd.com/*",
+    "https://s3.amazonaws.com/*",
+    "https://ipfs.io/*"
   ]
 }

@@ -83,9 +83,18 @@ const fetchHiveEngineTokenInfo = async (symbols: string[]): Promise<Record<strin
 
     const info: Record<string, { name: string; logo: string }> = {};
     for (const token of data.result) {
+      let logo = '';
+      if (token.metadata && typeof token.metadata === 'string') {
+        try {
+          const meta = JSON.parse(token.metadata);
+          logo = meta.icon || '';
+        } catch {}
+      } else if (token.metadata?.icon) {
+        logo = token.metadata.icon;
+      }
       info[token.symbol] = {
         name: token.name || token.symbol,
-        logo: token.logo || ''
+        logo
       };
     }
     return info;
@@ -149,6 +158,8 @@ const resolveLogoUrl = (logo: string): string | undefined => {
 
 /**
  * Combines balances, market prices, and token metadata into display tokens.
+ * Returns immediately with icon URLs — icons are resolved to data URLs
+ * lazily by the UI component to avoid blocking the token list render.
  */
 const enrichHiveEngineTokens = (
   balances: any[],
@@ -176,6 +187,33 @@ const enrichHiveEngineTokens = (
   }).filter(t => t.symbol && t.balance > 0);
 
   return enriched.sort((a, b) => (b.balance * b.priceUSD) - (a.balance * a.priceUSD));
+};
+
+/**
+ * Fetch an image and convert to data URL for CSP-compatible rendering.
+ * Returns undefined if fetch fails (caller should use fallback).
+ */
+export const loadIconAsDataUrl = async (url: string): Promise<string | undefined> => {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const resp = await fetch(url, { signal: controller.signal });
+      if (!resp.ok) return undefined;
+      const blob = await resp.blob();
+      if (!blob.type.startsWith('image/')) return undefined;
+      return new Promise<string | undefined>(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(undefined);
+        reader.readAsDataURL(blob);
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  } catch {
+    return undefined;
+  }
 };
 
 /**

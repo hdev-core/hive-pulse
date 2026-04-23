@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronDown, TrendingUp, Wallet, Zap, Lock, Clock, Coins, Loader, Search, ArrowUpDown } from 'lucide-react';
 import { BalanceInfo } from '../types';
 import { formatUSD } from '../utils/hiveHelpers';
-import { getHiveEnginePortfolioValue, HiveEngineToken } from '../utils/hiveEngineHelpers';
+import { getHiveEnginePortfolioValue, HiveEngineToken, loadIconAsDataUrl } from '../utils/hiveEngineHelpers';
 
 type HESortMode = 'value' | 'name' | 'balance';
 
@@ -44,6 +44,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   });
 
   const [iconErrors, setIconErrors] = useState<Record<string, boolean>>({});
+  const [iconDataUrls, setIconDataUrls] = useState<Record<string, string>>({});
 
   // Fetch Hive-Engine tokens when expanding the card
   useEffect(() => {
@@ -62,6 +63,27 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
         .finally(() => setLoadingHE(false));
     }
   }, [isExpanded, username, hivePrice]);
+
+  // Lazily load token icons as data URLs (non-blocking)
+  useEffect(() => {
+    if (hiveEngineTokens.length === 0) return;
+    let cancelled = false;
+    const loadIcons = async () => {
+      for (const token of hiveEngineTokens) {
+        if (cancelled) break;
+        if (!token.iconUrl || iconDataUrls[token.symbol] || iconErrors[token.symbol]) continue;
+        const dataUrl = await loadIconAsDataUrl(token.iconUrl);
+        if (cancelled) break;
+        if (dataUrl) {
+          setIconDataUrls(prev => ({ ...prev, [token.symbol]: dataUrl }));
+        } else {
+          setIconErrors(prev => ({ ...prev, [token.symbol]: true }));
+        }
+      }
+    };
+    loadIcons();
+    return () => { cancelled = true; };
+  }, [hiveEngineTokens]);
 
   const filteredSortedTokens = useMemo(() => {
     let list = hiveEngineTokens;
@@ -392,13 +414,14 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                     {filteredSortedTokens.length > 0 ? filteredSortedTokens.map((token, idx) => (
                       <div key={idx} className="bg-gradient-to-r from-purple-50 to-pink-100 border border-purple-200 rounded-lg p-3 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          {token.iconUrl && !iconErrors[token.symbol] ? (
+                          {iconDataUrls[token.symbol] ? (
                             <img
-                              src={token.iconUrl}
+                              src={iconDataUrls[token.symbol]}
                               alt={token.symbol}
                               className="w-7 h-7 rounded"
-                              onError={() => setIconErrors(prev => ({ ...prev, [token.symbol]: true }))}
                             />
+                          ) : !iconErrors[token.symbol] && token.iconUrl ? (
+                            <div className="w-7 h-7 rounded bg-purple-100 flex items-center justify-center animate-pulse" />
                           ) : (
                             <div className="text-xs font-bold text-purple-700 bg-purple-200 rounded px-2 py-1 min-w-[28px] text-center">
                               {token.symbol.length > 4 ? token.symbol.slice(0, 4) : token.symbol}

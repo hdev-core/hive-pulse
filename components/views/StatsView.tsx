@@ -55,7 +55,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
 
     try {
       const cleanUser = targetUser.replace('@', '').trim();
-      const data = await fetchAccountStats(cleanUser);
+      const data = await fetchAccountStats(cleanUser, settings);
       
       if (data) {
         setStats(data);

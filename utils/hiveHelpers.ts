@@ -1,53 +1,88 @@
-
 import { AccountStats, HiveNotification } from '../types';
+import { HIVE_RPC_NODES } from '../constants';
 
-const HIVE_RPC_NODE = 'https://api.hive.blog';
+const DEFAULT_HIVE_RPC_NODE = HIVE_RPC_NODES[0];
+
+type RpcBody = Record<string, any>;
+
+const rpcFetch = async (nodeUrl: string, body: RpcBody): Promise<any> => {
+  const response = await fetch(nodeUrl, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return response.json();
+};
+
+const rpcFetchWithFallback = async (
+  body: RpcBody,
+  primaryNode: string,
+  fallbackNodes?: string[],
+  autoSwitch?: boolean
+): Promise<any> => {
+  const data = await rpcFetch(primaryNode, body);
+  if (data.result !== undefined && data.result !== null) return data;
+
+  if (!autoSwitch || !fallbackNodes?.length) return data;
+
+  for (const node of fallbackNodes) {
+    if (node === primaryNode) continue;
+    try {
+      const fallbackData = await rpcFetch(node, body);
+      if (fallbackData.result !== undefined && fallbackData.result !== null) return fallbackData;
+    } catch {}
+  }
+
+  return data;
+};
+
+const getHiveNodes = (settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }): {
+  primary: string;
+  fallback: string[];
+  autoSwitch: boolean;
+} => {
+  const primary = settings?.hiveRpcNode || DEFAULT_HIVE_RPC_NODE;
+  const custom = settings?.customHiveRpcNodes || [];
+  const fallback = [...HIVE_RPC_NODES.filter(n => n !== primary), ...custom.filter(n => n !== primary)];
+  const autoSwitch = settings?.autoSwitchHiveNode || false;
+  return { primary, fallback, autoSwitch };
+};
 
 interface RCAccountResponse {
   account: string;
-  rc_manabar: {
-    current_mana: string;
-    last_update_time: number;
-  };
+  rc_manabar: { current_mana: string; last_update_time: number };
   max_rc: string;
 }
 
 interface AccountResponse {
   name: string;
   voting_power: number;
-  last_vote_time: string; // "2023-10-27T10:00:00"
-  balance: string; // e.g., "123.456 HIVE"
-  hbd_balance: string; // e.g., "50.000 HBD"
-  savings_balance: string; // e.g., "200.000 HIVE"
-  savings_hbd_balance: string; // e.g., "30.000 HBD"
-  vesting_shares: string; // e.g., "50000.123456 VESTS" (Staked HIVE / HP)
-  delegated_vesting_shares: string; // e.g., "1000.000000 VESTS"
-  reward_hive_balance: string; // e.g., "1.234 HIVE"
-  reward_hbd_balance: string; // e.g., "0.567 HBD"
+  last_vote_time: string;
+  balance: string;
+  hbd_balance: string;
+  savings_balance: string;
+  savings_hbd_balance: string;
+  vesting_shares: string;
+  delegated_vesting_shares: string;
+  reward_hive_balance: string;
+  reward_hbd_balance: string;
 }
 
-/**
- * Fetches notifications for a user using Hivemind bridge API.
- */
-export const fetchNotifications = async (username: string, limit: number = 20, lastId: number | null = null): Promise<HiveNotification[]> => {
+export const fetchNotifications = async (
+  username: string,
+  limit: number = 20,
+  lastId: number | null = null,
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<HiveNotification[]> => {
   try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
     const params: any = { account: username, limit };
-    if (lastId !== null) {
-      params.last_id = lastId;
-    }
+    if (lastId !== null) params.last_id = lastId;
 
-    const response = await fetch(HIVE_RPC_NODE, {
-      method: 'POST',
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'bridge.account_notifications',
-        params,
-        id: 1,
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const data = await response.json();
+    const data = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'bridge.account_notifications', params, id: 1 },
+      primary, fallback, autoSwitch
+    );
     return data.result || [];
   } catch (e) {
     console.error("Failed to fetch notifications:", e);
@@ -55,48 +90,21 @@ export const fetchNotifications = async (username: string, limit: number = 20, l
   }
 };
 
-/**
- * Fetches both RC and VP data for a username.
- */
-export const fetchAccountStats = async (username: string): Promise<AccountStats | null> => {
+export const fetchAccountStats = async (
+  username: string,
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<AccountStats | null> => {
   try {
-    // Parallel fetch for RC, Account data, and Global data (for vesting conversion)
-    const [rcResponse, accountResponse, globalResponse] = await Promise.all([
-      fetch(HIVE_RPC_NODE, {
-        method: 'POST',
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'rc_api.find_rc_accounts',
-          params: { accounts: [username] },
-          id: 1,
-        }),
-        headers: { 'Content-Type': 'application/json' },
-      }),
-      fetch(HIVE_RPC_NODE, {
-        method: 'POST',
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'condenser_api.get_accounts',
-          params: [[username]],
-          id: 2,
-        }),
-        headers: { 'Content-Type': 'application/json' },
-      }),
-      fetch(HIVE_RPC_NODE, {
-        method: 'POST',
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'condenser_api.get_dynamic_global_properties',
-          params: [],
-          id: 3,
-        }),
-        headers: { 'Content-Type': 'application/json' },
-      })
-    ]);
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const makeBody = (method: string, params: any, id: number) => ({
+      jsonrpc: '2.0', method, params, id
+    });
 
-    const rcData = await rcResponse.json();
-    const acctData = await accountResponse.json();
-    const globalData = await globalResponse.json();
+    const [rcData, acctData, globalData] = await Promise.all([
+      rpcFetchWithFallback(makeBody('rc_api.find_rc_accounts', { accounts: [username] }, 1), primary, fallback, autoSwitch),
+      rpcFetchWithFallback(makeBody('condenser_api.get_accounts', [[username]], 2), primary, fallback, autoSwitch),
+      rpcFetchWithFallback(makeBody('condenser_api.get_dynamic_global_properties', [], 3), primary, fallback, autoSwitch),
+    ]);
 
     const rcAccount = rcData.result?.rc_accounts?.[0] as RCAccountResponse | undefined;
     const account = acctData.result?.[0] as AccountResponse | undefined;
@@ -105,38 +113,29 @@ export const fetchAccountStats = async (username: string): Promise<AccountStats 
     if (!rcAccount || !account || !globals) return null;
 
     const now = Math.floor(Date.now() / 1000);
-    const REGEN_TIME = 432000; // 5 days in seconds
+    const REGEN_TIME = 432000;
 
-    // --- CALCULATE RC ---
     const maxRc = Number(rcAccount.max_rc);
     const currentRcMana = Number(rcAccount.rc_manabar.current_mana);
     const lastRcUpdate = rcAccount.rc_manabar.last_update_time;
-    
     const rcElapsed = now - lastRcUpdate;
     const rcRegenerated = (rcElapsed * maxRc) / REGEN_TIME;
     let actualCurrentRc = currentRcMana + rcRegenerated;
     if (actualCurrentRc > maxRc) actualCurrentRc = maxRc;
-    
     const rcPercentage = (actualCurrentRc / maxRc) * 100;
 
-    // --- CALCULATE VP ---
-    // voting_power is 0-10000
     const lastVoteTime = new Date(account.last_vote_time + 'Z').getTime() / 1000;
     const vpElapsed = now - lastVoteTime;
     const vpRegenerated = (vpElapsed * 10000) / REGEN_TIME;
-    
     let actualCurrentVp = account.voting_power + vpRegenerated;
     if (actualCurrentVp > 10000) actualCurrentVp = 10000;
-    
     const vpPercentage = actualCurrentVp / 100;
 
-    // --- EXTRACT BALANCES ---
     const parseBalance = (balanceStr: string): number => {
       const match = balanceStr.match(/[\d.]+/);
       return match ? parseFloat(match[0]) : 0;
     };
 
-    // Convert VESTS to HIVE
     const vestingShares = parseBalance(account.vesting_shares);
     const totalVestingShares = parseBalance(globals.total_vesting_shares);
     const totalVestingFundHive = parseBalance(globals.total_vesting_fund_hive);
@@ -174,9 +173,6 @@ export const fetchAccountStats = async (username: string): Promise<AccountStats 
   }
 };
 
-/**
- * Fetches the current HIVE price from CoinGecko (Exchange price).
- */
 export const fetchHivePrice = async (): Promise<number | null> => {
   try {
     const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=hive&vs_currencies=usd');
@@ -188,24 +184,15 @@ export const fetchHivePrice = async (): Promise<number | null> => {
   }
 };
 
-/**
- * Fetches the HIVE price from the internal market (HBD/HIVE).
- */
-export const fetchInternalMarketPrice = async (): Promise<number | null> => {
+export const fetchInternalMarketPrice = async (
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<number | null> => {
   try {
-    const response = await fetch(HIVE_RPC_NODE, {
-      method: 'POST',
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'condenser_api.get_ticker',
-        params: [],
-        id: 1,
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const data = await response.json();
-    // highest_bid is the current market price in HBD
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const data = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'condenser_api.get_ticker', params: [], id: 1 },
+      primary, fallback, autoSwitch
+    );
     return Number(data.result?.highest_bid) || null;
   } catch (e) {
     console.error("Failed to fetch HIVE internal market price:", e);
@@ -220,11 +207,8 @@ export const formatRCNumber = (num: number): string => {
   return num.toFixed(0);
 };
 
-/**
- * Calculates total portfolio value in USD from account balances and token prices.
- */
 export interface PortfolioValue {
-  total: number; // Total USD value
+  total: number;
   breakdown: {
     hive: number;
     hbd: number;
@@ -249,7 +233,7 @@ export const calculatePortfolioValue = (
     delegatedHp?: number;
   },
   hivePrice: number,
-  hbdPrice: number = 1.0 // HBD is stablecoin, default to $1
+  hbdPrice: number = 1.0
 ): PortfolioValue => {
   const breakdown = {
     hive: balances.hive * hivePrice,
@@ -268,9 +252,6 @@ export const calculatePortfolioValue = (
   };
 };
 
-/**
- * Format number as USD currency.
- */
 export const formatUSD = (value: number, decimals: number = 2): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

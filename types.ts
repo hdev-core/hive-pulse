@@ -83,6 +83,12 @@ export interface AppSettings {
 
   rcUser?: string;
   badgeMetric: 'RC' | 'VP';
+  hiveRpcNode?: string;
+  heRpcNode?: string;
+  customHiveRpcNodes?: string[];
+  customHeRpcNodes?: string[];
+  autoSwitchHiveNode?: boolean;
+  autoSwitchHeNode?: boolean;
   ecencyUsername?: string;
   ecencyAccessToken?: string; // Hive token (for bootstrap)
   ecencyChatToken?: string;   // Mattermost token (for chat)

@@ -13,14 +13,22 @@ export interface HiveEngineToken {
   iconUrl?: string;
 }
 
-const HIVE_ENGINE_API = 'https://api.hive-engine.com/rpc/contracts';
+const DEFAULT_HE_API = 'https://api.hive-engine.com/rpc';
+
+const HE_CONTRACTS_PATH = '/contracts';
+
+const getHeNode = (nodeOverride?: string): string => {
+  const base = (nodeOverride || DEFAULT_HE_API).replace(/\/+$/, '');
+  return base + HE_CONTRACTS_PATH;
+};
 
 /**
  * Fetches user's Hive-Engine token balances
  */
-export const fetchHiveEngineBalances = async (username: string): Promise<any[]> => {
+export const fetchHiveEngineBalances = async (username: string, heRpcNode?: string): Promise<any[]> => {
   try {
-    const response = await fetch(HIVE_ENGINE_API, {
+    const nodeUrl = getHeNode(heRpcNode);
+    const response = await fetch(nodeUrl, {
       method: 'POST',
       body: JSON.stringify({
         jsonrpc: '2.0',
@@ -58,11 +66,12 @@ export const fetchHiveEngineBalances = async (username: string): Promise<any[]> 
 /**
  * Fetches token metadata (name, logo) from Hive-Engine for specific symbols.
  */
-const fetchHiveEngineTokenInfo = async (symbols: string[]): Promise<Record<string, { name: string; logo: string }>> => {
+const fetchHiveEngineTokenInfo = async (symbols: string[], heRpcNode?: string): Promise<Record<string, { name: string; logo: string }>> => {
   if (symbols.length === 0) return {};
 
   try {
-    const response = await fetch(HIVE_ENGINE_API, {
+    const nodeUrl = getHeNode(heRpcNode);
+    const response = await fetch(nodeUrl, {
       method: 'POST',
       body: JSON.stringify({
         jsonrpc: '2.0',
@@ -108,11 +117,12 @@ const fetchHiveEngineTokenInfo = async (symbols: string[]): Promise<Record<strin
  * Fetches market prices from Hive-Engine for specific symbols.
  * Returns prices in SWAP.HIVE (pegged ~1:1 to HIVE).
  */
-const fetchHiveEngineMarketPrices = async (symbols: string[]): Promise<Record<string, number>> => {
+const fetchHiveEngineMarketPrices = async (symbols: string[], heRpcNode?: string): Promise<Record<string, number>> => {
   if (symbols.length === 0) return {};
 
   try {
-    const response = await fetch(HIVE_ENGINE_API, {
+    const nodeUrl = getHeNode(heRpcNode);
+    const response = await fetch(nodeUrl, {
       method: 'POST',
       body: JSON.stringify({
         jsonrpc: '2.0',
@@ -222,10 +232,11 @@ export const loadIconAsDataUrl = async (url: string): Promise<string | undefined
  */
 export const getHiveEnginePortfolioValue = async (
   username: string,
-  hivePriceUSD: number
+  hivePriceUSD: number,
+  heRpcNode?: string
 ): Promise<{ tokens: HiveEngineToken[]; totalUSD: number }> => {
   try {
-    const balances = await fetchHiveEngineBalances(username);
+    const balances = await fetchHiveEngineBalances(username, heRpcNode);
 
     const heldSymbols = balances
       .filter(b => (typeof b.balance === 'string' ? parseFloat(b.balance) : b.balance) > 0)
@@ -236,8 +247,8 @@ export const getHiveEnginePortfolioValue = async (
     }
 
     const [pricesInHive, tokenInfo] = await Promise.all([
-      fetchHiveEngineMarketPrices(heldSymbols),
-      fetchHiveEngineTokenInfo(heldSymbols)
+      fetchHiveEngineMarketPrices(heldSymbols, heRpcNode),
+      fetchHiveEngineTokenInfo(heldSymbols, heRpcNode)
     ]);
 
     const tokens = enrichHiveEngineTokens(balances, pricesInHive, tokenInfo, hivePriceUSD);

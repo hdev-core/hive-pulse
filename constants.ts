@@ -354,3 +354,24 @@ export const DAPPS: DAppConfig[] = [
 
 export const GENERIC_HIVE_PATH_REGEX = /(\/@[a-z0-9.-]+(\/[a-z0-9-]+)?)|(\/created\/.+)|(\/trending\/.+)|(\/hot\/.+)/;
 export const USERNAME_REGEX = /\/@([a-z0-9.-]+)/;
+
+export const HIVE_RPC_NODES = [
+  'https://api.hive.blog',
+  'https://api.deathwing.me',
+  'https://api.openhive.network',
+  'https://hiveapi.actifit.io',
+  'https://techcoderx.com',
+  'https://api.syncad.com',
+  'https://rpc.mahdiyari.info',
+  'https://api.c0ff33a.uk',
+  'https://hive.atexoras.com:2096'
+];
+
+export const HIVE_ENGINE_RPC_NODES = [
+  'https://api.hive-engine.com/rpc',
+  'https://v6-he.atexoras.com:2083',
+  'https://herpc.actifit.io',
+  'https://he.c0ff33a.uk',
+  'https://herpc.dtools.dev',
+  'https://api2.hive-engine.com/rpc'
+];

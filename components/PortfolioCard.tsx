@@ -11,6 +11,7 @@ interface PortfolioCardProps {
   hivePrice: number;
   hbdPrice?: number;
   username?: string;
+  heRpcNode?: string;
 }
 
 interface AssetRow {
@@ -27,9 +28,10 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   balances, 
   hivePrice,
   hbdPrice = 1.0,
-  username
+  username,
+  heRpcNode
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [hiveEngineTokens, setHiveEngineTokens] = useState<HiveEngineToken[]>([]);
   const [hiveEngineTotal, setHiveEngineTotal] = useState(0);
   const [loadingHE, setLoadingHE] = useState(false);
@@ -40,7 +42,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
     staked: true,
     savings: balances.savingsHive > 0 || balances.savingsHbd > 0,
     pending: balances.pendingHive > 0 || balances.pendingHbd > 0,
-    'hive-engine': false
+    'hive-engine': true
   });
 
   const [iconErrors, setIconErrors] = useState<Record<string, boolean>>({});
@@ -50,7 +52,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   useEffect(() => {
     if (isExpanded && username && hiveEngineTokens.length === 0 && !loadingHE && hivePrice > 0) {
       setLoadingHE(true);
-      getHiveEnginePortfolioValue(username, hivePrice)
+      getHiveEnginePortfolioValue(username, hivePrice, heRpcNode)
         .then(result => {
           setHiveEngineTokens(result.tokens);
           setHiveEngineTotal(result.totalUSD);

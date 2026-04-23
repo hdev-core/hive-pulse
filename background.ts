@@ -13,6 +13,8 @@ import {
 import { ActionMode, AppSettings, FrontendId, Channel, HivePrices } from './types';
 import { FRONTENDS } from './constants';
 
+import { HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from './constants';
+
 declare const chrome: any;
 
 const ALARM_NAME = 'checkStatus';
@@ -30,7 +32,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   ecencyRefreshToken: '',
   overrideBadgeWithUnreadMessages: true,
   activeFrontendIds: FRONTENDS.map(f => f.id),
-  customFrontends: []
+  customFrontends: [],
+  hiveRpcNode: HIVE_RPC_NODES[0],
+  heRpcNode: HIVE_ENGINE_RPC_NODES[0],
+  customHiveRpcNodes: [],
+  customHeRpcNodes: [],
+  autoSwitchHiveNode: false,
+  autoSwitchHeNode: false,
 };
 
 const setupAlarm = async () => {
@@ -214,7 +222,7 @@ const checkStatus = async () => {
          chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
          badgeSet = true;
       } else {
-          const data = await fetchAccountStats(settings.rcUser);
+          const data = await fetchAccountStats(settings.rcUser, settings);
           if (data) {
             const metric = settings.badgeMetric || 'VP';
             const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;

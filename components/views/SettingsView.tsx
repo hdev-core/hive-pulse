@@ -2,8 +2,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, FrontendId, FrontendConfig, LinkStructureConfig } from '../../types';
 import { FrontendIcon } from '../FrontendIcon';
+import { NodeSelector } from '../NodeSelector';
+import { HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from '../../constants';
 import { 
-  ShieldCheck, User, Activity, KeyRound, LogOut, Check, Bell, GripVertical, Grid, PlusCircle, Trash2
+  ShieldCheck, User, Activity, KeyRound, LogOut, Check, Bell, GripVertical, Grid, PlusCircle, Trash2, Server
 } from 'lucide-react'; // Added GripVertical for drag handle
 
 interface SettingsViewProps {
@@ -553,6 +555,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Node Settings */}
+      <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Server size={18} className="text-slate-500" />
+          <span className="font-semibold text-sm text-slate-800">Node Settings</span>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Hive RPC Node</h4>
+            <NodeSelector
+              label="Hive RPC"
+              selectedNode={settings.hiveRpcNode || HIVE_RPC_NODES[0]}
+              presetNodes={HIVE_RPC_NODES}
+              customNodes={settings.customHiveRpcNodes || []}
+              autoSwitch={settings.autoSwitchHiveNode || false}
+              onSelectedNodeChange={(node) => updateSettings({ hiveRpcNode: node })}
+              onCustomNodesChange={(nodes) => updateSettings({ customHiveRpcNodes: nodes })}
+              onAutoSwitchChange={(enabled) => updateSettings({ autoSwitchHiveNode: enabled })}
+            />
+          </div>
+
+          <div className="border-t border-slate-100 pt-3">
+            <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Hive-Engine RPC Node</h4>
+            <NodeSelector
+              label="Hive-Engine RPC"
+              selectedNode={settings.heRpcNode || HIVE_ENGINE_RPC_NODES[0]}
+              presetNodes={HIVE_ENGINE_RPC_NODES}
+              customNodes={settings.customHeRpcNodes || []}
+              autoSwitch={settings.autoSwitchHeNode || false}
+              onSelectedNodeChange={(node) => updateSettings({ heRpcNode: node })}
+              onCustomNodesChange={(nodes) => updateSettings({ customHeRpcNodes: nodes })}
+              onAutoSwitchChange={(enabled) => updateSettings({ autoSwitchHeNode: enabled })}
+            />
+          </div>
         </div>
       </section>
 

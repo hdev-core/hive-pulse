@@ -17,7 +17,7 @@ import {
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
 import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message, HivePrices } from './types';
-import { FRONTENDS } from './constants'; // Import FRONTENDS
+import { FRONTENDS, HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from './constants';
 import { Activity } from 'lucide-react';
 
 // Components
@@ -52,8 +52,14 @@ const DEFAULT_SETTINGS: AppSettings = {
   ecencyUserId: '',
   ecencyRefreshToken: '',
   overrideBadgeWithUnreadMessages: true,
-  activeFrontendIds: FRONTENDS.map(f => f.id), // Initialize with all frontend IDs
-  customFrontends: [], // Initialize with an empty array for custom frontends
+  activeFrontendIds: FRONTENDS.map(f => f.id),
+  customFrontends: [],
+  hiveRpcNode: HIVE_RPC_NODES[0],
+  heRpcNode: HIVE_ENGINE_RPC_NODES[0],
+  customHiveRpcNodes: [],
+  customHeRpcNodes: [],
+  autoSwitchHiveNode: false,
+  autoSwitchHeNode: false,
 };
 
 const App: React.FC = () => {
@@ -311,7 +317,7 @@ const App: React.FC = () => {
                     setUserMap(prev => ({ ...prev, [saved.ecencyUserId!]: saved.ecencyUsername! }));
                  }
                  if (saved.rcUser) {
-                    fetchAccountStats(saved.rcUser).then(data => data && setAccountStats(data));
+                    fetchAccountStats(saved.rcUser, saved).then(data => data && setAccountStats(data));
                  }
               }
               if (result.channels) setChannels(result.channels);
@@ -342,7 +348,7 @@ const App: React.FC = () => {
     if (!settings.rcUser) return;
 
     const poll = async () => {
-      const data = await fetchAccountStats(settings.rcUser!);
+      const data = await fetchAccountStats(settings.rcUser!, settings);
       if (data) setAccountStats(data);
     };
 

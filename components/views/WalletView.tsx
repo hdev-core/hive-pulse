@@ -48,7 +48,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
 
     try {
       const cleanUser = targetUser.replace('@', '').trim();
-      const data = await fetchAccountStats(cleanUser);
+      const data = await fetchAccountStats(cleanUser, settings);
       if (data) {
         setStats(data);
         if (!userToFetch) updateSettings({ rcUser: data.username });
@@ -107,6 +107,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
             hivePrice={prices.hive}
             hbdPrice={prices.hbd}
             username={stats.username}
+            heRpcNode={settings.heRpcNode}
           />
         )}
 

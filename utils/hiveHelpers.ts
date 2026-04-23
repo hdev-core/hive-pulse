@@ -20,6 +20,10 @@ interface AccountResponse {
   hbd_balance: string; // e.g., "50.000 HBD"
   savings_balance: string; // e.g., "200.000 HIVE"
   savings_hbd_balance: string; // e.g., "30.000 HBD"
+  vesting_shares: string; // e.g., "50000.123456 VESTS" (Staked HIVE / HP)
+  delegated_vesting_shares: string; // e.g., "1000.000000 VESTS"
+  reward_hive_balance: string; // e.g., "1.234 HIVE"
+  reward_hbd_balance: string; // e.g., "0.567 HBD"
 }
 
 /**
@@ -56,8 +60,8 @@ export const fetchNotifications = async (username: string, limit: number = 20, l
  */
 export const fetchAccountStats = async (username: string): Promise<AccountStats | null> => {
   try {
-    // Parallel fetch for RC and standard Account data
-    const [rcResponse, accountResponse] = await Promise.all([
+    // Parallel fetch for RC, Account data, and Global data (for vesting conversion)
+    const [rcResponse, accountResponse, globalResponse] = await Promise.all([
       fetch(HIVE_RPC_NODE, {
         method: 'POST',
         body: JSON.stringify({
@@ -77,16 +81,28 @@ export const fetchAccountStats = async (username: string): Promise<AccountStats 
           id: 2,
         }),
         headers: { 'Content-Type': 'application/json' },
+      }),
+      fetch(HIVE_RPC_NODE, {
+        method: 'POST',
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'condenser_api.get_dynamic_global_properties',
+          params: [],
+          id: 3,
+        }),
+        headers: { 'Content-Type': 'application/json' },
       })
     ]);
 
     const rcData = await rcResponse.json();
     const acctData = await accountResponse.json();
+    const globalData = await globalResponse.json();
 
     const rcAccount = rcData.result?.rc_accounts?.[0] as RCAccountResponse | undefined;
     const account = acctData.result?.[0] as AccountResponse | undefined;
+    const globals = globalData.result as any;
 
-    if (!rcAccount || !account) return null;
+    if (!rcAccount || !account || !globals) return null;
 
     const now = Math.floor(Date.now() / 1000);
     const REGEN_TIME = 432000; // 5 days in seconds
@@ -120,11 +136,21 @@ export const fetchAccountStats = async (username: string): Promise<AccountStats 
       return match ? parseFloat(match[0]) : 0;
     };
 
+    // Convert VESTS to HIVE
+    const vestingShares = parseBalance(account.vesting_shares);
+    const totalVestingShares = parseBalance(globals.total_vesting_shares);
+    const totalVestingFundHive = parseBalance(globals.total_vesting_fund_hive);
+    const hp = (vestingShares / totalVestingShares) * totalVestingFundHive;
+
     const balances = {
       hive: parseBalance(account.balance),
       hbd: parseBalance(account.hbd_balance),
       savingsHive: parseBalance(account.savings_balance),
-      savingsHbd: parseBalance(account.savings_hbd_balance)
+      savingsHbd: parseBalance(account.savings_hbd_balance),
+      hivepower: hp,
+      pendingHive: parseBalance(account.reward_hive_balance),
+      pendingHbd: parseBalance(account.reward_hbd_balance),
+      delegatedHp: parseBalance(account.delegated_vesting_shares) / totalVestingShares * totalVestingFundHive
     };
 
     return {
@@ -204,6 +230,10 @@ export interface PortfolioValue {
     hbd: number;
     savingsHive: number;
     savingsHbd: number;
+    hivepower: number;
+    pendingHive: number;
+    pendingHbd: number;
+    delegatedHp: number;
   };
 }
 
@@ -213,6 +243,10 @@ export const calculatePortfolioValue = (
     hbd: number;
     savingsHive: number;
     savingsHbd: number;
+    hivepower: number;
+    pendingHive: number;
+    pendingHbd: number;
+    delegatedHp?: number;
   },
   hivePrice: number,
   hbdPrice: number = 1.0 // HBD is stablecoin, default to $1
@@ -221,11 +255,15 @@ export const calculatePortfolioValue = (
     hive: balances.hive * hivePrice,
     hbd: balances.hbd * hbdPrice,
     savingsHive: balances.savingsHive * hivePrice,
-    savingsHbd: balances.savingsHbd * hbdPrice
+    savingsHbd: balances.savingsHbd * hbdPrice,
+    hivepower: balances.hivepower * hivePrice,
+    pendingHive: balances.pendingHive * hivePrice,
+    pendingHbd: balances.pendingHbd * hbdPrice,
+    delegatedHp: (balances.delegatedHp || 0) * hivePrice
   };
 
   return {
-    total: breakdown.hive + breakdown.hbd + breakdown.savingsHive + breakdown.savingsHbd,
+    total: Object.values(breakdown).reduce((a, b) => a + b, 0),
     breakdown
   };
 };

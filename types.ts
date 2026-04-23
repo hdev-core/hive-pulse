@@ -98,6 +98,10 @@ export interface BalanceInfo {
   hbd: number; // Liquid HBD
   savingsHive: number; // HIVE in savings
   savingsHbd: number; // HBD in savings
+  hivepower: number; // Staked HIVE (Hive Power / HP)
+  pendingHive: number; // Pending HIVE rewards
+  pendingHbd: number; // Pending HBD rewards
+  delegatedHp?: number; // Delegated Hive Power (optional)
 }
 
 export interface AccountStats {

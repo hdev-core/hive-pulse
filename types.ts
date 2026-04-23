@@ -93,6 +93,13 @@ export interface AppSettings {
   customFrontends: FrontendConfig[]; // New property to store custom frontends
 }
 
+export interface BalanceInfo {
+  hive: number; // Liquid HIVE
+  hbd: number; // Liquid HBD
+  savingsHive: number; // HIVE in savings
+  savingsHbd: number; // HBD in savings
+}
+
 export interface AccountStats {
   username: string;
   rc: {
@@ -106,6 +113,7 @@ export interface AccountStats {
     value: number; // 0-10000 basis points
     isLow: boolean;
   };
+  balances?: BalanceInfo;
 }
 
 export interface Channel {

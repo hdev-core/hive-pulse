@@ -4,6 +4,7 @@ import { fetchAccountStats } from '../../utils/hiveHelpers';
 import { Search, Activity, ThumbsUp, Zap } from 'lucide-react';
 import { NotificationList } from '../NotificationList';
 import { Gauge } from '../Gauge';
+import { PortfolioCard } from '../PortfolioCard';
 
 interface StatsViewProps {
   settings: AppSettings;
@@ -142,6 +143,18 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
                     size={112}
                   />
                 </div>
+                
+                {/* Portfolio Card */}
+                {stats.balances && prices && (
+                  <div className="w-full mt-4">
+                    <PortfolioCard 
+                      balances={stats.balances}
+                      hivePrice={prices.hive}
+                      hbdPrice={prices.hbd}
+                    />
+                  </div>
+                )}
+                
                 <div className="w-full bg-slate-50 p-2 rounded-lg border border-slate-100 flex items-center justify-between">
                 <span className="text-xs text-slate-500 font-medium">Extension Badge</span>
                 <div className="flex bg-slate-200 rounded p-0.5">

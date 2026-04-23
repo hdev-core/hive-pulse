@@ -16,6 +16,10 @@ interface AccountResponse {
   name: string;
   voting_power: number;
   last_vote_time: string; // "2023-10-27T10:00:00"
+  balance: string; // e.g., "123.456 HIVE"
+  hbd_balance: string; // e.g., "50.000 HBD"
+  savings_balance: string; // e.g., "200.000 HIVE"
+  savings_hbd_balance: string; // e.g., "30.000 HBD"
 }
 
 /**
@@ -110,6 +114,19 @@ export const fetchAccountStats = async (username: string): Promise<AccountStats 
     
     const vpPercentage = actualCurrentVp / 100;
 
+    // --- EXTRACT BALANCES ---
+    const parseBalance = (balanceStr: string): number => {
+      const match = balanceStr.match(/[\d.]+/);
+      return match ? parseFloat(match[0]) : 0;
+    };
+
+    const balances = {
+      hive: parseBalance(account.balance),
+      hbd: parseBalance(account.hbd_balance),
+      savingsHive: parseBalance(account.savings_balance),
+      savingsHbd: parseBalance(account.savings_hbd_balance)
+    };
+
     return {
       username: rcAccount.account,
       rc: {
@@ -122,7 +139,8 @@ export const fetchAccountStats = async (username: string): Promise<AccountStats 
         percentage: Math.min(Math.max(vpPercentage, 0), 100),
         value: Math.floor(actualCurrentVp),
         isLow: vpPercentage < 20
-      }
+      },
+      balances
     };
   } catch (e) {
     console.error("Failed to fetch stats:", e);
@@ -174,4 +192,52 @@ export const formatRCNumber = (num: number): string => {
   if (num >= 1e9) return (num / 1e9).toFixed(2) + 'G';
   if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
   return num.toFixed(0);
+};
+
+/**
+ * Calculates total portfolio value in USD from account balances and token prices.
+ */
+export interface PortfolioValue {
+  total: number; // Total USD value
+  breakdown: {
+    hive: number;
+    hbd: number;
+    savingsHive: number;
+    savingsHbd: number;
+  };
+}
+
+export const calculatePortfolioValue = (
+  balances: {
+    hive: number;
+    hbd: number;
+    savingsHive: number;
+    savingsHbd: number;
+  },
+  hivePrice: number,
+  hbdPrice: number = 1.0 // HBD is stablecoin, default to $1
+): PortfolioValue => {
+  const breakdown = {
+    hive: balances.hive * hivePrice,
+    hbd: balances.hbd * hbdPrice,
+    savingsHive: balances.savingsHive * hivePrice,
+    savingsHbd: balances.savingsHbd * hbdPrice
+  };
+
+  return {
+    total: breakdown.hive + breakdown.hbd + breakdown.savingsHive + breakdown.savingsHbd,
+    breakdown
+  };
+};
+
+/**
+ * Format number as USD currency.
+ */
+export const formatUSD = (value: number, decimals: number = 2): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }).format(value);
 };

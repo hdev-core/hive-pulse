@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { ChevronDown, TrendingUp, Wallet, Zap, Lock, Clock, Coins } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, TrendingUp, Wallet, Zap, Lock, Clock, Coins, Loader } from 'lucide-react';
 import { BalanceInfo } from '../types';
 import { formatUSD } from '../utils/hiveHelpers';
+import { getHiveEnginePortfolioValue, HiveEngineToken } from '../utils/hiveEngineHelpers';
 
 interface PortfolioCardProps {
   balances: BalanceInfo;
   hivePrice: number;
   hbdPrice?: number;
+  username?: string;
 }
 
 interface AssetRow {
@@ -22,9 +24,13 @@ interface AssetRow {
 export const PortfolioCard: React.FC<PortfolioCardProps> = ({ 
   balances, 
   hivePrice,
-  hbdPrice = 1.0
+  hbdPrice = 1.0,
+  username
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [hiveEngineTokens, setHiveEngineTokens] = useState<HiveEngineToken[]>([]);
+  const [hiveEngineTotal, setHiveEngineTotal] = useState(0);
+  const [loadingHE, setLoadingHE] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     liquid: true,
     staked: true,
@@ -32,6 +38,24 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
     pending: balances.pendingHive > 0 || balances.pendingHbd > 0,
     'hive-engine': false
   });
+
+  // Fetch Hive-Engine tokens when expanding the card
+  useEffect(() => {
+    if (isExpanded && username && hiveEngineTokens.length === 0 && !loadingHE) {
+      setLoadingHE(true);
+      getHiveEnginePortfolioValue(username)
+        .then(result => {
+          setHiveEngineTokens(result.tokens);
+          setHiveEngineTotal(result.totalUSD);
+        })
+        .catch(err => {
+          console.error('Error fetching Hive-Engine:', err);
+          setHiveEngineTokens([]);
+          setHiveEngineTotal(0);
+        })
+        .finally(() => setLoadingHE(false));
+    }
+  }, [isExpanded, username]);
 
   // Calculate breakdown
   const breakdown = {
@@ -45,7 +69,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
     delegatedHp: (balances.delegatedHp || 0) * hivePrice
   };
 
-  const totalValue = Object.values(breakdown).reduce((a, b) => a + b, 0);
+  const totalValue = Object.values(breakdown).reduce((a, b) => a + b, 0) + hiveEngineTotal;
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({
@@ -288,15 +312,50 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
               onClick={() => toggleSection('hive-engine')}
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors text-left"
             >
-              <span className="font-semibold text-slate-800 text-sm">🎮 Hive-Engine Assets</span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-800 text-sm">🎮 Hive-Engine Assets</span>
+                {hiveEngineTotal > 0 && (
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">
+                    {formatUSD(hiveEngineTotal)}
+                  </span>
+                )}
+              </div>
               <ChevronDown size={16} className={`text-slate-400 transition-transform ${expandedSections['hive-engine'] ? 'rotate-180' : ''}`} />
             </button>
             {expandedSections['hive-engine'] && (
               <div className="px-4 pb-3">
-                <div className="bg-slate-100/50 border border-slate-300 rounded-lg p-3 text-center">
-                  <p className="text-xs text-slate-600">Hive-Engine tokens coming soon</p>
-                  <p className="text-xs text-slate-500 mt-1">Integration in progress...</p>
-                </div>
+                {loadingHE ? (
+                  <div className="flex items-center justify-center gap-2 py-4">
+                    <Loader size={16} className="animate-spin text-slate-400" />
+                    <p className="text-xs text-slate-600">Fetching tokens...</p>
+                  </div>
+                ) : hiveEngineTokens.length > 0 ? (
+                  <div className="space-y-2">
+                    {hiveEngineTokens.map((token, idx) => (
+                      <div key={idx} className="bg-gradient-to-r from-purple-50 to-pink-100 border border-purple-200 rounded-lg p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-bold text-purple-700 bg-purple-200 rounded px-2 py-1">
+                            {token.symbol}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-800">{token.name}</p>
+                            <p className="text-xs text-slate-600">{token.balance.toFixed(2)} {token.symbol}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold text-slate-900">{formatUSD(token.balance * token.priceUSD)}</span>
+                      </div>
+                    ))}
+                    <div className="border-t border-purple-200 pt-2 flex justify-between items-center text-sm">
+                      <span className="font-semibold text-slate-800">Hive-Engine Total</span>
+                      <span className="font-bold text-purple-600">{formatUSD(hiveEngineTotal)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-100/50 border border-slate-300 rounded-lg p-3 text-center">
+                    <p className="text-xs text-slate-600">No Hive-Engine tokens found</p>
+                    <p className="text-xs text-slate-500 mt-1">Or prices not available</p>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -151,6 +151,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
                       balances={stats.balances}
                       hivePrice={prices.hive}
                       hbdPrice={prices.hbd}
+                      username={stats.username}
                     />
                   </div>
                 )}

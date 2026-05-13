@@ -270,29 +270,61 @@ export const validateHiveAccount = async (
   }
 };
 
+const parseOpAmount = (amount: any): string => {
+  if (typeof amount === 'string') return amount;
+  // HF26+ object format: {amount, precision, nai}
+  if (amount && typeof amount === 'object') {
+    const naiMap: Record<string, string> = {
+      '@@000000021': 'HIVE',
+      '@@000000013': 'HBD',
+      '@@000000037': 'VESTS',
+    };
+    const symbol = naiMap[amount.nai] || amount.nai || '';
+    const val = (Number(amount.amount) / Math.pow(10, amount.precision)).toFixed(amount.precision);
+    return `${val} ${symbol}`;
+  }
+  return String(amount);
+};
+
 export const fetchTransferHistory = async (
   username: string,
   settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
 ): Promise<TransferRecord[]> => {
   try {
     const { primary, fallback, autoSwitch } = getHiveNodes(settings);
-    // Fetch last 100 ops and filter transfers client-side
     const data = await rpcFetchWithFallback(
       { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, -1, 100], id: 1 },
       primary, fallback, autoSwitch
     );
     const ops: any[] = data.result || [];
+    if (!ops.length) return [];
+
     const transfers: TransferRecord[] = [];
+    // ops are [seq, entry] tuples; iterate newest-first
     for (let i = ops.length - 1; i >= 0; i--) {
-      const [, entry] = ops[i];
-      const [opType, opValue] = entry.op;
-      if (opType !== 'transfer') continue;
+      const entry = Array.isArray(ops[i]) ? ops[i][1] : ops[i];
+      if (!entry) continue;
+
+      // Handle both old tuple format ["transfer", {...}] and new object format {type, value}
+      let opType: string;
+      let opValue: any;
+      if (Array.isArray(entry.op)) {
+        [opType, opValue] = entry.op;
+      } else if (entry.op && typeof entry.op === 'object') {
+        opType = (entry.op.type || '').replace('_operation', '');
+        opValue = entry.op.value;
+      } else {
+        continue;
+      }
+
+      if (opType !== 'transfer' || !opValue) continue;
+
       transfers.push({
-        trxId: entry.trx_id,
-        timestamp: entry.timestamp,
-        from: opValue.from,
-        to: opValue.to,
-        amount: opValue.amount,
+        trxId: entry.trx_id || '',
+        timestamp: entry.timestamp || '',
+        from: opValue.from || '',
+        to: opValue.to || '',
+        amount: parseOpAmount(opValue.amount),
         memo: opValue.memo || '',
       });
       if (transfers.length >= 20) break;

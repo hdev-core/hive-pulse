@@ -29,6 +29,9 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
   // History state
   const [history, setHistory] = useState<TransferRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<number | null>(null);
 
   // Validate recipient with debounce
   useEffect(() => {
@@ -46,10 +49,32 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
 
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true);
-    const records = await fetchTransferHistory(username, settings);
-    setHistory(records);
-    setLoadingHistory(false);
+    setHistoryError(null);
+    setNextCursor(null);
+    try {
+      const { records, nextCursor: cursor } = await fetchTransferHistory(username, settings);
+      setHistory(records);
+      setNextCursor(cursor);
+    } catch (e: any) {
+      setHistoryError(e?.message || 'Failed to load history');
+    } finally {
+      setLoadingHistory(false);
+    }
   }, [username]);
+
+  const loadMore = useCallback(async () => {
+    if (nextCursor === null) return;
+    setLoadingMore(true);
+    try {
+      const { records, nextCursor: cursor } = await fetchTransferHistory(username, settings, nextCursor);
+      setHistory(prev => [...prev, ...records]);
+      setNextCursor(cursor);
+    } catch (e: any) {
+      setHistoryError(e?.message || 'Failed to load more');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [username, nextCursor]);
 
   useEffect(() => {
     if (tab === 'history') loadHistory();
@@ -99,7 +124,7 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
         {TABS.map(t => (
           <button
             key={t.key}
-            onClick={() => { setTab(t.key); setSendResult(null); }}
+            onClick={() => { setTab(t.key); setSendResult(null); setHistoryError(null); }}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
               tab === t.key
                 ? 'text-blue-600 border-b-2 border-blue-500 bg-blue-50/50'
@@ -226,10 +251,12 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
           </div>
           {loadingHistory ? (
             <div className="py-8 flex justify-center"><Loader size={20} className="animate-spin text-slate-300" /></div>
+          ) : historyError ? (
+            <div className="py-6 px-4 text-center text-xs text-red-500 bg-red-50 rounded-lg m-4 border border-red-100 break-all">{historyError}</div>
           ) : history.length === 0 ? (
             <div className="py-8 text-center text-xs text-slate-400">No transfers found</div>
           ) : (
-            <div className="max-h-[280px] overflow-y-auto divide-y divide-slate-100">
+            <div className="max-h-[320px] overflow-y-auto divide-y divide-slate-100">
               {history.map((tx, i) => {
                 const isOut = tx.from === username;
                 return (
@@ -252,6 +279,18 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
                   </div>
                 );
               })}
+              {nextCursor !== null && (
+                <div className="px-4 py-3 flex justify-center">
+                  <button
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {loadingMore ? <Loader size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                    {loadingMore ? 'Loading…' : 'Load more'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

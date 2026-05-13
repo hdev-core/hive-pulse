@@ -286,54 +286,59 @@ const parseOpAmount = (amount: any): string => {
   return String(amount);
 };
 
+const PAGE_SIZE = 20;
+
 export const fetchTransferHistory = async (
   username: string,
-  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
-): Promise<TransferRecord[]> => {
-  try {
-    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
-    const data = await rpcFetchWithFallback(
-      { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, -1, 100], id: 1 },
-      primary, fallback, autoSwitch
-    );
-    const ops: any[] = data.result || [];
-    if (!ops.length) return [];
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean },
+  start: number = -1
+): Promise<{ records: TransferRecord[]; nextCursor: number | null }> => {
+  const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+  // operation_filter_low bitmask: transfer = op type 2 → 1 << 2 = 4
+  const data = await rpcFetchWithFallback(
+    { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, start, PAGE_SIZE, 4], id: 1 },
+    primary, fallback, autoSwitch
+  );
 
-    const transfers: TransferRecord[] = [];
-    // ops are [seq, entry] tuples; iterate newest-first
-    for (let i = ops.length - 1; i >= 0; i--) {
-      const entry = Array.isArray(ops[i]) ? ops[i][1] : ops[i];
-      if (!entry) continue;
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
 
-      // Handle both old tuple format ["transfer", {...}] and new object format {type, value}
-      let opType: string;
-      let opValue: any;
-      if (Array.isArray(entry.op)) {
-        [opType, opValue] = entry.op;
-      } else if (entry.op && typeof entry.op === 'object') {
-        opType = (entry.op.type || '').replace('_operation', '');
-        opValue = entry.op.value;
-      } else {
-        continue;
-      }
+  const ops: any[] = data.result || [];
+  if (!ops.length) return { records: [], nextCursor: null };
 
-      if (opType !== 'transfer' || !opValue) continue;
+  // ops are [seq, entry] tuples sorted oldest-first; oldest seq is ops[0][0]
+  const oldestSeq: number = Array.isArray(ops[0]) ? ops[0][0] : null;
+  const nextCursor = oldestSeq !== null && oldestSeq > 0 ? oldestSeq - 1 : null;
 
-      transfers.push({
-        trxId: entry.trx_id || '',
-        timestamp: entry.timestamp || '',
-        from: opValue.from || '',
-        to: opValue.to || '',
-        amount: parseOpAmount(opValue.amount),
-        memo: opValue.memo || '',
-      });
-      if (transfers.length >= 20) break;
+  const transfers: TransferRecord[] = [];
+  // iterate newest-first
+  for (let i = ops.length - 1; i >= 0; i--) {
+    const entry = Array.isArray(ops[i]) ? ops[i][1] : ops[i];
+    if (!entry) continue;
+
+    // Handle both old tuple format ["transfer", {...}] and new object format {type, value}
+    let opType: string;
+    let opValue: any;
+    if (Array.isArray(entry.op)) {
+      [opType, opValue] = entry.op;
+    } else if (entry.op && typeof entry.op === 'object') {
+      opType = (entry.op.type || '').replace('_operation', '');
+      opValue = entry.op.value;
+    } else {
+      continue;
     }
-    return transfers;
-  } catch (e) {
-    console.error('Failed to fetch transfer history:', e);
-    return [];
+
+    if (opType !== 'transfer' || !opValue) continue;
+
+    transfers.push({
+      trxId: entry.trx_id || '',
+      timestamp: entry.timestamp || '',
+      from: opValue.from || '',
+      to: opValue.to || '',
+      amount: parseOpAmount(opValue.amount),
+      memo: opValue.memo || '',
+    });
   }
+  return { records: transfers, nextCursor };
 };
 
 export const fetchHbdInterestRate = async (

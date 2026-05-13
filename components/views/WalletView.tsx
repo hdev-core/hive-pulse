@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppSettings, AccountStats } from '../../types';
 import { fetchAccountStats } from '../../utils/hiveHelpers';
+import { broadcastKeychainOp } from '../../utils/keychainHelpers';
 import { Search, Activity } from 'lucide-react';
 import { PortfolioCard } from '../PortfolioCard';
 import { EarningExplainer } from '../EarningExplainer';
 import { OnboardingBanner } from '../OnboardingBanner';
+import { SendForm } from '../SendForm';
 
 interface WalletViewProps {
   settings: AppSettings;
@@ -65,6 +67,38 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
     }
   };
 
+  // Refresh stats after a successful claim/send
+  const refreshStats = useCallback(async () => {
+    if (!stats) return;
+    const data = await fetchAccountStats(stats.username, settings);
+    if (data) {
+      setStats(data);
+      if (onDataFetched) onDataFetched(data);
+    }
+  }, [stats, settings]);
+
+  // Only show claim button when viewing your own account
+  const isOwnAccount = !!settings.ecencyUsername && stats?.username === settings.ecencyUsername;
+
+  const handleClaimRewards = async () => {
+    if (!stats?.balances || !stats.username) throw new Error('No account data.');
+    const { pendingHive, pendingHbd, pendingVests } = stats.balances;
+    if (pendingHive <= 0 && pendingHbd <= 0 && pendingVests <= 0) throw new Error('No rewards to claim.');
+
+    const result = await broadcastKeychainOp(
+      stats.username,
+      [['claim_reward_balance', {
+        account: stats.username,
+        reward_hive: `${pendingHive.toFixed(3)} HIVE`,
+        reward_hbd: `${pendingHbd.toFixed(3)} HBD`,
+        reward_vests: `${pendingVests.toFixed(6)} VESTS`,
+      }]],
+      'Posting'
+    );
+    if (!result.success) throw new Error(result.error || 'Claim failed.');
+    await refreshStats();
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <OnboardingBanner />
@@ -112,6 +146,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
             username={stats.username}
             heRpcNode={settings.heRpcNode}
             hiveRpcNode={settings.hiveRpcNode}
+            onClaimRewards={isOwnAccount ? handleClaimRewards : undefined}
           />
         )}
 
@@ -119,6 +154,16 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
           <div className="text-center py-6 text-slate-400 text-sm">{settings.rcUser ? 'Loading saved user...' : 'Enter a Hive username to view wallet.'}</div>
         )}
       </div>
+
+      {/* Send / Receive / History — only shown for own account */}
+      {isOwnAccount && stats?.balances && (
+        <SendForm
+          username={stats.username}
+          balances={{ hive: stats.balances.hive, hbd: stats.balances.hbd }}
+          settings={settings}
+          onSuccess={refreshStats}
+        />
+      )}
 
       <EarningExplainer />
     </div>

@@ -79,6 +79,7 @@ interface PortfolioCardProps {
   username?: string;
   heRpcNode?: string;
   hiveRpcNode?: string;
+  onClaimRewards?: () => Promise<void>;
 }
 
 interface AssetRow {
@@ -97,7 +98,8 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   hbdPrice = 1.0,
   username,
   heRpcNode,
-  hiveRpcNode
+  hiveRpcNode,
+  onClaimRewards,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [hiveEngineTokens, setHiveEngineTokens] = useState<HiveEngineToken[]>([]);
@@ -116,6 +118,8 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
 
   const [iconErrors, setIconErrors] = useState<Record<string, boolean>>({});
   const [iconDataUrls, setIconDataUrls] = useState<Record<string, string>>({});
+  const [claiming, setClaiming] = useState(false);
+  const [claimResult, setClaimResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Fetch Hive-Engine tokens when expanding the card
   useEffect(() => {
@@ -440,7 +444,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                 onClick={() => toggleSection('pending')}
                 className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors text-left"
               >
-                <span className="font-semibold text-slate-800 text-sm">⚡ Pending Rewards (Claim Soon!)</span>
+                <span className="font-semibold text-slate-800 text-sm">⚡ Pending Rewards</span>
                 <ChevronDown size={16} className={`text-slate-400 transition-transform ${expandedSections.pending ? 'rotate-180' : ''}`} />
               </button>
               {expandedSections.pending && (
@@ -457,6 +461,34 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                       <span className="text-sm font-semibold text-slate-900">{formatUSD(asset.valueUSD)}</span>
                     </div>
                   ))}
+                  {onClaimRewards && (
+                    <div className="pt-1 space-y-1.5">
+                      <button
+                        onClick={async () => {
+                          setClaiming(true);
+                          setClaimResult(null);
+                          try {
+                            await onClaimRewards();
+                            setClaimResult({ ok: true, msg: 'Rewards claimed successfully!' });
+                          } catch (e: any) {
+                            setClaimResult({ ok: false, msg: e.message || 'Claim failed.' });
+                          } finally {
+                            setClaiming(false);
+                          }
+                        }}
+                        disabled={claiming}
+                        className="w-full flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-600 disabled:opacity-60 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
+                      >
+                        {claiming ? <Loader size={13} className="animate-spin" /> : <Zap size={13} />}
+                        {claiming ? 'Claiming…' : 'Claim All Rewards'}
+                      </button>
+                      {claimResult && (
+                        <p className={`text-[11px] text-center font-medium ${claimResult.ok ? 'text-green-600' : 'text-red-500'}`}>
+                          {claimResult.msg}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

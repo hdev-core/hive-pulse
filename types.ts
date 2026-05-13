@@ -107,7 +107,17 @@ export interface BalanceInfo {
   hivepower: number; // Staked HIVE (Hive Power / HP)
   pendingHive: number; // Pending HIVE rewards
   pendingHbd: number; // Pending HBD rewards
+  pendingVests: number; // Pending VESTS rewards (needed for claim_reward_balance)
   delegatedHp?: number; // Delegated Hive Power (optional)
+}
+
+export interface TransferRecord {
+  trxId: string;
+  timestamp: string;
+  from: string;
+  to: string;
+  amount: string;
+  memo: string;
 }
 
 export interface AccountStats {

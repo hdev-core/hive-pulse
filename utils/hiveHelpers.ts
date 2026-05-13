@@ -1,4 +1,4 @@
-import { AccountStats, HiveNotification } from '../types';
+import { AccountStats, HiveNotification, TransferRecord } from '../types';
 import { HIVE_RPC_NODES } from '../constants';
 
 const DEFAULT_HIVE_RPC_NODE = HIVE_RPC_NODES[0];
@@ -66,6 +66,7 @@ interface AccountResponse {
   delegated_vesting_shares: string;
   reward_hive_balance: string;
   reward_hbd_balance: string;
+  reward_vesting_balance: string;
 }
 
 export const fetchNotifications = async (
@@ -149,6 +150,7 @@ export const fetchAccountStats = async (
       hivepower: hp,
       pendingHive: parseBalance(account.reward_hive_balance),
       pendingHbd: parseBalance(account.reward_hbd_balance),
+      pendingVests: parseBalance(account.reward_vesting_balance),
       delegatedHp: parseBalance(account.delegated_vesting_shares) / totalVestingShares * totalVestingFundHive
     };
 
@@ -250,6 +252,56 @@ export const calculatePortfolioValue = (
     total: Object.values(breakdown).reduce((a, b) => a + b, 0),
     breakdown
   };
+};
+
+export const validateHiveAccount = async (
+  username: string,
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<boolean> => {
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const data = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'condenser_api.get_accounts', params: [[username]], id: 1 },
+      primary, fallback, autoSwitch
+    );
+    return Array.isArray(data.result) && data.result.length > 0;
+  } catch {
+    return false;
+  }
+};
+
+export const fetchTransferHistory = async (
+  username: string,
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<TransferRecord[]> => {
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    // Fetch last 100 ops and filter transfers client-side
+    const data = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, -1, 100], id: 1 },
+      primary, fallback, autoSwitch
+    );
+    const ops: any[] = data.result || [];
+    const transfers: TransferRecord[] = [];
+    for (let i = ops.length - 1; i >= 0; i--) {
+      const [, entry] = ops[i];
+      const [opType, opValue] = entry.op;
+      if (opType !== 'transfer') continue;
+      transfers.push({
+        trxId: entry.trx_id,
+        timestamp: entry.timestamp,
+        from: opValue.from,
+        to: opValue.to,
+        amount: opValue.amount,
+        memo: opValue.memo || '',
+      });
+      if (transfers.length >= 20) break;
+    }
+    return transfers;
+  } catch (e) {
+    console.error('Failed to fetch transfer history:', e);
+    return [];
+  }
 };
 
 export const fetchHbdInterestRate = async (

@@ -1,8 +1,74 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, TrendingUp, Wallet, Zap, Lock, Clock, Coins, Loader, Search, ArrowUpDown } from 'lucide-react';
+import { ChevronDown, TrendingUp, Wallet, Zap, Lock, Clock, Coins, Loader, Search, ArrowUpDown, ExternalLink, Calculator } from 'lucide-react';
 import { BalanceInfo } from '../types';
-import { formatUSD } from '../utils/hiveHelpers';
+import { formatUSD, fetchHbdInterestRate } from '../utils/hiveHelpers';
 import { getHiveEnginePortfolioValue, HiveEngineToken, loadIconAsDataUrl } from '../utils/hiveEngineHelpers';
+import { Tooltip } from './Tooltip';
+
+interface HbdSavingsWidgetProps {
+  savingsHbd: number;
+  liquidHbd: number;
+  hbdPrice: number;
+  apr: number | null;
+}
+
+const HbdSavingsWidget: React.FC<HbdSavingsWidgetProps> = ({ savingsHbd, liquidHbd, hbdPrice, apr }) => {
+  if (savingsHbd <= 0) return null;
+
+  const displayApr = apr ?? 0.20;
+  const monthly = savingsHbd * (displayApr / 12);
+  const yearly = savingsHbd * displayApr;
+
+  return (
+    <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-green-800">
+          <Calculator size={13} />
+          APR Calculator
+        </div>
+        <div className="flex items-center gap-1">
+          {apr !== null ? (
+            <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+              {(displayApr * 100).toFixed(1)}% APR
+            </span>
+          ) : (
+            <span className="text-[10px] text-slate-400 italic">Loading rate...</span>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white rounded-md p-2 border border-green-100 text-center">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Monthly</p>
+          <p className="text-sm font-bold text-green-700">+{monthly.toFixed(3)} HBD</p>
+          <p className="text-[10px] text-slate-400">{formatUSD(monthly * hbdPrice)}</p>
+        </div>
+        <div className="bg-white rounded-md p-2 border border-green-100 text-center">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Yearly</p>
+          <p className="text-sm font-bold text-green-700">+{yearly.toFixed(3)} HBD</p>
+          <p className="text-[10px] text-slate-400">{formatUSD(yearly * hbdPrice)}</p>
+        </div>
+      </div>
+      <p className="text-[10px] text-slate-400 italic">
+        Rate is set by Hive witnesses and may change with network consensus.
+      </p>
+      {liquidHbd >= 0.001 && (
+        <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-md px-2.5 py-2 text-xs">
+          <span className="text-yellow-800">
+            <span className="font-semibold">{liquidHbd.toFixed(3)} liquid HBD</span> not earning interest
+          </span>
+          <a
+            href="https://peakd.com/market"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-semibold shrink-0 ml-2"
+          >
+            Move <ExternalLink size={10} />
+          </a>
+        </div>
+      )}
+    </div>
+  );
+};
 
 type HESortMode = 'value' | 'name' | 'balance';
 
@@ -12,6 +78,7 @@ interface PortfolioCardProps {
   hbdPrice?: number;
   username?: string;
   heRpcNode?: string;
+  hiveRpcNode?: string;
 }
 
 interface AssetRow {
@@ -24,15 +91,17 @@ interface AssetRow {
   section: 'liquid' | 'staked' | 'savings' | 'pending' | 'hive-engine';
 }
 
-export const PortfolioCard: React.FC<PortfolioCardProps> = ({ 
-  balances, 
+export const PortfolioCard: React.FC<PortfolioCardProps> = ({
+  balances,
   hivePrice,
   hbdPrice = 1.0,
   username,
-  heRpcNode
+  heRpcNode,
+  hiveRpcNode
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [hiveEngineTokens, setHiveEngineTokens] = useState<HiveEngineToken[]>([]);
+  const [hbdApr, setHbdApr] = useState<number | null>(null);
   const [hiveEngineTotal, setHiveEngineTotal] = useState(0);
   const [loadingHE, setLoadingHE] = useState(false);
   const [heSortMode, setHeSortMode] = useState<HESortMode>('value');
@@ -65,6 +134,14 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
         .finally(() => setLoadingHE(false));
     }
   }, [isExpanded, username, hivePrice]);
+
+  // Fetch live HBD interest rate from chain
+  useEffect(() => {
+    if (balances.savingsHbd <= 0) return;
+    fetchHbdInterestRate({ hiveRpcNode })
+      .then(rate => { if (rate !== null) setHbdApr(rate); })
+      .catch(() => {});
+  }, [hiveRpcNode, balances.savingsHbd]);
 
   // Lazily load token icons as data URLs (non-blocking)
   useEffect(() => {
@@ -217,6 +294,27 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
     { key: 'hive-engine', label: '🎮 Hive-Engine', icon: '🎮' }
   ];
 
+  const ASSET_TOOLTIPS: Record<string, { term: string; definition: string }> = {
+    'Liquid HIVE': { term: 'Liquid HIVE', definition: 'Freely transferable HIVE in your wallet. Use it to trade, stake as Hive Power, or send to others.' },
+    'Liquid HBD': { term: 'HBD (Hive Backed Dollar)', definition: 'A stablecoin soft-pegged to $1 USD. Move it to Savings to earn interest at the current APR set by witnesses.' },
+    'Hive Power (HP)': { term: 'Hive Power (HP)', definition: 'Staked HIVE that boosts your voting influence and curation rewards. Unstaking (power down) takes 13 weeks.' },
+    'Delegated HP': { term: 'Delegated HP', definition: 'Hive Power you have lent to other accounts. It still counts toward your total but boosts the recipient\'s voting influence.' },
+    'Savings HIVE': { term: 'Savings HIVE', definition: 'HIVE locked in savings. Requires a 3-day waiting period to withdraw. Useful for security.' },
+    'Savings HBD': { term: 'Savings HBD', definition: 'HBD in savings, earning interest at the network APR set by Hive witnesses. 3-day withdrawal delay applies.' },
+    'Pending HIVE': { term: 'Pending HIVE', definition: 'HIVE rewards from your posts and curation that have not been claimed yet. Claim them on any Hive frontend.' },
+    'Pending HBD': { term: 'Pending HBD', definition: 'HBD rewards from your posts and curation awaiting claim. Payouts unlock 7 days after the post was published.' },
+  };
+
+  const renderLabel = (label: string) => {
+    const tip = ASSET_TOOLTIPS[label];
+    if (!tip) return <span>{label}</span>;
+    return (
+      <Tooltip term={tip.term} definition={tip.definition} position="top">
+        <span>{label}</span>
+      </Tooltip>
+    );
+  };
+
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm overflow-hidden">
       {/* Main Card Header */}
@@ -259,7 +357,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                       <div className="flex items-center gap-2">
                         <div className="text-slate-600">{asset.icon}</div>
                         <div>
-                          <p className="text-sm font-medium text-slate-800">{asset.label}</p>
+                          <p className="text-sm font-medium text-slate-800">{renderLabel(asset.label)}</p>
                           <p className="text-xs text-slate-600">{asset.amount.toFixed(2)} {asset.token}</p>
                         </div>
                       </div>
@@ -288,7 +386,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                       <div className="flex items-center gap-2">
                         <div className="text-slate-600">{asset.icon}</div>
                         <div>
-                          <p className="text-sm font-medium text-slate-800">{asset.label}</p>
+                          <p className="text-sm font-medium text-slate-800">{renderLabel(asset.label)}</p>
                           <p className="text-xs text-slate-600">{asset.amount.toFixed(2)} {asset.token}</p>
                         </div>
                       </div>
@@ -317,13 +415,19 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                       <div className="flex items-center gap-2">
                         <div className="text-slate-600">{asset.icon}</div>
                         <div>
-                          <p className="text-sm font-medium text-slate-800">{asset.label}</p>
+                          <p className="text-sm font-medium text-slate-800">{renderLabel(asset.label)}</p>
                           <p className="text-xs text-slate-600">{asset.amount.toFixed(2)} {asset.token}</p>
                         </div>
                       </div>
                       <span className="text-sm font-semibold text-slate-900">{formatUSD(asset.valueUSD)}</span>
                     </div>
                   ))}
+                  <HbdSavingsWidget
+                    savingsHbd={balances.savingsHbd}
+                    liquidHbd={balances.hbd}
+                    hbdPrice={hbdPrice}
+                    apr={hbdApr}
+                  />
                 </div>
               )}
             </div>
@@ -346,7 +450,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                       <div className="flex items-center gap-2">
                         <div className="text-slate-600">{asset.icon}</div>
                         <div>
-                          <p className="text-sm font-medium text-slate-800">{asset.label}</p>
+                          <p className="text-sm font-medium text-slate-800">{renderLabel(asset.label)}</p>
                           <p className="text-xs text-slate-600">{asset.amount.toFixed(2)} {asset.token}</p>
                         </div>
                       </div>

@@ -252,6 +252,24 @@ export const calculatePortfolioValue = (
   };
 };
 
+export const fetchHbdInterestRate = async (
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<number | null> => {
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const data = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'condenser_api.get_dynamic_global_properties', params: [], id: 1 },
+      primary, fallback, autoSwitch
+    );
+    // hbd_interest_rate is in basis points (e.g. 2000 = 20%)
+    const basisPoints = data.result?.hbd_interest_rate;
+    return typeof basisPoints === 'number' ? basisPoints / 10000 : null;
+  } catch (e) {
+    console.error('Failed to fetch HBD interest rate:', e);
+    return null;
+  }
+};
+
 export const formatUSD = (value: number, decimals: number = 2): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

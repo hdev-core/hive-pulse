@@ -3,6 +3,8 @@ import { AppSettings, AccountStats } from '../../types';
 import { fetchAccountStats } from '../../utils/hiveHelpers';
 import { Search, Activity } from 'lucide-react';
 import { PortfolioCard } from '../PortfolioCard';
+import { EarningExplainer } from '../EarningExplainer';
+import { OnboardingBanner } from '../OnboardingBanner';
 
 interface WalletViewProps {
   settings: AppSettings;
@@ -65,6 +67,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
 
   return (
     <div className="flex flex-col gap-4">
+      <OnboardingBanner />
       {prices ? (
         <div className="flex items-center justify-center gap-8 py-4 bg-white rounded-lg border border-slate-200 shadow-sm">
           <div className="flex flex-col items-center gap-1">
@@ -108,6 +111,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
             hbdPrice={prices.hbd}
             username={stats.username}
             heRpcNode={settings.heRpcNode}
+            hiveRpcNode={settings.hiveRpcNode}
           />
         )}
 
@@ -115,6 +119,8 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
           <div className="text-center py-6 text-slate-400 text-sm">{settings.rcUser ? 'Loading saved user...' : 'Enter a Hive username to view wallet.'}</div>
         )}
       </div>
+
+      <EarningExplainer />
     </div>
   );
 };

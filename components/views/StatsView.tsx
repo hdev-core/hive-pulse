@@ -4,6 +4,8 @@ import { fetchAccountStats } from '../../utils/hiveHelpers';
 import { Search, Activity, ThumbsUp, Zap } from 'lucide-react';
 import { NotificationList } from '../NotificationList';
 import { Gauge } from '../Gauge';
+import { Tooltip } from '../Tooltip';
+import { OnboardingBanner } from '../OnboardingBanner';
 
 interface StatsViewProps {
   settings: AppSettings;
@@ -82,15 +84,20 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
 
   return (
     <div className="flex flex-col gap-4">
+      <OnboardingBanner />
       {prices ? (
         <div className="flex items-center justify-center gap-8 py-4 bg-white rounded-lg border border-slate-200 shadow-sm">
            <div className="flex flex-col items-center gap-1">
-              <span className="text-xs font-bold text-red-600">HIVE</span>
+              <Tooltip term="HIVE" definition="The native token of the Hive blockchain. Used for staking (Hive Power), rewards, and governance." position="bottom">
+                <span className="text-xs font-bold text-red-600">HIVE</span>
+              </Tooltip>
               <span className="text-lg font-bold text-slate-700">${prices.hive.toFixed(3)}</span>
            </div>
            <div className="w-px h-8 bg-slate-200"></div>
            <div className="flex flex-col items-center gap-1">
-              <span className="text-xs font-bold text-green-600">HBD</span>
+              <Tooltip term="HBD (Hive Backed Dollar)" definition="A stablecoin soft-pegged to $1 USD. Earn 20% APR by keeping HBD in your Savings account." position="bottom">
+                <span className="text-xs font-bold text-green-600">HBD</span>
+              </Tooltip>
               <span className="text-lg font-bold text-slate-700">${prices.hbd.toFixed(3)}</span>
            </div>
         </div>
@@ -123,24 +130,34 @@ export const StatsView: React.FC<StatsViewProps> = ({ settings, updateSettings, 
             <div className="flex flex-col items-center py-2 animate-in fade-in zoom-in-95 duration-200">
                 <h3 className="text-lg font-bold text-slate-800 mb-4">@{stats.username}</h3>
                 <div className="flex justify-between w-full px-2 mb-4">
-                  <Gauge 
-                    percentage={stats.vp.percentage}
-                    isLow={stats.vp.isLow}
-                    type="VP"
-                    icon={<ThumbsUp size={20} className={stats.vp.isLow ? 'text-red-500' : 'text-slate-400'} />}
-                    label="Voting Power"
-                    subValue={`${(stats.vp.percentage).toFixed(2)}%`}
-                    size={112}
-                  />
-                  <Gauge 
-                    percentage={stats.rc.percentage}
-                    isLow={stats.rc.isLow}
-                    type="RC"
-                    icon={<Zap size={20} className={stats.rc.isLow ? 'text-red-500' : 'text-slate-400'} fill="currentColor" />}
-                    label="Resource Credits"
-                    subValue={`${formatRCNumber(stats.rc.current)} Mana`}
-                    size={112}
-                  />
+                  <div className="flex flex-col items-center gap-1">
+                    <Gauge
+                      percentage={stats.vp.percentage}
+                      isLow={stats.vp.isLow}
+                      type="VP"
+                      icon={<ThumbsUp size={20} className={stats.vp.isLow ? 'text-red-500' : 'text-slate-400'} />}
+                      label="Voting Power"
+                      subValue={`${(stats.vp.percentage).toFixed(2)}%`}
+                      size={112}
+                    />
+                    <Tooltip term="Voting Power (VP)" definition="Your influence to upvote content and earn curation rewards. Depletes when you vote and regenerates to 100% over 5 days." position="bottom">
+                      <span className="text-xs text-slate-500">VP</span>
+                    </Tooltip>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <Gauge
+                      percentage={stats.rc.percentage}
+                      isLow={stats.rc.isLow}
+                      type="RC"
+                      icon={<Zap size={20} className={stats.rc.isLow ? 'text-red-500' : 'text-slate-400'} fill="currentColor" />}
+                      label="Resource Credits"
+                      subValue={`${formatRCNumber(stats.rc.current)} Mana`}
+                      size={112}
+                    />
+                    <Tooltip term="Resource Credits (RC)" definition="Required to post, comment, vote, and transact on Hive. Regenerates over 5 days. If critically low, wait before posting." position="bottom">
+                      <span className="text-xs text-slate-500">RC</span>
+                    </Tooltip>
+                  </div>
                 </div>
                 
                 <div className="w-full bg-slate-50 p-2 rounded-lg border border-slate-100 flex items-center justify-between">

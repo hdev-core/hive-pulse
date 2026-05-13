@@ -2,6 +2,7 @@ import React from 'react';
 import { PanelRight, LogOut, LogIn, ThumbsUp, Zap, TrendingUp, BarChart3 } from 'lucide-react';
 import { AccountStats, HivePrices } from '../types';
 import { Gauge } from './Gauge';
+import { Tooltip } from './Tooltip';
 
 declare const chrome: any;
 
@@ -102,10 +103,10 @@ export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogout
         {/* Global Health Gauges (Status Deck) */}
         {stats && (
             <div className="flex items-center justify-around py-1.5 bg-slate-50/50 border-b border-slate-100">
-                <div className="flex items-center gap-2" title="Voting Power">
-                    <Gauge 
-                        percentage={stats.vp.percentage} 
-                        isLow={stats.vp.isLow} 
+                <div className="flex items-center gap-2">
+                    <Gauge
+                        percentage={stats.vp.percentage}
+                        isLow={stats.vp.isLow}
                         type="VP"
                         icon={<ThumbsUp size={10} className={stats.vp.isLow ? 'text-red-500' : 'text-slate-400'} />}
                         size={32}
@@ -113,15 +114,21 @@ export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogout
                         showLabel={false}
                     />
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-600">VP</span>
+                        <Tooltip
+                            term="Voting Power (VP)"
+                            definition="Your influence to upvote content and earn curation rewards. Depletes when you vote and regenerates to 100% over 5 days."
+                            position="bottom"
+                        >
+                            <span className="text-[10px] font-bold text-slate-600">VP</span>
+                        </Tooltip>
                         <span className="text-[10px] text-slate-400">{stats.vp.percentage.toFixed(0)}%</span>
                     </div>
                 </div>
                 <div className="w-px h-6 bg-slate-200" />
-                <div className="flex items-center gap-2" title="Resource Credits">
-                    <Gauge 
-                        percentage={stats.rc.percentage} 
-                        isLow={stats.rc.isLow} 
+                <div className="flex items-center gap-2">
+                    <Gauge
+                        percentage={stats.rc.percentage}
+                        isLow={stats.rc.isLow}
                         type="RC"
                         icon={<Zap size={10} className={stats.rc.isLow ? 'text-red-500' : 'text-slate-400'} fill="currentColor" />}
                         size={32}
@@ -129,7 +136,13 @@ export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogout
                         showLabel={false}
                     />
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-600">RC</span>
+                        <Tooltip
+                            term="Resource Credits (RC)"
+                            definition="Required to post, comment, vote, and transact on Hive. Regenerates over 5 days. If critically low, wait before posting."
+                            position="bottom"
+                        >
+                            <span className="text-[10px] font-bold text-slate-600">RC</span>
+                        </Tooltip>
                         <span className="text-[10px] text-slate-400">{stats.rc.percentage.toFixed(0)}%</span>
                     </div>
                 </div>

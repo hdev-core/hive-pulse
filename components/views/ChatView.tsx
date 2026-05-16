@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Channel, AppSettings, Message } from '../../types';
 import { getAvatarUrl } from '../../utils/ecencyHelpers';
-import { 
+import {
   MessageCircle, RefreshCw, User, Send, Activity, ChevronLeft, MessageSquarePlus,
   Pencil, Trash2, X, Check, Smile
 } from 'lucide-react';
@@ -13,7 +13,7 @@ interface ChatViewProps {
   loadingChat: boolean;
   chatSessionExpired: boolean;
   isLoggingIn: boolean;
-  refreshChat: (force?: boolean) => void;
+  refreshChat: () => void;
   onRefresh: () => void;
   handleCreateDM: (e: React.FormEvent) => void;
   handleKeychainLogin: () => void;
@@ -572,9 +572,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
           )}
         </div>
-        <button 
-          onClick={() => refreshChat(true)} 
-          className="text-slate-400 hover:text-blue-600 p-1 rounded hover:bg-slate-100 transition-colors"
+        <button
+          onClick={() => refreshChat()}
+          disabled={chatSessionExpired}
+          className="text-slate-400 hover:text-blue-600 p-1 rounded hover:bg-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
           title="Force Refresh"
         >
           <RefreshCw size={16} />
@@ -582,19 +583,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
       </div>
 
       {chatSessionExpired && (
-         <div className="mb-4 bg-red-50 border border-red-100 p-3 rounded-lg flex flex-col gap-2">
-            <p className="text-xs text-red-600 font-medium">Session expired. Please re-verify.</p>
-            <button 
-               onClick={handleKeychainLogin}
-               disabled={isLoggingIn}
-               className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-1.5 rounded text-xs font-bold transition-colors"
-            >
-               {isLoggingIn ? 'Verifying...' : 'Verify with Keychain'}
-            </button>
-         </div>
+        <div className="mb-4 bg-slate-100 border border-slate-200 p-3 rounded-lg">
+          <p className="text-xs font-semibold text-slate-600">Chat unavailable</p>
+          <p className="text-[10px] text-slate-400 mt-1">Ecency chat session is not active. Try logging out and back in.</p>
+        </div>
       )}
 
-      <form onSubmit={handleCreateDM} className="flex gap-2 mb-4">
+      <form onSubmit={handleCreateDM} className={`flex gap-2 mb-4 ${chatSessionExpired ? 'opacity-30 pointer-events-none' : ''}`}>
         <div className="relative flex-1">
           <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input 
@@ -615,30 +610,32 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </button>
       </form>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar -mx-4 px-4 pb-4 space-y-5">
-        {channels.length === 0 && !loadingChat && !chatSessionExpired ? (
-          <div className="text-center py-10 text-slate-400 text-sm">
-             <p>No conversations yet.</p>
-             <p className="text-xs mt-1">Enter a Hive username above to chat.</p>
-          </div>
-        ) : (
-          <>
-            {directMessages.length > 0 && (
-              <div className="space-y-1">
-                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Direct Messages</h3>
-                 {directMessages.map(renderChannelRow)}
-              </div>
-            )}
+      {!chatSessionExpired && (
+        <div className="flex-1 overflow-y-auto custom-scrollbar -mx-4 px-4 pb-4 space-y-5">
+          {channels.length === 0 && !loadingChat ? (
+            <div className="text-center py-10 text-slate-400 text-sm">
+               <p>No conversations yet.</p>
+               <p className="text-xs mt-1">Enter a Hive username above to chat.</p>
+            </div>
+          ) : (
+            <>
+              {directMessages.length > 0 && (
+                <div className="space-y-1">
+                   <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Direct Messages</h3>
+                   {directMessages.map(renderChannelRow)}
+                </div>
+              )}
 
-            {communityChannels.length > 0 && (
-              <div className="space-y-1">
-                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Channels</h3>
-                 {communityChannels.map(renderChannelRow)}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+              {communityChannels.length > 0 && (
+                <div className="space-y-1">
+                   <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Channels</h3>
+                   {communityChannels.map(renderChannelRow)}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };

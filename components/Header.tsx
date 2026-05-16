@@ -1,8 +1,9 @@
 import React from 'react';
 import { PanelRight, LogOut, LogIn, ThumbsUp, Zap, TrendingUp, BarChart3 } from 'lucide-react';
-import { AccountStats, HivePrices } from '../types';
+import { AccountStats, HivePrices, SavedAccount } from '../types';
 import { Gauge } from './Gauge';
 import { Tooltip } from './Tooltip';
+import { AccountSwitcherDropdown } from './AccountSwitcherDropdown';
 
 declare const chrome: any;
 
@@ -12,9 +13,14 @@ interface HeaderProps {
   onLogoutClick?: () => void;
   stats?: AccountStats | null;
   prices?: HivePrices;
+  savedAccounts?: SavedAccount[];
+  activeUsername?: string | null;
+  onSwitchAccount?: (username: string) => void;
+  onRemoveAccount?: (username: string) => void;
+  onAddAccount?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogoutClick, stats, prices }) => {
+export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogoutClick, stats, prices, savedAccounts, activeUsername, onSwitchAccount, onRemoveAccount, onAddAccount }) => {
   const openSidePanel = () => {
     if (typeof chrome !== 'undefined' && chrome.sidePanel) {
       chrome.windows.getCurrent((window: any) => {
@@ -64,7 +70,15 @@ export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogout
         </div>
         
         <div className="flex items-center gap-3">
-            {username ? (
+            {username && savedAccounts && savedAccounts.length > 0 && onSwitchAccount && onRemoveAccount && onAddAccount ? (
+                <AccountSwitcherDropdown
+                    savedAccounts={savedAccounts}
+                    activeUsername={activeUsername ?? null}
+                    onSwitch={onSwitchAccount}
+                    onRemove={onRemoveAccount}
+                    onAddAccount={onAddAccount}
+                />
+            ) : username ? (
                 <div className="flex items-center gap-2 bg-slate-50 px-2 py-1.5 rounded-full border border-slate-100">
                     <div className="flex items-center gap-1.5 pl-1">
                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
@@ -72,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogout
                             @{username}
                         </span>
                     </div>
-                    <button 
+                    <button
                         onClick={onLogoutClick}
                         className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1 rounded-full transition-all"
                         title="Logout"

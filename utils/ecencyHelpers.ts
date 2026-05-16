@@ -11,7 +11,6 @@ export class UnauthorizedError extends Error {
   }
 }
 
-// Helper to interact with Ecency Chat API
 const ECENCY_CHAT_BASE = 'https://ecency.com/api/mattermost';
 
 export interface UnreadChannel {
@@ -37,32 +36,27 @@ export interface ChannelMember {
   last_update_at: number;
 }
 
-/**
- * Creates auth headers.
- */
+// Auth is entirely cookie-based (mm_pat cookie). Never send a Bearer token —
+// the API ignores it and returns 401. All requests use credentials: 'include'
+// so the browser's mm_pat cookie is sent automatically.
 const getHeaders = (token?: string) => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest'
   };
-  
+  // Only add Authorization for real Bearer tokens (not cookie-session placeholders)
   if (token && token !== 'cookie-session' && token !== '') {
     headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
 };
 
-/**
- * Helper to retrieve the mm_pat cookie directly from the browser jar.
- */
 export const getMmPatCookie = async (): Promise<string | null> => {
   if (typeof chrome === 'undefined' || !chrome.cookies) return null;
-
   try {
     const cookie = await chrome.cookies.get({ url: 'https://ecency.com', name: 'mm_pat' });
     if (cookie) return cookie.value;
-
     const cookies = await chrome.cookies.getAll({ domain: 'ecency.com', name: 'mm_pat' });
     if (cookies && cookies.length > 0) {
       const valid = cookies.find((c: any) => c.value && c.value.length > 5);
@@ -75,94 +69,76 @@ export const getMmPatCookie = async (): Promise<string | null> => {
   return null;
 };
 
+// Sets the mm_pat cookie on ecency.com, effectively switching the browser's
+// chat session to a different account.
+export const setMmPatCookie = async (value: string): Promise<boolean> => {
+  if (typeof chrome === 'undefined' || !chrome.cookies) return false;
+  return new Promise((resolve) => {
+    chrome.cookies.set(
+      { url: 'https://ecency.com', name: 'mm_pat', value, path: '/', secure: true },
+      (cookie: any) => resolve(!!cookie)
+    );
+  });
+};
+
 interface BootstrapResult {
-    token: string;
-    userId?: string;
-    refreshToken?: string;
+  token: string;
+  userId?: string;
+  refreshToken?: string;
+  mmPat?: string; // actual mm_pat cookie value captured during bootstrap
 }
 
-/**
- * Bootstraps the Ecency Chat session.
- */
 export const bootstrapEcencyChat = async (username: string, accessToken: string): Promise<BootstrapResult | null> => {
   try {
     const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
-    
-    const body: any = {
-      username: cleanUsername,
-      accessToken
-    };
+    const body: any = { username: cleanUsername, accessToken };
 
+    // credentials: 'include' is required — the server authenticates the Hive token and
+    // responds with Set-Cookie: mm_pat=<value>, which the browser stores automatically.
     const response = await fetch(`${ECENCY_CHAT_BASE}/bootstrap`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       cache: 'no-store',
       credentials: 'include',
       body: JSON.stringify(body)
     });
 
     if (response.ok) {
-        try {
-            const data = await response.json();
-            const token = data.token || data.access_token || data.sid || data.mm_token;
-            let userId = data.user_id || data.id; 
-            const refreshToken = data.refresh_token || data.refreshToken;
-            
-            if (token) {
-                if (!userId) {
-                    const me = await fetchMe(token);
-                    if (me && me.id) userId = me.id;
-                }
-                return { token, userId, refreshToken };
-            }
-        } catch (e) { }
+      const mmPat = await getMmPatCookie();
+      let token = 'cookie-session';
+      let userId: string | undefined;
+      let refreshToken: string | undefined;
+      try {
+        const data = await response.json();
+        token = data.token || data.access_token || data.sid || data.mm_token || 'cookie-session';
+        userId = data.user_id || data.id;
+        refreshToken = data.refresh_token || data.refreshToken;
+      } catch (e) {}
+      return { token, userId, refreshToken, mmPat: mmPat ?? undefined };
     }
-
-    const cookieToken = await getMmPatCookie();
-    if (cookieToken) {
-       const me = await fetchMe(cookieToken);
-       return { 
-           token: 'cookie-session',
-           userId: me?.id
-       };
-    }
-
     return null;
   } catch (e) {
     return null;
   }
 };
 
-/**
- * Attempts to refresh the session using a refresh token.
- */
 export const refreshEcencySession = async (refreshToken: string): Promise<{ token: string, refreshToken?: string } | null> => {
   try {
-     const response = await fetch(`${ECENCY_CHAT_BASE}/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: refreshToken })
-     });
-
-     if (response.ok) {
-        const data = await response.json();
-        if (data && (data.token || data.access_token)) {
-           return {
-              token: data.token || data.access_token,
-              refreshToken: data.refresh_token || data.refreshToken || refreshToken 
-           };
-        }
-     }
-  } catch (e) { }
+    const response = await fetch(`${ECENCY_CHAT_BASE}/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: refreshToken })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data && (data.token || data.access_token)) {
+        return { token: data.token || data.access_token, refreshToken: data.refresh_token || data.refreshToken || refreshToken };
+      }
+    }
+  } catch (e) {}
   return null;
 };
 
-/**
- * Fetches the current authenticated user's details.
- */
 export const fetchMe = async (token?: string): Promise<{ id: string; username: string } | null> => {
   try {
     const response = await fetch(`${ECENCY_CHAT_BASE}/users/me`, {
@@ -171,14 +147,10 @@ export const fetchMe = async (token?: string): Promise<{ id: string; username: s
       cache: 'no-store',
       credentials: 'include'
     });
-
     if (response.status === 401) throw new UnauthorizedError('Unauthorized');
     if (!response.ok) return null;
-
     const data = await response.json();
-    if (data && data.id) {
-       return { id: data.id, username: data.username };
-    }
+    if (data && data.id) return { id: data.id, username: data.username };
     return null;
   } catch (e) {
     if (e instanceof UnauthorizedError) throw e;
@@ -186,9 +158,6 @@ export const fetchMe = async (token?: string): Promise<{ id: string; username: s
   }
 };
 
-/**
- * Fetches aggregate unread counts for all channels the user is in.
- */
 export const fetchUnreads = async (token?: string): Promise<UnreadsApiResponse | null> => {
   try {
     const response = await fetch(`${ECENCY_CHAT_BASE}/channels/unreads`, {
@@ -197,14 +166,10 @@ export const fetchUnreads = async (token?: string): Promise<UnreadsApiResponse |
       cache: 'no-store',
       credentials: 'include'
     });
-
     if (response.status === 401) throw new UnauthorizedError('Unauthorized');
     if (!response.ok) return null;
-
     const data = await response.json();
-    if (data && data.channels) {
-        return data as UnreadsApiResponse;
-    }
+    if (data && data.channels) return data as UnreadsApiResponse;
     return null;
   } catch (e) {
     if (e instanceof UnauthorizedError) throw e;
@@ -212,9 +177,6 @@ export const fetchUnreads = async (token?: string): Promise<UnreadsApiResponse |
   }
 };
 
-/**
- * Fetches the list of channels.
- */
 export const fetchChannels = async (token?: string): Promise<Channel[] | null> => {
   try {
     const response = await fetch(`${ECENCY_CHAT_BASE}/channels`, {
@@ -223,10 +185,8 @@ export const fetchChannels = async (token?: string): Promise<Channel[] | null> =
       cache: 'no-store',
       credentials: 'include'
     });
-
     if (response.status === 401) throw new UnauthorizedError('Unauthorized');
     if (!response.ok) return null;
-
     const data = await response.json();
     if (Array.isArray(data)) return data;
     if (data && Array.isArray(data.channels)) return data.channels;
@@ -237,13 +197,9 @@ export const fetchChannels = async (token?: string): Promise<Channel[] | null> =
   }
 };
 
-/**
- * Creates DM channel.
- */
 export const getOrCreateDirectChannel = async (username: string, token?: string): Promise<{ channel?: Channel, id: string | null, error?: string, success?: boolean }> => {
   try {
     const cleanUser = username.replace(/^@/, '').trim().toLowerCase();
-    
     const response = await fetch(`${ECENCY_CHAT_BASE}/direct`, {
       method: 'POST',
       headers: getHeaders(token),
@@ -251,33 +207,20 @@ export const getOrCreateDirectChannel = async (username: string, token?: string)
       credentials: 'include',
       body: JSON.stringify({ username: cleanUser })
     });
-
     if (response.status === 401) throw new UnauthorizedError('Unauthorized');
     if (!response.ok) {
       const errText = await response.text();
       let errMsg = `Error ${response.status}`;
-      try {
-        const errJson = JSON.parse(errText);
-        errMsg = errJson.message || errMsg;
-      } catch (e) {}
+      try { const errJson = JSON.parse(errText); errMsg = errJson.message || errMsg; } catch (e) {}
       return { id: null, success: false, error: errMsg };
     }
-
     const data = await response.json();
     const channelItem = Array.isArray(data) ? data[0] : (data.channel || data);
-    
     if (channelItem && (channelItem.id || channelItem.channel_id)) {
-        const channel = {
-            ...channelItem,
-            id: channelItem.id || channelItem.channel_id,
-            type: channelItem.type || 'D'
-        } as Channel;
-        
-        return { channel, id: channel.id, success: true };
+      const channel = { ...channelItem, id: channelItem.id || channelItem.channel_id, type: channelItem.type || 'D' } as Channel;
+      return { channel, id: channel.id, success: true };
     }
-
-    return { id: null, success: false, error: `Invalid response format` };
-
+    return { id: null, success: false, error: 'Invalid response format' };
   } catch (e: any) {
     if (e instanceof UnauthorizedError) throw e;
     return { id: null, success: false, error: e.message || 'Network error' };
@@ -288,51 +231,35 @@ export const fetchUsersByIds = async (userIds: string[], token?: string): Promis
   if (userIds.length === 0) return {};
   const map: Record<string, string> = {};
   const uniqueIds = [...new Set(userIds)];
-  
   try {
     const response = await fetch(`${ECENCY_CHAT_BASE}/users/ids`, {
       method: 'POST',
       headers: getHeaders(token),
-      body: JSON.stringify({ ids: uniqueIds }) 
+      credentials: 'include',
+      body: JSON.stringify({ ids: uniqueIds })
     });
-
     if (response.ok) {
       const data = await response.json();
       const users = Array.isArray(data) ? data : (data.users || []);
-      if (Array.isArray(users)) {
-        users.forEach((u: any) => {
-          if (u.id && u.username) map[u.id] = u.username;
-        });
-      }
+      if (Array.isArray(users)) users.forEach((u: any) => { if (u.id && u.username) map[u.id] = u.username; });
     }
-  } catch (e) { }
+  } catch (e) {}
   return map;
 };
 
-/**
- * Robust fetch for channel posts.
- * Handles Mattermost-style {order, posts} objects AND simple arrays.
- */
 export const fetchChannelPosts = async (channelId: string, token?: string, limit: number = 60): Promise<{ messages: Message[], users: Record<string, string> }> => {
   const ts = Date.now();
   const url = `${ECENCY_CHAT_BASE}/channels/${channelId}/posts?page=0&per_page=${limit}&t=${ts}`;
-  
-  const performFetch = async (t?: string) => {
-    return fetch(url, {
+  try {
+    let response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders(t),
+      headers: getHeaders(token),
       cache: 'no-store',
       credentials: 'include'
     });
-  };
 
-  try {
-    let response = await performFetch(token);
-
-    // If Bearer token is rejected (401/403), try falling back to cookie-only session
     if ((response.status === 401 || response.status === 403) && token && token !== '') {
-        console.debug('[EcencyChat] Token auth failed, retrying with cookies...');
-        response = await performFetch('');
+      response = await fetch(url, { method: 'GET', headers: getHeaders(''), cache: 'no-store', credentials: 'include' });
     }
 
     if (response.status === 401) throw new UnauthorizedError('Unauthorized');
@@ -343,38 +270,30 @@ export const fetchChannelPosts = async (channelId: string, token?: string, limit
     const users: Record<string, string> = {};
 
     if (data) {
-      // 1. Extract users
       const extractUser = (u: any) => { if (u && u.id && u.username) users[u.id] = u.username; };
       if (data.profiles) Object.values(data.profiles).forEach(extractUser);
       if (data.users) {
-         if (Array.isArray(data.users)) data.users.forEach(extractUser);
-         else if (typeof data.users === 'object') Object.values(data.users).forEach(extractUser);
+        if (Array.isArray(data.users)) data.users.forEach(extractUser);
+        else if (typeof data.users === 'object') Object.values(data.users).forEach(extractUser);
       }
-
-      // 2. Extract messages based on shape
       if (data.order && data.posts && typeof data.posts === 'object') {
-        // Mattermost Object Map Format
         messages = data.order.map((id: string) => data.posts[id]).filter((p: any) => !!p);
       } else if (Array.isArray(data)) {
-        // Simple Array Format
         messages = data;
       } else if (data.posts && Array.isArray(data.posts)) {
-        // Simple Posts Array Format
         messages = data.posts;
       }
     }
 
-    // Sort chronologically and enrich user map from message metadata
     messages.sort((a, b) => a.create_at - b.create_at);
     messages.forEach(m => {
-        if (m.username && !users[m.user_id]) users[m.user_id] = m.username;
-        if (m.sender_name && !users[m.user_id]) users[m.user_id] = m.sender_name;
-        if (m.props) {
-            const override = m.props.override_username || m.props.webhook_display_name || m.props.username;
-            if (override && !users[m.user_id]) users[m.user_id] = override;
-        }
+      if (m.username && !users[m.user_id]) users[m.user_id] = m.username;
+      if (m.sender_name && !users[m.user_id]) users[m.user_id] = m.sender_name;
+      if (m.props) {
+        const override = m.props.override_username || m.props.webhook_display_name || m.props.username;
+        if (override && !users[m.user_id]) users[m.user_id] = override;
+      }
     });
-
     return { messages, users };
   } catch (e) {
     if (e instanceof UnauthorizedError) throw e;
@@ -439,6 +358,7 @@ export const toggleReaction = async (channelId: string, postId: string, emoji: s
     const response = await fetch(`${ECENCY_CHAT_BASE}/channels/${channelId}/posts/${postId}/reactions`, {
       method: 'POST',
       headers: getHeaders(token),
+      credentials: 'include',
       body: JSON.stringify({ emoji, add: shouldAdd })
     });
     if (response.status === 401) throw new UnauthorizedError('Unauthorized');
@@ -452,7 +372,6 @@ export const toggleReaction = async (channelId: string, postId: string, emoji: s
 export const getAvatarUrl = (username?: string) => {
   if (!username) return '';
   const clean = username.replace(/^@/, '').trim();
-  // Filter out obviously invalid IDs that aren't Hive usernames
-  if (clean.length > 20 && !clean.includes(' ')) return 'https://images.ecency.com/u/ecency/avatar/small'; 
+  if (clean.length > 20 && !clean.includes(' ')) return 'https://images.ecency.com/u/ecency/avatar/small';
   return `https://images.ecency.com/u/${clean}/avatar/small`;
 };

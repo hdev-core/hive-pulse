@@ -1,27 +1,28 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice } from './utils/hiveHelpers';
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
-import { 
-  bootstrapEcencyChat, 
-  fetchChannels, 
-  getOrCreateDirectChannel, 
+import {
+  bootstrapEcencyChat,
+  fetchChannels,
+  getOrCreateDirectChannel,
   fetchChannelPosts,
   sendMessage,
   editMessage,
   deleteMessage,
-  fetchMe,
   fetchUsersByIds,
   toggleReaction,
   fetchUnreads,
+  setMmPatCookie,
   UnauthorizedError
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
-import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message, HivePrices } from './types';
+import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message, HivePrices, SavedAccount } from './types';
 import { FRONTENDS, HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from './constants';
 import { Activity } from 'lucide-react';
 
 // Components
 import { Header } from './components/Header';
+import { AddAccountModal } from './components/AddAccountModal';
 import { BottomNav } from './components/BottomNav';
 import { SwitcherView } from './components/views/SwitcherView';
 import { ShareView } from './components/views/ShareView';
@@ -98,12 +99,18 @@ const App: React.FC = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   
+
   // User Cache
   const [userMap, setUserMap] = useState<Record<string, string>>({});
 
   // Login State
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+
+  // Multi-Account State
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+  const [activeUsername, setActiveUsername] = useState<string | null>(null);
+  const [addingAccount, setAddingAccount] = useState(false);
 
   // Polling Reference
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -168,14 +175,16 @@ const App: React.FC = () => {
   }, [accountStats, unreadCounts, updateBadge]);
 
   // --- REFRESH CHAT ---
-  const refreshChat = async () => {
-    if (!settings.ecencyUsername) return;
+  // tokenOverride lets callers pass a fresh token when settings closure is stale (e.g. account switch)
+  const refreshChat = async (tokenOverride?: string) => {
+    const chatToken = tokenOverride || settings.ecencyChatToken;
+    if (!chatToken) return;
     setLoadingChat(true);
 
     try {
       const [newChannels, unreadResp] = await Promise.all([
-        fetchChannels(settings.ecencyChatToken),
-        fetchUnreads(settings.ecencyChatToken)
+        fetchChannels(chatToken),
+        fetchUnreads(chatToken)
       ]);
 
       if (newChannels) {
@@ -257,9 +266,17 @@ const App: React.FC = () => {
     }
   }, [settings.ecencyChatToken, settings.ecencyUsername]);
 
+  // Clear channels whenever the chat session becomes invalid so stale data is never shown
+  useEffect(() => {
+    if (chatSessionExpired) {
+      setChannels([]);
+      setUnreadCounts({});
+    }
+  }, [chatSessionExpired]);
+
   // --- HEARTBEAT EFFECT ---
   useEffect(() => {
-    const shouldPoll = currentView === AppView.CHAT && settings.ecencyUsername;
+    const shouldPoll = currentView === AppView.CHAT && settings.ecencyUsername && settings.ecencyChatToken && !chatSessionExpired;
     
     if (!shouldPoll) {
       if (pollingIntervalRef.current) {
@@ -302,14 +319,14 @@ const App: React.FC = () => {
         pollingIntervalRef.current = null;
       }
     };
-  }, [currentView, activeChannel?.id, settings.ecencyChatToken, settings.ecencyUsername]);
+  }, [currentView, activeChannel?.id, settings.ecencyChatToken, settings.ecencyUsername, chatSessionExpired]);
 
   // --- INITIALIZATION ---
   useEffect(() => {
     const hydrate = async () => {
       if (typeof chrome !== 'undefined' && chrome.storage) {
         try {
-           chrome.storage.local.get(['settings', 'channels', 'unreadCounts'], (result: any) => {
+           chrome.storage.local.get(['settings', 'channels', 'unreadCounts', 'savedAccounts'], (result: any) => {
               if (result.settings) {
                  const saved = { ...DEFAULT_SETTINGS, ...result.settings };
                  setSettings(saved);
@@ -320,9 +337,19 @@ const App: React.FC = () => {
                     fetchAccountStats(saved.rcUser, saved).then(data => data && setAccountStats(data));
                  }
               }
-              if (result.channels) setChannels(result.channels);
+              if (result.savedAccounts) {
+                 setSavedAccounts(result.savedAccounts.accounts || []);
+                 setActiveUsername(result.savedAccounts.activeUsername || null);
+              }
               if (result.unreadCounts) setUnreadCounts(result.unreadCounts);
               setInitializing(false);
+              const storedToken = result.settings?.ecencyChatToken;
+              const hasVerifiedToken = storedToken && storedToken !== 'cookie-session' && storedToken !== '';
+              if (hasVerifiedToken && result.settings?.ecencyUsername) {
+                refreshChat(storedToken);
+              } else if (result.settings?.ecencyUsername) {
+                setChatSessionExpired(true);
+              }
            });
         } catch (e) { setInitializing(false); }
       } else { setInitializing(false); }
@@ -332,9 +359,16 @@ const App: React.FC = () => {
 
     const storageListener = (changes: any, areaName: string) => {
       if (areaName === 'local') {
-        if (changes.channels) setChannels(changes.channels.newValue || []);
+        if (changes.channels?.newValue) setChannels(changes.channels.newValue);
         if (changes.unreadCounts) setUnreadCounts(changes.unreadCounts.newValue || {});
         if (changes.settings) setSettings(prev => ({ ...prev, ...changes.settings.newValue }));
+        if (changes.savedAccounts) {
+          const store = changes.savedAccounts.newValue;
+          if (store) {
+            setSavedAccounts(store.accounts || []);
+            setActiveUsername(store.activeUsername || null);
+          }
+        }
       }
     };
 
@@ -390,6 +424,81 @@ const App: React.FC = () => {
     setAccountStats(data);
   };
 
+  const persistSavedAccounts = (accounts: SavedAccount[], active: string | null) => {
+    setSavedAccounts(accounts);
+    setActiveUsername(active);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ savedAccounts: { accounts, activeUsername: active } });
+    }
+  };
+
+  const handleSwitchAccount = async (username: string, accountsOverride?: SavedAccount[]) => {
+    const list = accountsOverride ?? savedAccounts;
+    const account = list.find(a => a.username === username);
+    if (!account) return;
+
+    // Kill the heartbeat immediately so the old token closure can't repopulate channels.
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    setChannels([]);
+    setUnreadCounts({});
+    setActiveChannel(null);
+    setActiveMessages([]);
+    setAccountStats(null);
+    setChatSessionExpired(false);
+
+    const accountHasBearer = account.ecencyChatToken && account.ecencyChatToken !== 'cookie-session';
+    if (account.mmPat) {
+      await setMmPatCookie(account.mmPat);
+    } else if (!accountHasBearer) {
+      setChatSessionExpired(true);
+    }
+
+    const updatedSettings: AppSettings = {
+      ...settings,
+      ecencyUsername: account.username,
+      ecencyAccessToken: account.ecencyAccessToken,
+      ecencyChatToken: account.ecencyChatToken,
+      ecencyUserId: account.ecencyUserId,
+      ecencyRefreshToken: account.ecencyRefreshToken,
+      rcUser: account.username,
+    };
+
+    setSettings(updatedSettings);
+    if (account.ecencyUserId) {
+      setUserMap(prev => ({ ...prev, [account.ecencyUserId]: account.username }));
+    }
+    persistSavedAccounts(list, username);
+    fetchAccountStats(account.username, updatedSettings).then(data => data && setAccountStats(data));
+
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ settings: updatedSettings });
+      chrome.storage.local.remove(['unreadCounts', 'channelTotals', 'channelReadState', 'channels'], () => {
+        if (account.ecencyChatToken) refreshChat(account.ecencyChatToken);
+      });
+    } else if (account.ecencyChatToken) {
+      refreshChat(account.ecencyChatToken);
+    }
+  };
+
+  const handleRemoveAccount = (username: string) => {
+    const filtered = savedAccounts.filter(a => a.username !== username);
+    if (username === activeUsername) {
+      if (filtered.length === 0) {
+        handleLogout();
+        persistSavedAccounts([], null);
+      } else {
+        handleSwitchAccount(filtered[0].username, filtered);
+      }
+    } else {
+      persistSavedAccounts(filtered, activeUsername);
+    }
+  };
+
+
   const handleSwitch = (id: FrontendId | string, mode: ActionMode, usernameOverride?: string) => {
     const url = getTargetUrl(
       id,
@@ -409,8 +518,11 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogin = async () => {
-    if (!settings.ecencyUsername) {
+  const handleLogin = async (usernameOverride?: string) => {
+    // usernameOverride must be a plain string; guard against React SyntheticEvent
+    // being passed when handleLogin is used directly as an onClick handler
+    const targetUsername = (typeof usernameOverride === 'string' ? usernameOverride : null) || settings.ecencyUsername;
+    if (!targetUsername) {
       setLoginError("Please enter a username.");
       return;
     }
@@ -418,7 +530,7 @@ const App: React.FC = () => {
     setLoginError(null);
 
     try {
-      const payload = createEcencyLoginPayload(settings.ecencyUsername);
+      const payload = createEcencyLoginPayload(targetUsername);
       const messageStr = JSON.stringify(payload);
 
       // Helper to try login via Script Injection (Extension) or direct (Web)
@@ -459,13 +571,12 @@ const App: React.FC = () => {
                                }
                            });
                        },
-                       args: [settings.ecencyUsername!, messageStr]
+                       args: [targetUsername, messageStr]
                    });
-                   
+
                    if (results && results[0] && results[0].result) {
                        resolve(results[0].result);
                    } else {
-                       // If result is null/undefined, it usually means the script returned undefined or failed silently
                        reject("Script execution returned no result. Refresh page?");
                    }
                } catch (e: any) {
@@ -480,7 +591,7 @@ const App: React.FC = () => {
          } else if (typeof window.hive_keychain !== 'undefined') {
             // Fallback for Web Mode
             window.hive_keychain.requestSignBuffer(
-               settings.ecencyUsername,
+               targetUsername,
                messageStr,
                'Posting',
                (resp: any) => resolve({ success: true, result: resp })
@@ -505,25 +616,63 @@ const App: React.FC = () => {
 
       if (response.success) {
         const token = createEcencyToken(payload, response.result);
-        const bootstrap = await bootstrapEcencyChat(settings.ecencyUsername, token);
-        if (bootstrap && bootstrap.token) {
-          updateSettings({
-            ecencyAccessToken: token,
-            ecencyChatToken: bootstrap.token,
-            ecencyUserId: bootstrap.userId,
-            ecencyRefreshToken: bootstrap.refreshToken,
-            rcUser: settings.ecencyUsername // Update rcUser to the logged-in user
-          });
+        const bootstrap = await bootstrapEcencyChat(targetUsername, token);
+        const chatToken = bootstrap?.token || '';
+
+        // Preserve any previously stored chat credentials — mm_pat tokens are valid for 30 days.
+        // Discarding them on every re-login means losing a working session whenever bootstrap is down.
+        const existingAccount = savedAccounts.find(a => a.username === targetUsername);
+        const prevToken = existingAccount?.ecencyChatToken;
+        const prevIsBearer = prevToken && prevToken !== 'cookie-session' && prevToken !== '';
+        const effectiveChatToken = chatToken || (prevIsBearer ? prevToken : '') || '';
+        const effectiveMmPat = bootstrap?.mmPat || existingAccount?.mmPat;
+
+        const newAccount: SavedAccount = {
+          username: targetUsername,
+          ecencyAccessToken: token,
+          ecencyChatToken: effectiveChatToken,
+          ecencyUserId: bootstrap?.userId || existingAccount?.ecencyUserId || '',
+          ecencyRefreshToken: bootstrap?.refreshToken || existingAccount?.ecencyRefreshToken || '',
+          mmPat: effectiveMmPat,
+        };
+        const updatedAccounts = [...savedAccounts.filter(a => a.username !== targetUsername), newAccount];
+        const updatedSettings: AppSettings = {
+          ...settings,
+          ecencyUsername: targetUsername,
+          ecencyAccessToken: token,
+          ecencyChatToken: effectiveChatToken,
+          ecencyUserId: bootstrap?.userId || existingAccount?.ecencyUserId,
+          ecencyRefreshToken: bootstrap?.refreshToken || existingAccount?.ecencyRefreshToken,
+          rcUser: targetUsername,
+        };
+        setSettings(updatedSettings);
+        const resolvedUserId = bootstrap?.userId || existingAccount?.ecencyUserId;
+        if (resolvedUserId) setUserMap(prev => ({ ...prev, [resolvedUserId]: targetUsername }));
+        persistSavedAccounts(updatedAccounts, targetUsername);
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.local.set({ settings: updatedSettings });
+        }
+        setAddingAccount(false);
+
+        // Chat is usable if bootstrap succeeded OR we preserved a valid Bearer token
+        const hasUsableToken = !!bootstrap || (effectiveChatToken && effectiveChatToken !== 'cookie-session');
+        if (hasUsableToken) {
+          if (effectiveMmPat) await setMmPatCookie(effectiveMmPat);
           setChatSessionExpired(false);
-          refreshChat();
+          refreshChat(effectiveChatToken);
         } else {
-          setLoginError("Failed to bootstrap chat session.");
+          setChatSessionExpired(true);
+          setChannels([]);
+          setUnreadCounts({});
+          if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.local.remove(['channels', 'unreadCounts', 'channelTotals', 'channelReadState']);
+          }
         }
       } else {
         setLoginError(response.message || "Login failed");
       }
     } catch (e: any) {
-      setLoginError(typeof e === 'string' ? e : "An unexpected error occurred.");
+      setLoginError(typeof e === 'string' ? e : (e?.message || "An unexpected error occurred."));
     } finally {
       setIsLoggingIn(false);
     }
@@ -547,7 +696,7 @@ const App: React.FC = () => {
     }
     // Clear persisted unread counts and channel states from storage
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.remove(['unreadCounts', 'channelTotals', 'channelReadState']);
+      chrome.storage.local.remove(['unreadCounts', 'channelTotals', 'channelReadState', 'channels']);
     }
   };
 
@@ -663,13 +812,26 @@ const App: React.FC = () => {
 
   return (
     <div className="w-[380px] h-[600px] flex flex-col bg-slate-50 overflow-hidden font-sans border border-slate-200">
-      <Header 
+      <Header
         username={settings.ecencyAccessToken ? settings.ecencyUsername : null}
         onLoginClick={() => setCurrentView(AppView.SETTINGS)}
         onLogoutClick={handleLogout}
         stats={accountStats}
         prices={hivePrices}
+        savedAccounts={savedAccounts}
+        activeUsername={activeUsername}
+        onSwitchAccount={handleSwitchAccount}
+        onRemoveAccount={handleRemoveAccount}
+        onAddAccount={() => setAddingAccount(true)}
       />
+      {addingAccount && (
+        <AddAccountModal
+          isLoggingIn={isLoggingIn}
+          loginError={loginError}
+          onLogin={handleLogin}
+          onClose={() => { setAddingAccount(false); setLoginError(null); }}
+        />
+      )}
       
       <main className="flex-1 overflow-hidden relative flex flex-col">
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
@@ -686,10 +848,11 @@ const App: React.FC = () => {
             <ShareView tabState={tabState} allFrontends={allFrontends} />
             )}
             {currentView === AppView.STATS && (
-            <StatsView settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} allFrontends={allFrontends} />
+            <StatsView key={settings.rcUser || settings.ecencyUsername} settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} allFrontends={allFrontends} />
             )}
             {currentView === AppView.CHAT && (
-            <ChatView 
+            <ChatView
+                key={settings.ecencyUsername}
                 settings={settings}
                 channels={channels}
                 loadingChat={loadingChat}
@@ -718,7 +881,7 @@ const App: React.FC = () => {
             />
             )}
             {currentView === AppView.WALLET && (
-            <WalletView settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} />
+            <WalletView key={settings.rcUser || settings.ecencyUsername} settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} />
             )}
             {currentView === AppView.SETTINGS && (
             <SettingsView 

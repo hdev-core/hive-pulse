@@ -72,6 +72,15 @@ export interface DAppConfig {
   category: 'Game' | 'DeFi' | 'Video' | 'Tool' | 'Social';
 }
 
+export interface SavedAccount {
+  username: string;
+  ecencyAccessToken: string;
+  ecencyChatToken: string;
+  ecencyUserId: string;
+  ecencyRefreshToken: string;
+  mmPat?: string; // mm_pat cookie value — swapped on account switch for correct chat session
+}
+
 export interface AppSettings {
   autoRedirect: boolean;
   preferredFrontendId: FrontendId | string; // Allow string for custom frontend IDs

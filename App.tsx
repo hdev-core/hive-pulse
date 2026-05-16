@@ -567,34 +567,26 @@ const App: React.FC = () => {
                }
             };
 
+            const isRestricted = (url: string) =>
+               !url || url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('brave://') ||
+               url.startsWith('about:') || url.startsWith('moz-extension://') || url.startsWith('chrome-extension://');
+
+            // Try active tab first, then fall back to any open http/https tab.
+            // Never open a new tab — doing so closes the extension popup and kills this JS context.
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
                const activeTab = tabs?.[0];
-               const url = activeTab?.url || '';
-               const isRestricted = !activeTab?.id ||
-                  url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('brave://') ||
-                  url.startsWith('about:') || url.startsWith('moz-extension://') || url.startsWith('chrome-extension://');
-
-               if (!isRestricted) {
+               if (activeTab?.id && !isRestricted(activeTab.url || '')) {
                   injectIntoTab(activeTab.id);
                   return;
                }
-
-               // Active tab is restricted — open a silent background tab, inject there, close after
-               chrome.tabs.create({ url: 'https://hive.blog/', active: false }, (tempTab: any) => {
-                  const tempTabId = tempTab.id;
-                  const timeout = setTimeout(() => {
-                     chrome.tabs.onUpdated.removeListener(onUpdated);
-                     chrome.tabs.remove(tempTabId);
-                     reject("Timed out. Please try again.");
-                  }, 20000);
-                  const onUpdated = async (changedId: number, info: any) => {
-                     if (changedId !== tempTabId || info.status !== 'complete') return;
-                     chrome.tabs.onUpdated.removeListener(onUpdated);
-                     clearTimeout(timeout);
-                     await injectIntoTab(tempTabId);
-                     chrome.tabs.remove(tempTabId);
-                  };
-                  chrome.tabs.onUpdated.addListener(onUpdated);
+               // Active tab is restricted — find any existing http/https tab
+               chrome.tabs.query({}, (allTabs: any[]) => {
+                  const fallback = allTabs.find(t => t.id && !isRestricted(t.url || ''));
+                  if (fallback) {
+                     injectIntoTab(fallback.id);
+                  } else {
+                     reject("Please open any website in a tab first, then try again.");
+                  }
                });
             });
 

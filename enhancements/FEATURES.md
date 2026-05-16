@@ -2,11 +2,15 @@
 
 This document outlines proposed enhancements to HivePulse, segmented by user cohort and implementation complexity.
 
+**Last reviewed:** May 2026 · **Current version:** 1.5.0
+
+Status key: ✅ Done · ⚠️ Partial · ❌ Pending
+
 ---
 
 ## For Hive Community Members (Power Users)
 
-### 1. Unified Notification Hub ⭐⭐⭐ HIGH PRIORITY
+### 1. Unified Notification Hub ⭐⭐⭐ HIGH PRIORITY — ⚠️ Partial
 **Problem:** Users must check multiple frontends (PeakD, Ecency, InLeo) separately to catch replies, transfers, and account events.
 
 **Solution:** Centralized notification feed in the extension that aggregates:
@@ -30,7 +34,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 2. HBD Savings Dashboard ⭐⭐⭐ HIGH PRIORITY
+### 2. HBD Savings Dashboard ⭐⭐⭐ HIGH PRIORITY — ⚠️ Partial
 **Problem:** Hive's 20% APR on HBD savings is a killer feature but hidden. Users forget to claim interest or move HBD to savings.
 
 **Solution:** Finance widget showing:
@@ -55,7 +59,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 3. Rewards Claim Aggregator ⭐⭐ MEDIUM PRIORITY
+### 3. Rewards Claim Aggregator ⭐⭐ MEDIUM PRIORITY — ✅ Done
 **Problem:** Users have pending rewards scattered across posts/curation over 7 days. They must manually visit each frontend to claim.
 
 **Solution:** One-click "Claim All Rewards" button that:
@@ -78,7 +82,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 4. Multi-Account Switcher ⭐⭐⭐ HIGH PRIORITY
+### 4. Multi-Account Switcher ⭐⭐⭐ HIGH PRIORITY — ✅ Done
 **Problem:** Power users (bot farm operators, curation trail managers) must log out and back in to switch accounts. Extremely tedious.
 
 **Solution:** Quick account switcher dropdown showing:
@@ -101,7 +105,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 5. Witness Voting Dashboard ⭐⭐ MEDIUM PRIORITY
+### 5. Witness Voting Dashboard ⭐⭐ MEDIUM PRIORITY — ❌ Pending
 **Problem:** Witness voting is scattered across frontends and most users can't find it easily. No visibility into vote expiry or witness performance.
 
 **Solution:** Dedicated card/view showing:
@@ -126,7 +130,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 6. RC Burn Predictive Warnings ⭐ LOW PRIORITY
+### 6. RC Burn Predictive Warnings ⭐ LOW PRIORITY — ❌ Pending
 **Problem:** Users run out of RC unexpectedly and can't transact.
 
 **Solution:** Predictive alert system:
@@ -148,7 +152,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 7. Custom Notification Sounds ⭐ LOW PRIORITY
+### 7. Custom Notification Sounds ⭐ LOW PRIORITY — ❌ Pending
 **Problem:** Users want distinct audio cues for different notifications (reply vs. transfer).
 
 **Solution:** Notification sound settings:
@@ -172,7 +176,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ## For Outsiders (Blockchain-Curious Newcomers)
 
-### 1. "What is Hive?" Onboarding Tooltips ⭐⭐⭐ HIGH PRIORITY
+### 1. "What is Hive?" Onboarding Tooltips ⭐⭐⭐ HIGH PRIORITY — ✅ Done
 **Problem:** First-time users see "VP", "RC", "HBD" with zero context.
 
 **Solution:** Contextual tooltips on first launch:
@@ -196,7 +200,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 2. Portfolio Value Display in USD ⭐⭐⭐ HIGH PRIORITY
+### 2. Portfolio Value Display in USD ⭐⭐⭐ HIGH PRIORITY — ✅ Done
 **Problem:** Outsiders care about fiat value ("How much is my account worth?"), not token abstractions.
 
 **Solution:** Prominent USD card showing:
@@ -218,7 +222,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 3. Hive Earning Explainer Module ⭐⭐ MEDIUM PRIORITY
+### 3. Hive Earning Explainer Module ⭐⭐ MEDIUM PRIORITY — ✅ Done
 **Problem:** Outsiders don't understand how Hive rewards work.
 
 **Solution:** Interactive explainer showing:
@@ -242,7 +246,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 4. Quick Wallet (Send/Receive UI) ⭐⭐ MEDIUM PRIORITY
+### 4. Quick Wallet (Send/Receive UI) ⭐⭐ MEDIUM PRIORITY — ✅ Done
 **Problem:** Users must leave extension and go to PeakD/Ecency to send HIVE/HBD. Friction point.
 
 **Solution:** In-extension wallet UI:
@@ -266,7 +270,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 5. DApp Discovery Hub ⭐⭐ MEDIUM PRIORITY
+### 5. DApp Discovery Hub ⭐⭐ MEDIUM PRIORITY — ❌ Pending
 **Problem:** Newcomers have no idea "What can I do with HIVE?"
 
 **Solution:** Gallery view showing:
@@ -291,7 +295,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 6. Energy Cost Estimator ⭐⭐ MEDIUM PRIORITY
+### 6. Energy Cost Estimator ⭐⭐ MEDIUM PRIORITY — ❌ Pending
 **Problem:** Newcomers don't know if they have enough RC to post/comment.
 
 **Solution:** RC cost preview:
@@ -314,7 +318,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 7. Referral/Share System ⭐ LOW PRIORITY
+### 7. Referral/Share System ⭐ LOW PRIORITY — ❌ Pending
 **Problem:** Outsiders are hesitant without social proof. No easy way to invite friends.
 
 **Solution:** Share feature:
@@ -338,7 +342,7 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ---
 
-### 8. Performance Metrics & Trending ⭐⭐ MEDIUM PRIORITY
+### 8. Performance Metrics & Trending ⭐⭐ MEDIUM PRIORITY — ❌ Pending
 **Problem:** Newcomers don't know where to start (what to read, who to follow, what's trending).
 
 **Solution:** Trending dashboard showing:
@@ -364,23 +368,23 @@ This document outlines proposed enhancements to HivePulse, segmented by user coh
 
 ## Summary Table
 
-| Feature | Cohort | Priority | Effort | Impact |
-|---------|--------|----------|--------|--------|
-| Unified Notification Hub | Power Users | ⭐⭐⭐ HIGH | 3-4 weeks | 🔥 Game-changer |
-| HBD Savings Dashboard | Power Users | ⭐⭐⭐ HIGH | 2 weeks | 🔥 High engagement |
-| Rewards Claim Aggregator | Power Users | ⭐⭐ MEDIUM | 2 weeks | 📈 QoL improvement |
-| Multi-Account Switcher | Power Users | ⭐⭐⭐ HIGH | 2 weeks | 🔥 Heavy use case |
-| Witness Voting Dashboard | Power Users | ⭐⭐ MEDIUM | 2 weeks | 📈 QoL improvement |
-| RC Burn Warnings | Power Users | ⭐ LOW | 1 week | 💡 Niche feature |
-| Custom Notification Sounds | Power Users | ⭐ LOW | 1 week | 💡 Polish |
-| Onboarding Tooltips | Outsiders | ⭐⭐⭐ HIGH | 1 week | 🔥 Adoption driver |
-| Portfolio Value (USD) | Outsiders | ⭐⭐⭐ HIGH | 1 week | 🔥 Immediate clarity |
-| Earning Explainer | Outsiders | ⭐⭐ MEDIUM | 1.5 weeks | 📈 Education |
-| Quick Wallet | Outsiders | ⭐⭐ MEDIUM | 2.5 weeks | 📈 Friction reduction |
-| DApp Discovery Hub | Outsiders | ⭐⭐ MEDIUM | 2 weeks | 📈 Exploration |
-| Energy Cost Estimator | Outsiders | ⭐⭐ MEDIUM | 2 weeks | 📈 Confidence builder |
-| Referral/Share System | Outsiders | ⭐ LOW | 1 week | 💡 Growth loop |
-| Performance Metrics | Outsiders | ⭐⭐ MEDIUM | 3 weeks | 📈 Discovery |
+| Feature | Cohort | Priority | Effort | Impact | Status |
+|---------|--------|----------|--------|--------|--------|
+| Multi-Account Switcher | Power Users | ⭐⭐⭐ HIGH | 2 weeks | 🔥 Heavy use case | ✅ Done |
+| Portfolio Value (USD) | Outsiders | ⭐⭐⭐ HIGH | 1 week | 🔥 Immediate clarity | ✅ Done |
+| Onboarding Tooltips | Outsiders | ⭐⭐⭐ HIGH | 1 week | 🔥 Adoption driver | ✅ Done |
+| Earning Explainer | Outsiders | ⭐⭐ MEDIUM | 1.5 weeks | 📈 Education | ✅ Done |
+| Rewards Claim Aggregator | Power Users | ⭐⭐ MEDIUM | 2 weeks | 📈 QoL improvement | ✅ Done |
+| Quick Wallet | Outsiders | ⭐⭐ MEDIUM | 2.5 weeks | 📈 Friction reduction | ✅ Done |
+| Unified Notification Hub | Power Users | ⭐⭐⭐ HIGH | 3-4 weeks | 🔥 Game-changer | ⚠️ Partial |
+| HBD Savings Dashboard | Power Users | ⭐⭐⭐ HIGH | 2 weeks | 🔥 High engagement | ⚠️ Partial |
+| Witness Voting Dashboard | Power Users | ⭐⭐ MEDIUM | 2 weeks | 📈 QoL improvement | ❌ Pending |
+| RC Burn Warnings | Power Users | ⭐ LOW | 1 week | 💡 Niche feature | ❌ Pending |
+| Custom Notification Sounds | Power Users | ⭐ LOW | 1 week | 💡 Polish | ❌ Pending |
+| DApp Discovery Hub | Outsiders | ⭐⭐ MEDIUM | 2 weeks | 📈 Exploration | ❌ Pending |
+| Energy Cost Estimator | Outsiders | ⭐⭐ MEDIUM | 2 weeks | 📈 Confidence builder | ❌ Pending |
+| Referral/Share System | Outsiders | ⭐ LOW | 1 week | 💡 Growth loop | ❌ Pending |
+| Performance Metrics | Outsiders | ⭐⭐ MEDIUM | 3 weeks | 📈 Discovery | ❌ Pending |
 
 ---
 

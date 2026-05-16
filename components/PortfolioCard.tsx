@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, TrendingUp, Wallet, Zap, Lock, Clock, Coins, Loader, Search, ArrowUpDown, ExternalLink, Calculator } from 'lucide-react';
+import { ChevronDown, TrendingUp, Wallet, Zap, Lock, Clock, Coins, Loader, Search, ArrowUpDown, ExternalLink, Calculator, Sparkles, History } from 'lucide-react';
 import { BalanceInfo } from '../types';
-import { formatUSD, fetchHbdInterestRate } from '../utils/hiveHelpers';
+import { formatUSD, fetchHbdInterestRate, fetchHbdInterestHistory, HbdInterestRecord } from '../utils/hiveHelpers';
 import { getHiveEnginePortfolioValue, HiveEngineToken, loadIconAsDataUrl } from '../utils/hiveEngineHelpers';
 import { Tooltip } from './Tooltip';
 
@@ -10,32 +10,74 @@ interface HbdSavingsWidgetProps {
   liquidHbd: number;
   hbdPrice: number;
   apr: number | null;
+  lastInterestPayment?: string;
+  interestHistory?: HbdInterestRecord[];
+  loadingHistory?: boolean;
+  onClaimInterest?: () => Promise<void>;
 }
 
-const HbdSavingsWidget: React.FC<HbdSavingsWidgetProps> = ({ savingsHbd, liquidHbd, hbdPrice, apr }) => {
+const HbdSavingsWidget: React.FC<HbdSavingsWidgetProps> = ({
+  savingsHbd, liquidHbd, hbdPrice, apr,
+  lastInterestPayment, interestHistory, loadingHistory, onClaimInterest,
+}) => {
+  const [claiming, setClaiming] = useState(false);
+  const [claimResult, setClaimResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  // Hive compounds HBD savings interest once every 30 days.
+  // The blockchain will not credit interest if fewer than 30 days have elapsed.
+  const COMPOUND_DAYS = 30;
+
   if (savingsHbd <= 0) return null;
 
   const displayApr = apr ?? 0.20;
   const monthly = savingsHbd * (displayApr / 12);
   const yearly = savingsHbd * displayApr;
 
+  // Estimate accrued interest since last payment
+  let accruedHbd = 0;
+  let daysSince = 0;
+  if (lastInterestPayment) {
+    const lastMs = new Date(lastInterestPayment + (lastInterestPayment.endsWith('Z') ? '' : 'Z')).getTime();
+    daysSince = (Date.now() - lastMs) / 86_400_000;
+    accruedHbd = savingsHbd * (displayApr / 365) * daysSince;
+  }
+
+  const daysUntilEligible = Math.max(0, COMPOUND_DAYS - daysSince);
+  const isEligible = daysUntilEligible === 0;
+  const canClaim = !!onClaimInterest && isEligible && liquidHbd >= 0.001;
+
+  const handleClaim = async () => {
+    if (!onClaimInterest) return;
+    setClaiming(true);
+    setClaimResult(null);
+    try {
+      await onClaimInterest();
+      setClaimResult({ ok: true, msg: 'Interest claimed successfully!' });
+    } catch (e: any) {
+      setClaimResult({ ok: false, msg: e.message || 'Claim failed.' });
+    } finally {
+      setClaiming(false);
+    }
+  };
+
   return (
     <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+      {/* APR header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-green-800">
           <Calculator size={13} />
           APR Calculator
         </div>
-        <div className="flex items-center gap-1">
-          {apr !== null ? (
-            <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
-              {(displayApr * 100).toFixed(1)}% APR
-            </span>
-          ) : (
-            <span className="text-[10px] text-slate-400 italic">Loading rate...</span>
-          )}
-        </div>
+        {apr !== null ? (
+          <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+            {(displayApr * 100).toFixed(1)}% APR
+          </span>
+        ) : (
+          <span className="text-[10px] text-slate-400 italic">Loading rate...</span>
+        )}
       </div>
+
+      {/* Projected earnings */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-white rounded-md p-2 border border-green-100 text-center">
           <p className="text-[10px] text-slate-500 uppercase tracking-wide">Monthly</p>
@@ -48,9 +90,81 @@ const HbdSavingsWidget: React.FC<HbdSavingsWidgetProps> = ({ savingsHbd, liquidH
           <p className="text-[10px] text-slate-400">{formatUSD(yearly * hbdPrice)}</p>
         </div>
       </div>
+
+      {/* Accrued interest + claim button */}
+      {accruedHbd > 0.001 && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-md p-2.5 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
+              <Sparkles size={12} />
+              Accrued Interest
+            </div>
+            <span className="text-[10px] text-slate-500">{Math.round(daysSince)}d since last payment</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-emerald-700">~{accruedHbd.toFixed(3)} HBD</p>
+              <p className="text-[10px] text-slate-500">{formatUSD(accruedHbd * hbdPrice)} estimated</p>
+            </div>
+            {onClaimInterest && isEligible ? (
+              <button
+                onClick={handleClaim}
+                disabled={claiming || !canClaim}
+                title={!canClaim ? 'Need ≥0.001 liquid HBD to trigger interest claim' : undefined}
+                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shrink-0"
+              >
+                {claiming ? <Loader size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                {claiming ? 'Claiming…' : 'Claim'}
+              </button>
+            ) : onClaimInterest && (
+              <span className="text-[10px] text-slate-500 shrink-0 text-right">
+                Eligible in<br />
+                <span className="font-semibold text-slate-600">{Math.ceil(daysUntilEligible)}d</span>
+              </span>
+            )}
+          </div>
+          {claimResult && (
+            <p className={`text-[11px] font-medium ${claimResult.ok ? 'text-emerald-700' : 'text-red-500'}`}>
+              {claimResult.msg}
+            </p>
+          )}
+          {onClaimInterest && isEligible && !canClaim && (
+            <p className="text-[10px] text-amber-600 italic">
+              Need ≥0.001 liquid HBD in wallet to trigger interest credit.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Recent interest payments */}
+      {(loadingHistory || (interestHistory && interestHistory.length > 0)) && (
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-green-700 uppercase tracking-wide">
+            <History size={11} />
+            Recent Payments
+          </div>
+          {loadingHistory ? (
+            <div className="flex items-center gap-1.5 py-1 text-[10px] text-slate-400">
+              <Loader size={10} className="animate-spin" /> Loading history…
+            </div>
+          ) : interestHistory?.map((rec, i) => {
+            const date = new Date(rec.timestamp + (rec.timestamp.endsWith('Z') ? '' : 'Z'));
+            const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            return (
+              <div key={i} className="flex items-center justify-between bg-white rounded px-2 py-1 border border-green-100 text-xs">
+                <span className="text-slate-500">{label}</span>
+                <span className="font-semibold text-green-700">+{rec.amount.toFixed(3)} HBD</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <p className="text-[10px] text-slate-400 italic">
-        Rate is set by Hive witnesses and may change with network consensus.
+        Rate set by Hive witnesses. Accrued amount is an estimate.
       </p>
+
+      {/* Idle liquid HBD nudge */}
       {liquidHbd >= 0.001 && (
         <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-md px-2.5 py-2 text-xs">
           <span className="text-yellow-800">
@@ -80,6 +194,7 @@ interface PortfolioCardProps {
   heRpcNode?: string;
   hiveRpcNode?: string;
   onClaimRewards?: () => Promise<void>;
+  onClaimInterest?: () => Promise<void>;
 }
 
 interface AssetRow {
@@ -100,6 +215,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   heRpcNode,
   hiveRpcNode,
   onClaimRewards,
+  onClaimInterest,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [hiveEngineTokens, setHiveEngineTokens] = useState<HiveEngineToken[]>([]);
@@ -120,6 +236,8 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   const [iconDataUrls, setIconDataUrls] = useState<Record<string, string>>({});
   const [claiming, setClaiming] = useState(false);
   const [claimResult, setClaimResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [interestHistory, setInterestHistory] = useState<HbdInterestRecord[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Fetch Hive-Engine tokens when expanding the card
   useEffect(() => {
@@ -146,6 +264,17 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
       .then(rate => { if (rate !== null) setHbdApr(rate); })
       .catch(() => {});
   }, [hiveRpcNode, balances.savingsHbd]);
+
+  // Fetch HBD interest payment history when savings section is visible
+  useEffect(() => {
+    if (!username || balances.savingsHbd <= 0 || !expandedSections.savings) return;
+    if (interestHistory.length > 0 || loadingHistory) return;
+    setLoadingHistory(true);
+    fetchHbdInterestHistory(username, { hiveRpcNode })
+      .then(records => setInterestHistory(records))
+      .catch(() => {})
+      .finally(() => setLoadingHistory(false));
+  }, [username, balances.savingsHbd, expandedSections.savings, hiveRpcNode]);
 
   // Lazily load token icons as data URLs (non-blocking)
   useEffect(() => {
@@ -431,6 +560,10 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                     liquidHbd={balances.hbd}
                     hbdPrice={hbdPrice}
                     apr={hbdApr}
+                    lastInterestPayment={balances.savingsHbdLastInterestPayment}
+                    interestHistory={interestHistory}
+                    loadingHistory={loadingHistory}
+                    onClaimInterest={onClaimInterest}
                   />
                 </div>
               )}

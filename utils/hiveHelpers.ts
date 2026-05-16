@@ -62,6 +62,7 @@ interface AccountResponse {
   hbd_balance: string;
   savings_balance: string;
   savings_hbd_balance: string;
+  savings_hbd_last_interest_payment?: string;
   vesting_shares: string;
   delegated_vesting_shares: string;
   reward_hive_balance: string;
@@ -147,6 +148,7 @@ export const fetchAccountStats = async (
       hbd: parseBalance(account.hbd_balance),
       savingsHive: parseBalance(account.savings_balance),
       savingsHbd: parseBalance(account.savings_hbd_balance),
+      savingsHbdLastInterestPayment: account.savings_hbd_last_interest_payment,
       hivepower: hp,
       pendingHive: parseBalance(account.reward_hive_balance),
       pendingHbd: parseBalance(account.reward_hbd_balance),
@@ -366,4 +368,55 @@ export const formatUSD = (value: number, decimals: number = 2): string => {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
   }).format(value);
+};
+
+export interface HbdInterestRecord {
+  timestamp: string;
+  amount: number;
+}
+
+export const fetchHbdInterestHistory = async (
+  username: string,
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean },
+  limit: number = 5
+): Promise<HbdInterestRecord[]> => {
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const data = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, -1, 200], id: 1 },
+      primary, fallback, autoSwitch
+    );
+
+    const ops: any[] = data.result || [];
+    const records: HbdInterestRecord[] = [];
+
+    for (let i = ops.length - 1; i >= 0 && records.length < limit; i--) {
+      const entry = Array.isArray(ops[i]) ? ops[i][1] : ops[i];
+      if (!entry) continue;
+
+      let opType: string;
+      let opValue: any;
+
+      if (Array.isArray(entry.op)) {
+        [opType, opValue] = entry.op;
+      } else if (entry.op && typeof entry.op === 'object') {
+        opType = (entry.op.type || '').replace('_operation', '');
+        opValue = entry.op.value;
+      } else {
+        continue;
+      }
+
+      if (opType !== 'interest' || !opValue) continue;
+
+      const raw = opValue.interest;
+      const amountStr = parseOpAmount(raw);
+      const amount = parseFloat(amountStr.match(/[\d.]+/)?.[0] || '0');
+      records.push({ timestamp: entry.timestamp || '', amount });
+    }
+
+    return records;
+  } catch (e) {
+    console.error('Failed to fetch HBD interest history:', e);
+    return [];
+  }
 };

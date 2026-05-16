@@ -99,6 +99,29 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
     await refreshStats();
   };
 
+  // Trigger HBD savings interest credit via a minimal transfer_to_savings.
+  // Hive has no standalone claim-interest op; any savings transfer causes the chain
+  // to credit accrued interest first.
+  const handleClaimInterest = async () => {
+    if (!stats?.balances || !stats.username) throw new Error('No account data.');
+    const { savingsHbd, hbd } = stats.balances;
+    if (savingsHbd <= 0) throw new Error('No HBD in savings.');
+    if (hbd < 0.001) throw new Error('Need at least 0.001 liquid HBD to trigger interest credit.');
+
+    const result = await broadcastKeychainOp(
+      stats.username,
+      [['transfer_to_savings', {
+        from: stats.username,
+        to: stats.username,
+        amount: '0.001 HBD',
+        memo: '',
+      }]],
+      'Active'
+    );
+    if (!result.success) throw new Error(result.error || 'Claim failed.');
+    await refreshStats();
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <OnboardingBanner />
@@ -147,6 +170,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
             heRpcNode={settings.heRpcNode}
             hiveRpcNode={settings.hiveRpcNode}
             onClaimRewards={isOwnAccount ? handleClaimRewards : undefined}
+            onClaimInterest={isOwnAccount ? handleClaimInterest : undefined}
           />
         )}
 

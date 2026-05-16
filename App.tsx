@@ -536,7 +536,7 @@ const App: React.FC = () => {
       const performLogin = () => new Promise<any>((resolve, reject) => {
          if (typeof chrome !== 'undefined' && chrome.scripting) {
 
-            const injectIntoTab = async (tabId: number) => {
+            const injectIntoTab = async (tabId: number, closeTabAfter?: number) => {
                try {
                   const results = await chrome.scripting.executeScript({
                      target: { tabId },
@@ -557,22 +557,38 @@ const App: React.FC = () => {
                      },
                      args: [targetUsername, messageStr]
                   });
+                  if (closeTabAfter) chrome.tabs.remove(closeTabAfter);
                   if (results && results[0] && results[0].result) {
                      resolve(results[0].result);
                   } else {
                      reject("Script execution returned no result.");
                   }
                } catch (e: any) {
+                  if (closeTabAfter) chrome.tabs.remove(closeTabAfter);
                   reject(e.message || "Script injection failed.");
                }
+            };
+
+            // Open ecency.com as a background tab (active: false keeps the popup open),
+            // wait for it to load, inject, then close it.
+            const openBackgroundTabAndInject = () => {
+               chrome.tabs.create({ url: 'https://ecency.com', active: false }, (tab: any) => {
+                  if (!tab?.id) { reject("Could not open background tab."); return; }
+                  const tabId = tab.id;
+                  const onUpdated = (updatedTabId: number, changeInfo: any) => {
+                     if (updatedTabId === tabId && changeInfo.status === 'complete') {
+                        chrome.tabs.onUpdated.removeListener(onUpdated);
+                        injectIntoTab(tabId, tabId);
+                     }
+                  };
+                  chrome.tabs.onUpdated.addListener(onUpdated);
+               });
             };
 
             const isRestricted = (url: string) =>
                !url || url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('brave://') ||
                url.startsWith('about:') || url.startsWith('moz-extension://') || url.startsWith('chrome-extension://');
 
-            // Try active tab first, then fall back to any open http/https tab.
-            // Never open a new tab — doing so closes the extension popup and kills this JS context.
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
                const activeTab = tabs?.[0];
                if (activeTab?.id && !isRestricted(activeTab.url || '')) {
@@ -585,7 +601,8 @@ const App: React.FC = () => {
                   if (fallback) {
                      injectIntoTab(fallback.id);
                   } else {
-                     reject("Please open any website in a tab first, then try again.");
+                     // No usable tab open — open ecency.com silently in background
+                     openBackgroundTabAndInject();
                   }
                });
             });

@@ -593,18 +593,10 @@ const App: React.FC = () => {
                const activeTab = tabs?.[0];
                if (activeTab?.id && !isRestricted(activeTab.url || '')) {
                   injectIntoTab(activeTab.id);
-                  return;
+               } else {
+                  // Active tab is restricted — open ecency.com silently in background
+                  openBackgroundTabAndInject();
                }
-               // Active tab is restricted — find any existing http/https tab
-               chrome.tabs.query({}, (allTabs: any[]) => {
-                  const fallback = allTabs.find(t => t.id && !isRestricted(t.url || ''));
-                  if (fallback) {
-                     injectIntoTab(fallback.id);
-                  } else {
-                     // No usable tab open — open ecency.com silently in background
-                     openBackgroundTabAndInject();
-                  }
-               });
             });
 
          } else if (typeof window.hive_keychain !== 'undefined') {

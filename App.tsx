@@ -533,69 +533,73 @@ const App: React.FC = () => {
       const payload = createEcencyLoginPayload(targetUsername);
       const messageStr = JSON.stringify(payload);
 
-      // Helper to try login via Script Injection (Extension) or direct (Web)
       const performLogin = () => new Promise<any>((resolve, reject) => {
          if (typeof chrome !== 'undefined' && chrome.scripting) {
-            chrome.tabs.query({ active: true, currentWindow: true }, async (tabs: any[]) => {
-               if (!tabs || tabs.length === 0 || !tabs[0].id) {
-                  reject("No active tab found. Please open a website.");
+
+            const injectIntoTab = async (tabId: number) => {
+               try {
+                  const results = await chrome.scripting.executeScript({
+                     target: { tabId },
+                     world: 'MAIN',
+                     func: (u: string, m: string) => {
+                        return new Promise((res) => {
+                           const win = window as any;
+                           if (typeof win.hive_keychain === 'undefined') {
+                              res({ success: false, error: 'KEYCHAIN_NOT_FOUND' });
+                              return;
+                           }
+                           try {
+                              win.hive_keychain.requestSignBuffer(u, m, 'Posting', (resp: any) => res({ success: true, result: resp }));
+                           } catch (err: any) {
+                              res({ success: false, error: err.message || 'KEYCHAIN_EXCEPTION' });
+                           }
+                        });
+                     },
+                     args: [targetUsername, messageStr]
+                  });
+                  if (results && results[0] && results[0].result) {
+                     resolve(results[0].result);
+                  } else {
+                     reject("Script execution returned no result.");
+                  }
+               } catch (e: any) {
+                  reject(e.message || "Script injection failed.");
+               }
+            };
+
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
+               const activeTab = tabs?.[0];
+               const url = activeTab?.url || '';
+               const isRestricted = !activeTab?.id ||
+                  url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('brave://') ||
+                  url.startsWith('about:') || url.startsWith('moz-extension://') || url.startsWith('chrome-extension://');
+
+               if (!isRestricted) {
+                  injectIntoTab(activeTab.id);
                   return;
                }
 
-               // Check for restricted URLs
-               const url = tabs[0].url || '';
-               if (url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('brave://') || url.startsWith('about:') || url.startsWith('moz-extension://')) {
-                   reject("Login requires an active website tab. Please open any website (e.g. google.com) and try again.");
-                   return;
-               }
-
-               try {
-                   // Inject script into MAIN world to access window.hive_keychain
-                   const results = await chrome.scripting.executeScript({
-                       target: { tabId: tabs[0].id },
-                       world: 'MAIN',
-                       func: (u: string, m: string) => {
-                           return new Promise((res) => {
-                               const win = window as any;
-                               if (typeof win.hive_keychain === 'undefined') {
-                                   res({ success: false, error: 'KEYCHAIN_NOT_FOUND' });
-                                   return;
-                               }
-                               try {
-                                   win.hive_keychain.requestSignBuffer(
-                                       u, m, 'Posting',
-                                       (resp: any) => res({ success: true, result: resp })
-                                   );
-                               } catch (err: any) {
-                                   res({ success: false, error: err.message || 'KEYCHAIN_EXCEPTION' });
-                               }
-                           });
-                       },
-                       args: [targetUsername, messageStr]
-                   });
-
-                   if (results && results[0] && results[0].result) {
-                       resolve(results[0].result);
-                   } else {
-                       reject("Script execution returned no result. Refresh page?");
-                   }
-               } catch (e: any) {
-                   const msg = e.message || '';
-                   if (msg.includes('Cannot access a chrome:// URL') || msg.includes('Cannot access contents of url')) {
-                        reject("Login requires an active website tab. Please open a regular website.");
-                   } else {
-                        reject(msg || "Script injection failed.");
-                   }
-               }
+               // Active tab is restricted — open a silent background tab, inject there, close after
+               chrome.tabs.create({ url: 'https://hive.blog/', active: false }, (tempTab: any) => {
+                  const tempTabId = tempTab.id;
+                  const timeout = setTimeout(() => {
+                     chrome.tabs.onUpdated.removeListener(onUpdated);
+                     chrome.tabs.remove(tempTabId);
+                     reject("Timed out. Please try again.");
+                  }, 20000);
+                  const onUpdated = async (changedId: number, info: any) => {
+                     if (changedId !== tempTabId || info.status !== 'complete') return;
+                     chrome.tabs.onUpdated.removeListener(onUpdated);
+                     clearTimeout(timeout);
+                     await injectIntoTab(tempTabId);
+                     chrome.tabs.remove(tempTabId);
+                  };
+                  chrome.tabs.onUpdated.addListener(onUpdated);
+               });
             });
+
          } else if (typeof window.hive_keychain !== 'undefined') {
-            // Fallback for Web Mode
-            window.hive_keychain.requestSignBuffer(
-               targetUsername,
-               messageStr,
-               'Posting',
-               (resp: any) => resolve({ success: true, result: resp })
-            );
+            window.hive_keychain.requestSignBuffer(targetUsername, messageStr, 'Posting', (resp: any) => resolve({ success: true, result: resp }));
          } else {
             reject("Hive Keychain not found.");
          }

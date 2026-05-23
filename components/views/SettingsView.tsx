@@ -672,21 +672,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 
                 <label className="flex items-center justify-between cursor-pointer mb-3">
                   <span className="text-sm text-slate-600">Prioritize unread message badge</span>
-                  <input 
-                    type="checkbox" 
-                    checked={settings.overrideBadgeWithUnreadMessages} 
+                  <input
+                    type="checkbox"
+                    checked={settings.overrideBadgeWithUnreadMessages}
                     onChange={(e) => updateSettings({ overrideBadgeWithUnreadMessages: e.target.checked })}
                     className="accent-emerald-500 w-4 h-4"
                   />
                 </label>
-                
+
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-slate-600">Extension Badge Metric</span>
+                  <div className="flex bg-slate-200 rounded p-0.5">
+                    <button
+                      onClick={() => updateSettings({ badgeMetric: 'VP' })}
+                      className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${settings.badgeMetric === 'VP' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}
+                    >VP</button>
+                    <button
+                      onClick={() => updateSettings({ badgeMetric: 'RC' })}
+                      className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${settings.badgeMetric === 'RC' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}
+                    >RC</button>
+                  </div>
+                </div>
+
                 {/* Show saved RC user in settings */}
                 <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-                   <span className="text-sm text-slate-600">Monitored User (Stats)</span>
+                   <span className="text-sm text-slate-600">Monitored User</span>
                    <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
                      {settings.rcUser || 'None'}
                    </span>
-                </div>      </section>
+                </div>
+      </section>
+
+      <p className="text-center text-[10px] text-slate-400 pb-2">HivePulse v1.6.0</p>
 
     </div>
   );

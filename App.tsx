@@ -861,8 +861,8 @@ const App: React.FC = () => {
             {currentView === AppView.SHARE && (
             <ShareView tabState={tabState} allFrontends={allFrontends} />
             )}
-            {currentView === AppView.STATS && (
-            <StatsView key={settings.rcUser || settings.ecencyUsername} settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} allFrontends={allFrontends} />
+            {currentView === AppView.NOTIFICATIONS && (
+            <StatsView key={settings.rcUser || settings.ecencyUsername} settings={settings} allFrontends={allFrontends} />
             )}
             {currentView === AppView.CHAT && (
             <ChatView

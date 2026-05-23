@@ -177,12 +177,14 @@ function normalizeAccountHistoryOp(
 
 export const fetchAccountHistoryFinance = async (
   username: string,
-  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
-): Promise<HiveNotification[]> => {
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean },
+  start: number = -1,
+  limit: number = 1000,
+): Promise<{ items: HiveNotification[]; hasMore: boolean; oldestSeq: number | null }> => {
   try {
     const { primary, fallback, autoSwitch } = getHiveNodes(settings);
     const data = await rpcFetchWithFallback(
-      { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, -1, 1000], id: 1 },
+      { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, start, limit], id: 1 },
       primary, fallback, autoSwitch
     );
     const ops: [number, any][] = data.result || [];
@@ -194,10 +196,14 @@ export const fetchAccountHistoryFinance = async (
       const notif = normalizeAccountHistoryOp(seq, opType, opData, entry.timestamp, username);
       if (notif) result.push(notif);
     }
-    return result;
+    return {
+      items: result,
+      hasMore: ops.length >= limit,
+      oldestSeq: ops.length > 0 ? ops[0][0] : null,
+    };
   } catch (e) {
     console.error('Failed to fetch account history finance ops', e);
-    return [];
+    return { items: [], hasMore: false, oldestSeq: null };
   }
 };
 

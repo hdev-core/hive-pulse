@@ -20,7 +20,7 @@ export enum ActionMode {
 export enum AppView {
   SWITCHER = 'SWITCHER',
   SHARE = 'SHARE',
-  STATS = 'STATS',
+  NOTIFICATIONS = 'NOTIFICATIONS',
   CHAT = 'CHAT',
   WALLET = 'WALLET',
   SETTINGS = 'SETTINGS'

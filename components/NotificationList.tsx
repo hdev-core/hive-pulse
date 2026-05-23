@@ -80,9 +80,12 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
   const [hasMore, setHasMore]             = useState(true);
   const [activeFilter, setActiveFilter]   = useState<FilterTab>('all');
 
-  const [financeHistory, setFinanceHistory]   = useState<HiveNotification[]>([]);
-  const [financeLoading, setFinanceLoading]   = useState(false);
-  const financeFetchedRef                     = useRef(false);
+  const [financeHistory, setFinanceHistory]         = useState<HiveNotification[]>([]);
+  const [financeLoading, setFinanceLoading]         = useState(false);
+  const [financeHasMore, setFinanceHasMore]         = useState(false);
+  const [financeOldestSeq, setFinanceOldestSeq]     = useState<number | null>(null);
+  const [loadingMoreFinance, setLoadingMoreFinance] = useState(false);
+  const financeFetchedRef                           = useRef(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const autoLoadCountRef   = useRef(0);
@@ -140,11 +143,23 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
     if (financeFetchedRef.current || !username) return;
     financeFetchedRef.current = true;
     setFinanceLoading(true);
-    fetchAccountHistoryFinance(username, settings).then(data => {
-      setFinanceHistory(data);
+    fetchAccountHistoryFinance(username, settings).then(({ items, hasMore, oldestSeq }) => {
+      setFinanceHistory(items);
+      setFinanceHasMore(hasMore);
+      setFinanceOldestSeq(oldestSeq);
       setFinanceLoading(false);
     });
   }, [username]);
+
+  const loadMoreAccountHistory = useCallback(async () => {
+    if (!username || financeOldestSeq === null || loadingMoreFinance) return;
+    setLoadingMoreFinance(true);
+    const { items, hasMore, oldestSeq } = await fetchAccountHistoryFinance(username, settings, financeOldestSeq - 1);
+    setFinanceHistory(prev => [...prev, ...items]);
+    setFinanceHasMore(hasMore);
+    setFinanceOldestSeq(oldestSeq);
+    setLoadingMoreFinance(false);
+  }, [username, financeOldestSeq, loadingMoreFinance]);
 
   const handleScroll = () => {
     if (!scrollContainerRef.current || loading || loadingMore || !hasMore) return;
@@ -193,9 +208,9 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
             <Bell size={13} className="text-white" />
           </div>
           <h3 className="text-sm font-bold text-slate-800">The Pulse</h3>
-          {!loading && notifications.length > 0 && (
+          {!loading && counts.all > 0 && (
             <span className="text-[10px] font-semibold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">
-              {notifications.length}
+              {counts.all > 99 ? '99+' : counts.all}
             </span>
           )}
         </div>
@@ -275,21 +290,36 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
               </div>
             ))}
 
-            {/* Load more */}
-            {hasMore && (
-              <button
-                onClick={() => loadNotifications(false)}
-                disabled={loadingMore}
-                className="flex items-center justify-center gap-2 py-3 text-xs font-medium text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition-all border-t border-slate-100"
-              >
-                {loadingMore
-                  ? <><Loader size={13} className="animate-spin" /><span>Loading…</span></>
-                  : <><ChevronDown size={13} /><span>Load older</span></>
-                }
-              </button>
+            {/* Load more — Finance tab paginates account history; other tabs paginate bridge */}
+            {activeFilter === 'finance' ? (
+              financeHasMore && (
+                <button
+                  onClick={loadMoreAccountHistory}
+                  disabled={loadingMoreFinance}
+                  className="flex items-center justify-center gap-2 py-3 text-xs font-medium text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition-all border-t border-slate-100"
+                >
+                  {loadingMoreFinance
+                    ? <><Loader size={13} className="animate-spin" /><span>Loading…</span></>
+                    : <><ChevronDown size={13} /><span>Load older</span></>
+                  }
+                </button>
+              )
+            ) : (
+              hasMore && (
+                <button
+                  onClick={() => loadNotifications(false)}
+                  disabled={loadingMore}
+                  className="flex items-center justify-center gap-2 py-3 text-xs font-medium text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition-all border-t border-slate-100"
+                >
+                  {loadingMore
+                    ? <><Loader size={13} className="animate-spin" /><span>Loading…</span></>
+                    : <><ChevronDown size={13} /><span>Load older</span></>
+                  }
+                </button>
+              )
             )}
 
-            {!hasMore && visible.length > 0 && (
+            {!(activeFilter === 'finance' ? financeHasMore : hasMore) && visible.length > 0 && (
               <div className="py-3 text-center text-[10px] text-slate-300 uppercase tracking-widest font-bold border-t border-slate-50">
                 End of Pulse
               </div>

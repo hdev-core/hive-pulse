@@ -583,9 +583,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
       </div>
 
       {chatSessionExpired && (
-        <div className="mb-4 bg-slate-100 border border-slate-200 p-3 rounded-lg">
-          <p className="text-xs font-semibold text-slate-600">Chat unavailable</p>
-          <p className="text-[10px] text-slate-400 mt-1">Ecency chat session is not active. Try logging out and back in.</p>
+        <div className="mb-4 bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-amber-800">Chat session expired</p>
+            <p className="text-[10px] text-amber-600 mt-0.5">Reconnect with Keychain to restore your session.</p>
+          </div>
+          <button
+            onClick={handleKeychainLogin}
+            disabled={isLoggingIn}
+            className="shrink-0 flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+          >
+            {isLoggingIn ? <Activity size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            {isLoggingIn ? 'Connecting…' : 'Reconnect'}
+          </button>
         </div>
       )}
 

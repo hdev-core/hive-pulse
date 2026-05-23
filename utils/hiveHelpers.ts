@@ -1,4 +1,4 @@
-import { AccountStats, HiveNotification, TransferRecord } from '../types';
+import { AccountStats, HiveNotification, HiveNotificationType, TransferRecord } from '../types';
 import { HIVE_RPC_NODES } from '../constants';
 
 const DEFAULT_HIVE_RPC_NODE = HIVE_RPC_NODES[0];
@@ -88,6 +88,115 @@ export const fetchNotifications = async (
     return data.result || [];
   } catch (e) {
     console.error("Failed to fetch notifications:", e);
+    return [];
+  }
+};
+
+const ACCOUNT_HISTORY_FINANCE_OPS = new Set([
+  'transfer',
+  'interest',
+  'claim_reward_balance',
+  'transfer_to_vesting',
+  'withdraw_vesting',
+  'fill_vesting_withdraw',
+  'transfer_to_savings',
+  'transfer_from_savings',
+  'fill_transfer_from_savings',
+  'proposal_pay',
+]);
+
+function normalizeAccountHistoryOp(
+  seq: number,
+  opType: string,
+  opData: Record<string, any>,
+  timestamp: string,
+  username: string
+): HiveNotification | null {
+  const base = {
+    id: seq,
+    score: 0,
+    date: timestamp,
+    url: `/@${username}/transfers`,
+    author: '',
+  };
+
+  switch (opType) {
+    case 'transfer': {
+      const isIncoming = opData.to === username;
+      const counterparty = isIncoming ? opData.from : opData.to;
+      return {
+        ...base,
+        type: HiveNotificationType.TRANSFER,
+        msg: isIncoming
+          ? `Received ${opData.amount} from @${counterparty}`
+          : `Sent ${opData.amount} to @${counterparty}`,
+        amount: opData.amount,
+        memo: opData.memo,
+        author: counterparty,
+      };
+    }
+    case 'proposal_pay':
+      return {
+        ...base,
+        type: HiveNotificationType.PROPOSAL_PAY,
+        msg: `Proposal #${opData.proposal_id} payment: ${opData.payment}`,
+        amount: opData.payment,
+        author: opData.receiver,
+      };
+    case 'interest':
+      return { ...base, type: HiveNotificationType.INTEREST,
+        msg: `HBD savings interest: ${opData.interest}`, amount: opData.interest };
+    case 'claim_reward_balance': {
+      const parts = [opData.reward_hive, opData.reward_hbd, opData.reward_vests]
+        .filter((r: string) => r && !r.startsWith('0.000'));
+      return { ...base, type: HiveNotificationType.CLAIM_REWARD,
+        msg: `Claimed rewards: ${parts.join(' + ')}`, amount: parts.join(' + ') };
+    }
+    case 'transfer_to_vesting':
+      return { ...base, type: HiveNotificationType.POWER_UP,
+        msg: `Powered up ${opData.amount} to HP`, amount: opData.amount };
+    case 'withdraw_vesting':
+      return { ...base, type: HiveNotificationType.POWER_DOWN,
+        msg: `Power down initiated: ${opData.vesting_shares}`, amount: opData.vesting_shares };
+    case 'fill_vesting_withdraw':
+      return { ...base, type: HiveNotificationType.POWER_DOWN_FILL,
+        msg: `Power down payment: received ${opData.deposited}`, amount: opData.deposited };
+    case 'transfer_to_savings':
+      return { ...base, type: HiveNotificationType.SAVINGS_DEPOSIT,
+        msg: `Moved ${opData.amount} to savings`, amount: opData.amount, memo: opData.memo };
+    case 'transfer_from_savings':
+      return { ...base, type: HiveNotificationType.SAVINGS_WITHDRAW,
+        msg: `Savings withdrawal requested: ${opData.amount}`, amount: opData.amount, memo: opData.memo };
+    case 'fill_transfer_from_savings':
+      return { ...base, type: HiveNotificationType.SAVINGS_WITHDRAW_FILL,
+        msg: `Savings withdrawal completed: ${opData.amount}`, amount: opData.amount };
+    default:
+      return null;
+  }
+}
+
+export const fetchAccountHistoryFinance = async (
+  username: string,
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<HiveNotification[]> => {
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const data = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, -1, 1000], id: 1 },
+      primary, fallback, autoSwitch
+    );
+    const ops: [number, any][] = data.result || [];
+    const result: HiveNotification[] = [];
+    for (let i = ops.length - 1; i >= 0; i--) {
+      const [seq, entry] = ops[i];
+      const [opType, opData] = entry.op;
+      if (!ACCOUNT_HISTORY_FINANCE_OPS.has(opType)) continue;
+      const notif = normalizeAccountHistoryOp(seq, opType, opData, entry.timestamp, username);
+      if (notif) result.push(notif);
+    }
+    return result;
+  } catch (e) {
+    console.error('Failed to fetch account history finance ops', e);
     return [];
   }
 };

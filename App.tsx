@@ -16,7 +16,7 @@ import {
   UnauthorizedError
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
-import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message, HivePrices, SavedAccount } from './types';
+import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message, HivePrices, SavedAccount, HiveNotificationType } from './types';
 import { FRONTENDS, HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from './constants';
 import { Activity } from 'lucide-react';
 
@@ -53,6 +53,15 @@ const DEFAULT_SETTINGS: AppSettings = {
   ecencyUserId: '',
   ecencyRefreshToken: '',
   overrideBadgeWithUnreadMessages: true,
+  hiveNotificationBadgeEnabled: true,
+  hiveNotificationFilterTypes: [
+    HiveNotificationType.REPLY,
+    HiveNotificationType.MENTION,
+    HiveNotificationType.FOLLOW,
+    HiveNotificationType.TRANSFER,
+    HiveNotificationType.DELEGATIONS,
+    HiveNotificationType.REBLOG,
+  ],
   activeFrontendIds: FRONTENDS.map(f => f.id),
   customFrontends: [],
   hiveRpcNode: HIVE_RPC_NODES[0],

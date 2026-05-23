@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AppSettings, FrontendId, FrontendConfig, LinkStructureConfig } from '../../types';
+import { AppSettings, FrontendId, FrontendConfig, LinkStructureConfig, HiveNotificationType } from '../../types';
 import { FrontendIcon } from '../FrontendIcon';
 import { NodeSelector } from '../NodeSelector';
 import { HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from '../../constants';
@@ -257,12 +257,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
             <Bell size={18} className="text-slate-500" />
-            <span className="font-semibold text-sm text-slate-800">Background Chat Monitoring</span>
+            <span className="font-semibold text-sm text-slate-800">Background Monitoring</span>
         </div>
 
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-slate-600">Enable Notifications</span>
-          <button 
+          <span className="text-sm text-slate-600">Enable Background Polling</span>
+          <button
             onClick={() => updateSettings({ notificationsEnabled: !settings.notificationsEnabled })}
             className={`
               w-11 h-6 rounded-full transition-colors relative
@@ -277,25 +277,86 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {settings.notificationsEnabled && (
-          <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-             <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Chat Check Frequency</label>
-             <select 
-               value={settings.notificationInterval || 1}
-               onChange={(e) => updateSettings({ notificationInterval: Number(e.target.value) })}
-               className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-             >
+          <div className="animate-in fade-in slide-in-from-top-1 duration-200 flex flex-col gap-4">
+            <div>
+              <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Check Frequency</label>
+              <select
+                value={settings.notificationInterval || 1}
+                onChange={(e) => updateSettings({ notificationInterval: Number(e.target.value) })}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
                 <option value={1}>Every 1 minute</option>
                 <option value={3}>Every 3 minutes</option>
                 <option value={5}>Every 5 minutes</option>
                 <option value={10}>Every 10 minutes</option>
                 <option value={15}>Every 15 minutes</option>
-             </select>
-             <p className="text-[10px] text-slate-400 mt-1">
-               Controls how frequently the extension checks for new chat messages in the background.
-             </p>
+              </select>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Controls how frequently the extension checks for new chat messages and Hive notifications.
+              </p>
+            </div>
+
+            {/* Hive Notification Badge */}
+            <div className="border-t border-slate-100 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <span className="text-sm text-slate-700 font-medium">Hive Notification Badge</span>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Show a red badge for new blockchain events (replies, transfers, etc.)</p>
+                </div>
+                <button
+                  onClick={() => updateSettings({ hiveNotificationBadgeEnabled: !settings.hiveNotificationBadgeEnabled })}
+                  className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ml-3 ${settings.hiveNotificationBadgeEnabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm ${settings.hiveNotificationBadgeEnabled ? 'left-6' : 'left-1'}`} />
+                </button>
+              </div>
+
+              {settings.hiveNotificationBadgeEnabled && (() => {
+                const allTypes: { type: HiveNotificationType; label: string }[] = [
+                  { type: HiveNotificationType.REPLY,       label: 'Replies' },
+                  { type: HiveNotificationType.MENTION,     label: 'Mentions' },
+                  { type: HiveNotificationType.FOLLOW,      label: 'Follows' },
+                  { type: HiveNotificationType.TRANSFER,    label: 'Transfers' },
+                  { type: HiveNotificationType.DELEGATIONS, label: 'Delegations' },
+                  { type: HiveNotificationType.REBLOG,      label: 'Reblogs' },
+                  { type: HiveNotificationType.VOTE,        label: 'Upvotes' },
+                ];
+                const current: HiveNotificationType[] = settings.hiveNotificationFilterTypes ?? [];
+                const toggle = (type: HiveNotificationType) => {
+                  const next = current.includes(type)
+                    ? current.filter(t => t !== type)
+                    : [...current, type];
+                  updateSettings({ hiveNotificationFilterTypes: next });
+                };
+                return (
+                  <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                    <label className="text-[10px] font-medium text-slate-500 uppercase mb-1.5 block">Alert me for</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {allTypes.map(({ type, label }) => {
+                        const active = current.includes(type);
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => toggle(type)}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                              active
+                                ? 'bg-slate-800 text-white border-slate-800'
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1.5">Upvotes are noisy — disable to avoid frequent alerts.</p>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
-            </section>
+      </section>
       
             {/* Auto Redirect Section */}
             <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">

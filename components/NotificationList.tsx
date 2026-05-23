@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { AppSettings, HiveNotification, HiveNotificationType } from '../types';
-import { fetchNotifications } from '../utils/hiveHelpers';
+import { fetchNotifications, fetchAccountHistoryFinance } from '../utils/hiveHelpers';
 import { NotificationItem } from './NotificationItem';
 import { Bell, RefreshCw, ChevronDown, Loader } from 'lucide-react';
 
@@ -20,7 +20,19 @@ const FILTER_TABS: { key: FilterTab; label: string }[] = [
 ];
 
 const SOCIAL_TYPES     = new Set([HiveNotificationType.REPLY, HiveNotificationType.MENTION, HiveNotificationType.FOLLOW, HiveNotificationType.REBLOG]);
-const FINANCE_TYPES    = new Set([HiveNotificationType.TRANSFER, HiveNotificationType.DELEGATIONS]);
+const FINANCE_TYPES    = new Set([
+  HiveNotificationType.TRANSFER,
+  HiveNotificationType.DELEGATIONS,
+  HiveNotificationType.INTEREST,
+  HiveNotificationType.CLAIM_REWARD,
+  HiveNotificationType.POWER_UP,
+  HiveNotificationType.POWER_DOWN,
+  HiveNotificationType.POWER_DOWN_FILL,
+  HiveNotificationType.SAVINGS_DEPOSIT,
+  HiveNotificationType.SAVINGS_WITHDRAW,
+  HiveNotificationType.SAVINGS_WITHDRAW_FILL,
+  HiveNotificationType.PROPOSAL_PAY,
+]);
 const ENGAGEMENT_TYPES = new Set([HiveNotificationType.VOTE]);
 
 function matchesFilter(n: HiveNotification, tab: FilterTab): boolean {
@@ -68,9 +80,14 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
   const [hasMore, setHasMore]             = useState(true);
   const [activeFilter, setActiveFilter]   = useState<FilterTab>('all');
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [financeHistory, setFinanceHistory]   = useState<HiveNotification[]>([]);
+  const [financeLoading, setFinanceLoading]   = useState(false);
+  const financeFetchedRef                     = useRef(false);
 
-  const loadNotifications = async (isInitial = true) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const autoLoadCountRef   = useRef(0);
+
+  const loadNotifications = useCallback(async (isInitial = true) => {
     if (!username) return;
     if (isInitial) { setLoading(true); setLastId(null); }
     else setLoadingMore(true);
@@ -82,8 +99,11 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
       setHasMore(data.length >= limit);
       if (data.length > 0) {
         setLastId(data[data.length - 1].id);
-        if (isInitial) setNotifications(data);
-        else setNotifications(prev => [...prev, ...data]);
+        if (isInitial) {
+          setNotifications(data);
+          // Mark as read: background will clear the badge on next tick
+          try { (chrome as any).storage.local.set({ lastSeenHiveNotifId: data[0].id }); } catch {}
+        } else setNotifications(prev => [...prev, ...data]);
       } else if (isInitial) {
         setNotifications([]);
         setHasMore(false);
@@ -94,9 +114,37 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [username, lastId]);
 
-  useEffect(() => { loadNotifications(true); }, [username]);
+  // Reset auto-load counter when filter tab changes
+  useEffect(() => { autoLoadCountRef.current = 0; }, [activeFilter]);
+
+  // Auto-load more bridge pages when the active filter tab has no visible results
+  useEffect(() => {
+    const bridgeFiltered = notifications.filter(n => matchesFilter(n, activeFilter));
+    const historyCount = financeHistory.length;
+    if (bridgeFiltered.length === 0 && historyCount === 0 && hasMore && !loading && !loadingMore && autoLoadCountRef.current < 10) {
+      autoLoadCountRef.current++;
+      loadNotifications(false);
+    }
+  }, [activeFilter, notifications, financeHistory, hasMore, loading, loadingMore]);
+
+  useEffect(() => {
+    financeFetchedRef.current = false;
+    setFinanceHistory([]);
+    loadNotifications(true);
+  }, [username]);
+
+  // Fetch account history finance ops eagerly on mount so All tab is always complete
+  useEffect(() => {
+    if (financeFetchedRef.current || !username) return;
+    financeFetchedRef.current = true;
+    setFinanceLoading(true);
+    fetchAccountHistoryFinance(username, settings).then(data => {
+      setFinanceHistory(data);
+      setFinanceLoading(false);
+    });
+  }, [username]);
 
   const handleScroll = () => {
     if (!scrollContainerRef.current || loading || loadingMore || !hasMore) return;
@@ -106,14 +154,33 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
 
   if (!username) return null;
 
-  const visible = notifications.filter(n => matchesFilter(n, activeFilter));
-  const groups  = groupByDate(visible);
+  const sortByDate = (a: HiveNotification, b: HiveNotification) =>
+    new Date(b.date.endsWith('Z') ? b.date : b.date + 'Z').getTime() -
+    new Date(a.date.endsWith('Z') ? a.date : a.date + 'Z').getTime();
+
+  // Once account history loads it covers transfers (both directions + memo) — suppress bridge duplicates
+  const historyLoaded = financeHistory.length > 0;
+  const bridgeNotifs  = historyLoaded
+    ? notifications.filter(n => n.type !== HiveNotificationType.TRANSFER)
+    : notifications;
+  const bridgeFinance = bridgeNotifs.filter(n => FINANCE_TYPES.has(n.type));
+
+  const visible = (() => {
+    if (activeFilter === 'finance') {
+      return [...bridgeFinance, ...financeHistory].sort(sortByDate);
+    }
+    if (activeFilter === 'all') {
+      return [...bridgeNotifs, ...financeHistory].sort(sortByDate);
+    }
+    return notifications.filter(n => matchesFilter(n, activeFilter));
+  })();
+  const groups = groupByDate(visible);
 
   // Per-tab counts for badges
   const counts: Record<FilterTab, number> = {
-    all:        notifications.length,
+    all:        bridgeNotifs.length + financeHistory.length,
     social:     notifications.filter(n => SOCIAL_TYPES.has(n.type)).length,
-    finance:    notifications.filter(n => FINANCE_TYPES.has(n.type)).length,
+    finance:    bridgeFinance.length + financeHistory.length,
     engagement: notifications.filter(n => ENGAGEMENT_TYPES.has(n.type)).length,
   };
 
@@ -176,7 +243,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
         onScroll={handleScroll}
         className="flex flex-col max-h-[380px] overflow-y-auto"
       >
-        {loading && visible.length === 0 ? (
+        {(loading || financeLoading) && visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-slate-400">
             <Loader size={20} className="animate-spin opacity-40" />
             <span className="text-xs">Loading notifications…</span>

@@ -89,6 +89,8 @@ export interface AppSettings {
   // Notification Settings
   notificationsEnabled: boolean;
   notificationInterval: number; // in minutes
+  hiveNotificationBadgeEnabled: boolean;
+  hiveNotificationFilterTypes: HiveNotificationType[];
 
   rcUser?: string;
   badgeMetric: 'RC' | 'VP';
@@ -220,7 +222,17 @@ export enum HiveNotificationType {
   VOTE = 'vote',
   REBLOG = 'reblog',
   TRANSFER = 'transfer',
-  DELEGATIONS = 'delegations'
+  DELEGATIONS = 'delegations',
+  // From condenser_api.get_account_history
+  INTEREST = 'interest',
+  CLAIM_REWARD = 'claim_reward_balance',
+  POWER_UP = 'transfer_to_vesting',
+  POWER_DOWN = 'withdraw_vesting',
+  POWER_DOWN_FILL = 'fill_vesting_withdraw',
+  SAVINGS_DEPOSIT = 'transfer_to_savings',
+  SAVINGS_WITHDRAW = 'transfer_from_savings',
+  SAVINGS_WITHDRAW_FILL = 'fill_transfer_from_savings',
+  PROPOSAL_PAY = 'proposal_pay',
 }
 
 export interface HiveNotification {

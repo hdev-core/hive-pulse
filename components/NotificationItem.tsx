@@ -1,6 +1,6 @@
 import React from 'react';
 import { HiveNotification, HiveNotificationType, AppSettings } from '../types';
-import { MessageSquare, AtSign, UserPlus, Repeat2, ArrowRightLeft, Heart, TrendingUp, Info } from 'lucide-react';
+import { MessageSquare, AtSign, UserPlus, Repeat2, ArrowRightLeft, Heart, TrendingUp, TrendingDown, Info, Coins, Gift, Zap, PiggyBank, Banknote, Landmark } from 'lucide-react';
 import { getTargetUrl } from '../utils/urlHelpers';
 
 interface NotificationItemProps {
@@ -74,6 +74,64 @@ function getTypeConfig(type: HiveNotificationType): TypeConfig {
         accent: 'border-l-cyan-400 bg-cyan-50/40',
         iconColor: 'bg-cyan-100 text-cyan-600',
         rowHover: 'hover:bg-cyan-50/60',
+      };
+    case HiveNotificationType.INTEREST:
+      return {
+        icon: <Coins size={13} />,
+        label: 'Interest',
+        accent: 'border-l-emerald-400 bg-emerald-50/40',
+        iconColor: 'bg-emerald-100 text-emerald-600',
+        rowHover: 'hover:bg-emerald-50/60',
+      };
+    case HiveNotificationType.CLAIM_REWARD:
+      return {
+        icon: <Gift size={13} />,
+        label: 'Reward',
+        accent: 'border-l-amber-400 bg-amber-50/40',
+        iconColor: 'bg-amber-100 text-amber-600',
+        rowHover: 'hover:bg-amber-50/60',
+      };
+    case HiveNotificationType.POWER_UP:
+      return {
+        icon: <Zap size={13} />,
+        label: 'Power Up',
+        accent: 'border-l-violet-400 bg-violet-50/40',
+        iconColor: 'bg-violet-100 text-violet-600',
+        rowHover: 'hover:bg-violet-50/60',
+      };
+    case HiveNotificationType.POWER_DOWN:
+    case HiveNotificationType.POWER_DOWN_FILL:
+      return {
+        icon: <TrendingDown size={13} />,
+        label: type === HiveNotificationType.POWER_DOWN ? 'Power Down' : 'PD Payment',
+        accent: 'border-l-orange-400 bg-orange-50/40',
+        iconColor: 'bg-orange-100 text-orange-600',
+        rowHover: 'hover:bg-orange-50/60',
+      };
+    case HiveNotificationType.SAVINGS_DEPOSIT:
+      return {
+        icon: <PiggyBank size={13} />,
+        label: 'Savings In',
+        accent: 'border-l-teal-400 bg-teal-50/40',
+        iconColor: 'bg-teal-100 text-teal-600',
+        rowHover: 'hover:bg-teal-50/60',
+      };
+    case HiveNotificationType.SAVINGS_WITHDRAW:
+    case HiveNotificationType.SAVINGS_WITHDRAW_FILL:
+      return {
+        icon: <Banknote size={13} />,
+        label: type === HiveNotificationType.SAVINGS_WITHDRAW ? 'Savings Out' : 'Savings Paid',
+        accent: 'border-l-sky-400 bg-sky-50/40',
+        iconColor: 'bg-sky-100 text-sky-600',
+        rowHover: 'hover:bg-sky-50/60',
+      };
+    case HiveNotificationType.PROPOSAL_PAY:
+      return {
+        icon: <Landmark size={13} />,
+        label: 'Proposal Pay',
+        accent: 'border-l-indigo-400 bg-indigo-50/40',
+        iconColor: 'bg-indigo-100 text-indigo-600',
+        rowHover: 'hover:bg-indigo-50/60',
       };
     default:
       return {

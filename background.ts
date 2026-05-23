@@ -1,6 +1,6 @@
 
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
-import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice } from './utils/hiveHelpers';
+import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice, fetchNotifications } from './utils/hiveHelpers';
 import { 
   fetchChannels, 
   bootstrapEcencyChat, 
@@ -10,7 +10,7 @@ import {
   fetchUnreads,
   fetchMe
 } from './utils/ecencyHelpers';
-import { ActionMode, AppSettings, FrontendId, Channel, HivePrices } from './types';
+import { ActionMode, AppSettings, FrontendId, Channel, HivePrices, HiveNotificationType } from './types';
 import { FRONTENDS } from './constants';
 
 import { HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from './constants';
@@ -31,6 +31,15 @@ const DEFAULT_SETTINGS: AppSettings = {
   ecencyChatToken: '',
   ecencyRefreshToken: '',
   overrideBadgeWithUnreadMessages: true,
+  hiveNotificationBadgeEnabled: true,
+  hiveNotificationFilterTypes: [
+    HiveNotificationType.REPLY,
+    HiveNotificationType.MENTION,
+    HiveNotificationType.FOLLOW,
+    HiveNotificationType.TRANSFER,
+    HiveNotificationType.DELEGATIONS,
+    HiveNotificationType.REBLOG,
+  ],
   activeFrontendIds: FRONTENDS.map(f => f.id),
   customFrontends: [],
   hiveRpcNode: HIVE_RPC_NODES[0],
@@ -66,7 +75,7 @@ chrome.runtime.onStartup.addListener(() => {
 
 const checkStatus = async () => {
   try {
-    const stored = await chrome.storage.local.get(['settings', 'channelState', 'channelReadState']);
+    const stored = await chrome.storage.local.get(['settings', 'channelState', 'channelReadState', 'lastSeenHiveNotifId']);
     let settings: AppSettings = stored.settings || DEFAULT_SETTINGS;
     const lastChannelState: Record<string, number> = stored.channelState || {};
     const channelReadState: Record<string, number> = stored.channelReadState || {};
@@ -216,6 +225,43 @@ const checkStatus = async () => {
        }
     }
 
+    // Poll Hive blockchain notifications
+    if (!badgeSet && settings.hiveNotificationBadgeEnabled && settings.rcUser) {
+      const lastSeenId: number | undefined = stored.lastSeenHiveNotifId;
+      const filterTypes: HiveNotificationType[] = settings.hiveNotificationFilterTypes?.length
+        ? settings.hiveNotificationFilterTypes
+        : [HiveNotificationType.REPLY, HiveNotificationType.MENTION, HiveNotificationType.FOLLOW,
+           HiveNotificationType.TRANSFER, HiveNotificationType.DELEGATIONS, HiveNotificationType.REBLOG];
+      try {
+        const hiveNotifs = await fetchNotifications(settings.rcUser, 10, null, settings);
+        if (hiveNotifs.length > 0) {
+          const latestId = hiveNotifs[0].id;
+          if (lastSeenId === undefined) {
+            // First run: set baseline, no badge
+            await chrome.storage.local.set({ lastSeenHiveNotifId: latestId });
+          } else {
+            const newNotifs = hiveNotifs.filter(n => n.id > lastSeenId && filterTypes.includes(n.type));
+            if (newNotifs.length > 0) {
+              const text = newNotifs.length > 9 ? '🔔9+' : `🔔${newNotifs.length}`;
+              chrome.action.setBadgeText({ text });
+              chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
+              badgeSet = true;
+              const iconPath = chrome.runtime.getURL('icon.png');
+              chrome.notifications.create(`hive:${newNotifs[0].id}:${Date.now()}`, {
+                type: 'basic',
+                iconUrl: iconPath,
+                title: 'HivePulse — New Notification',
+                message: newNotifs[0].msg || 'You have new Hive notifications.',
+                priority: 2,
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to poll Hive notifications', e);
+      }
+    }
+
     if (!badgeSet && settings.rcUser) {
       if (authFailed) {
          chrome.action.setBadgeText({ text: '!' });
@@ -320,6 +366,9 @@ chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
 chrome.notifications.onClicked.addListener((notificationId: string) => {
     if (notificationId.startsWith('chat:')) {
         chrome.tabs.create({ url: 'https://ecency.com/chat' });
+        chrome.notifications.clear(notificationId);
+    } else if (notificationId.startsWith('hive:')) {
+        chrome.action.openPopup?.();
         chrome.notifications.clear(notificationId);
     }
 });

@@ -1,14 +1,15 @@
 
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
 import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice, fetchNotifications } from './utils/hiveHelpers';
-import { 
-  fetchChannels, 
-  bootstrapEcencyChat, 
-  refreshEcencySession, 
-  getMmPatCookie, 
+import {
+  fetchChannels,
+  bootstrapEcencyChat,
+  refreshEcencySession,
+  getMmPatCookie,
   fetchChannelPosts,
   fetchUnreads,
-  fetchMe
+  fetchMe,
+  UnauthorizedError
 } from './utils/ecencyHelpers';
 import { ActionMode, AppSettings, FrontendId, Channel, HivePrices, HiveNotificationType } from './types';
 import { FRONTENDS } from './constants';
@@ -75,7 +76,7 @@ chrome.runtime.onStartup.addListener(() => {
 
 const checkStatus = async () => {
   try {
-    const stored = await chrome.storage.local.get(['settings', 'channelState', 'channelReadState', 'lastSeenHiveNotifId']);
+    const stored = await chrome.storage.local.get(['settings', 'channelState', 'channelReadState', 'lastSeenHiveNotifId', 'lastShownHiveNotifId']);
     let settings: AppSettings = stored.settings || DEFAULT_SETTINGS;
     const lastChannelState: Record<string, number> = stored.channelState || {};
     const channelReadState: Record<string, number> = stored.channelReadState || {};
@@ -84,11 +85,12 @@ const checkStatus = async () => {
     let authFailed = false;
 
     if (settings.notificationsEnabled && settings.ecencyUsername) {
+      try {
        let tokenToUse = settings.ecencyChatToken;
-       
+
        let channels = await fetchChannels(tokenToUse);
        let unreadResponse = channels ? await fetchUnreads(tokenToUse) : null;
-       
+
        if (channels === null || unreadResponse === null) {
           let newTokens: { token: string; refreshToken?: string; userId?: string } | null = null;
           const cookieToken = await getMmPatCookie();
@@ -122,15 +124,15 @@ const checkStatus = async () => {
           }
 
           if (newTokens) {
-             const updatedSettings: AppSettings = { 
-                ...settings, 
+             const updatedSettings: AppSettings = {
+                ...settings,
                 ecencyChatToken: newTokens.token === 'cookie-session' ? '' : newTokens.token,
                 ecencyRefreshToken: newTokens.refreshToken || settings.ecencyRefreshToken,
                 ecencyUserId: newTokens.userId || settings.ecencyUserId
              };
              await chrome.storage.local.set({ settings: updatedSettings });
              settings = updatedSettings;
-             
+
              tokenToUse = updatedSettings.ecencyChatToken;
              channels = await fetchChannels(tokenToUse);
              unreadResponse = channels ? await fetchUnreads(tokenToUse) : null;
@@ -139,7 +141,7 @@ const checkStatus = async () => {
              authFailed = true;
           }
        }
-       
+
        if (channels && unreadResponse) {
          const currentChannelTotals: Record<string, number> = {};
          if (unreadResponse.channels && Array.isArray(unreadResponse.channels)) {
@@ -157,7 +159,7 @@ const checkStatus = async () => {
 
          for (const ch of channels) {
             const currentTotal = currentChannelTotals[ch.id] || 0;
-            
+
             // Initialization baseline if not yet present in storage
             if (updatedReadState[ch.id] === undefined) {
                updatedReadState[ch.id] = currentTotal;
@@ -166,20 +168,20 @@ const checkStatus = async () => {
 
             const readTotal = updatedReadState[ch.id];
             const unreadCount = Math.max(0, currentTotal - readTotal);
-            
+
             if (unreadCount > 0) {
               unreadMap[ch.id] = unreadCount;
               totalUnread += unreadCount;
             }
          }
-         
-         const storageUpdate: any = { 
+
+         const storageUpdate: any = {
             unreadCounts: unreadMap,
             channelTotals: currentChannelTotals
          };
          if (stateChanged) storageUpdate.channelReadState = updatedReadState;
          await chrome.storage.local.set(storageUpdate);
-         
+
          const currentMap: Record<string, number> = {};
          const notificationChannels: Channel[] = [];
 
@@ -197,7 +199,7 @@ const checkStatus = async () => {
                      try {
                          const { messages } = await fetchChannelPosts(ch.id, tokenToUse, 1);
                          if (messages && messages.length > 0) {
-                             const lastMsg = messages[messages.length - 1]; 
+                             const lastMsg = messages[messages.length - 1];
                              const isMe = settings.ecencyUserId === lastMsg.user_id;
                              if (!isMe) notificationChannels.push(ch);
                          }
@@ -223,11 +225,19 @@ const checkStatus = async () => {
              handleNotifications(notificationChannels, settings.ecencyUserId);
          }
        }
+      } catch (e) {
+        if (e instanceof UnauthorizedError) {
+          authFailed = true;
+        } else {
+          console.error('Chat check failed', e);
+        }
+      }
     }
 
     // Poll Hive blockchain notifications
     if (!badgeSet && settings.hiveNotificationBadgeEnabled && settings.rcUser) {
       const lastSeenId: number | undefined = stored.lastSeenHiveNotifId;
+      const lastShownId: number | undefined = stored.lastShownHiveNotifId;
       const filterTypes: HiveNotificationType[] = settings.hiveNotificationFilterTypes?.length
         ? settings.hiveNotificationFilterTypes
         : [HiveNotificationType.REPLY, HiveNotificationType.MENTION, HiveNotificationType.FOLLOW,
@@ -238,20 +248,25 @@ const checkStatus = async () => {
           const latestId = hiveNotifs[0].id;
           if (lastSeenId === undefined) {
             // First run: set baseline, no badge
-            await chrome.storage.local.set({ lastSeenHiveNotifId: latestId });
+            await chrome.storage.local.set({ lastSeenHiveNotifId: latestId, lastShownHiveNotifId: latestId });
           } else {
-            const newNotifs = hiveNotifs.filter(n => n.id > lastSeenId && filterTypes.includes(n.type));
-            if (newNotifs.length > 0) {
-              const text = newNotifs.length > 9 ? '🔔9+' : `🔔${newNotifs.length}`;
+            // Notifications unread by the user
+            const unreadNotifs = hiveNotifs.filter(n => n.id > lastSeenId && filterTypes.includes(n.type));
+            // Of those, only ones we haven't already shown a badge for
+            const freshNotifs = unreadNotifs.filter(n => n.id > (lastShownId ?? 0));
+            if (freshNotifs.length > 0) {
+              const text = freshNotifs.length > 9 ? '🔔9+' : `🔔${freshNotifs.length}`;
               chrome.action.setBadgeText({ text });
               chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
               badgeSet = true;
+              // Advance the shown pointer so the same batch doesn't block VP/RC next tick
+              await chrome.storage.local.set({ lastShownHiveNotifId: latestId });
               const iconPath = chrome.runtime.getURL('icon.png');
-              chrome.notifications.create(`hive:${newNotifs[0].id}:${Date.now()}`, {
+              chrome.notifications.create(`hive:${freshNotifs[0].id}`, {
                 type: 'basic',
                 iconUrl: iconPath,
                 title: 'HivePulse — New Notification',
-                message: newNotifs[0].msg || 'You have new Hive notifications.',
+                message: freshNotifs[0].msg || 'You have new Hive notifications.',
                 priority: 2,
               });
             }
@@ -263,37 +278,23 @@ const checkStatus = async () => {
     }
 
     if (!badgeSet && settings.rcUser) {
-      if (authFailed) {
-         chrome.action.setBadgeText({ text: '!' });
-         chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
-         badgeSet = true;
-      } else {
-          const data = await fetchAccountStats(settings.rcUser, settings);
-          if (data) {
-            const metric = settings.badgeMetric || 'VP';
-            const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
-            const rounded = Math.round(percent);
-            const isLow = rounded < 20;
-            const icon = metric === 'RC' ? '⚡' : '👍';
-            
-            // Remove '%' to prevent visual cutoff, icon serves as metric indicator
-            const text = `${icon}${rounded}`;
-            
-            chrome.action.setBadgeText({ text });
-            
-            if (isLow) {
-              chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
-            } else {
-              const color = metric === 'RC' ? '#a855f7' : '#10b981';
-              chrome.action.setBadgeBackgroundColor({ color });
-            }
-            badgeSet = true;
-          }
+      const data = await fetchAccountStats(settings.rcUser, settings);
+      if (data) {
+        const metric = settings.badgeMetric || 'VP';
+        const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
+        const rounded = Math.round(percent);
+        const isLow = rounded < 20;
+        const icon = metric === 'RC' ? '⚡' : '👍';
+        const text = `${icon}${rounded}`;
+        chrome.action.setBadgeText({ text });
+        if (isLow) {
+          chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
+        } else {
+          const color = metric === 'RC' ? '#a855f7' : '#10b981';
+          chrome.action.setBadgeBackgroundColor({ color });
+        }
+        badgeSet = true;
       }
-    } else if (authFailed && !badgeSet) {
-       chrome.action.setBadgeText({ text: '!' });
-       chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
-       badgeSet = true;
     }
 
     if (!badgeSet) {
@@ -357,7 +358,7 @@ chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
         setupAlarm();
         checkStatus();
     }
-    if (changes.channelReadState || changes.unreadCounts) {
+    if (changes.channelReadState || changes.unreadCounts || changes.lastSeenHiveNotifId) {
         checkStatus();
     }
   }

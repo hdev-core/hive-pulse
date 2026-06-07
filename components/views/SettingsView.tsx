@@ -703,7 +703,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
       </section>
 
-      <p className="text-center text-[10px] text-slate-400 pb-2">HivePulse v1.6.0</p>
+      <p className="text-center text-[10px] text-slate-400 pb-2">HivePulse v1.6.1</p>
 
     </div>
   );

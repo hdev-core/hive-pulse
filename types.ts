@@ -39,11 +39,14 @@ export interface TrendingPost {
   tags: string[];
 }
 
-export interface TrendingTag {
-  name: string;
-  postsToday: number;
-  topPostsToday: number;
-  totalPayouts: string;
+export interface TrendingCommunity {
+  name: string;      // e.g. "hive-194913"
+  title: string;     // display name
+  about: string;
+  subscribers: number;
+  numAuthors: number;
+  numPending: number;
+  sumPending: number;
 }
 
 export interface PathConfig {

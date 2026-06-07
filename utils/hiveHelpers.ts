@@ -1,4 +1,4 @@
-import { AccountStats, HiveNotification, HiveNotificationType, TransferRecord, TrendingPost, TrendingTag } from '../types';
+import { AccountStats, HiveNotification, HiveNotificationType, TransferRecord, TrendingPost, TrendingCommunity } from '../types';
 import { HIVE_RPC_NODES } from '../constants';
 
 const DEFAULT_HIVE_RPC_NODE = HIVE_RPC_NODES[0];
@@ -569,28 +569,29 @@ export const fetchTrendingPosts = async (
   }
 };
 
-export const fetchTrendingTags = async (
+export const fetchTrendingCommunities = async (
   limit = 20,
   settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
-): Promise<TrendingTag[]> => {
+): Promise<TrendingCommunity[]> => {
   try {
     const { primary, fallback, autoSwitch } = getHiveNodes(settings);
     const data = await rpcFetchWithFallback(
-      { jsonrpc: '2.0', method: 'condenser_api.get_trending_tags',
-        params: ['', limit], id: 1 },
+      { jsonrpc: '2.0', method: 'bridge.list_communities',
+        params: { sort: 'rank', limit, observer: '' }, id: 1 },
       primary, fallback, autoSwitch
     );
-    const tags: any[] = data.result || [];
-    return tags
-      .filter(t => t.name)
-      .map(t => ({
-        name:          t.name,
-        postsToday:    t.total_posts_in_last_24_hours ?? 0,
-        topPostsToday: t.top_posts ?? 0,
-        totalPayouts:  t.total_payouts || '0.000 HBD',
-      }));
+    const communities: any[] = data.result || [];
+    return communities.map(c => ({
+      name:        c.name,
+      title:       c.title || c.name,
+      about:       c.about || '',
+      subscribers: c.subscribers ?? 0,
+      numAuthors:  c.num_authors ?? 0,
+      numPending:  c.num_pending ?? 0,
+      sumPending:  c.sum_pending ?? 0,
+    }));
   } catch (e) {
-    console.error('Failed to fetch trending tags:', e);
+    console.error('Failed to fetch trending communities:', e);
     return [];
   }
 };

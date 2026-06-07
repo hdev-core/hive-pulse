@@ -23,7 +23,27 @@ export enum AppView {
   NOTIFICATIONS = 'NOTIFICATIONS',
   CHAT = 'CHAT',
   WALLET = 'WALLET',
+  TRENDING = 'TRENDING',
   SETTINGS = 'SETTINGS'
+}
+
+export interface TrendingPost {
+  author: string;
+  permlink: string;
+  title: string;
+  pendingPayout: number;
+  totalPayout: number;
+  votes: number;
+  comments: number;
+  created: string;
+  tags: string[];
+}
+
+export interface TrendingTag {
+  name: string;
+  postsToday: number;
+  topPostsToday: number;
+  totalPayouts: string;
 }
 
 export interface PathConfig {

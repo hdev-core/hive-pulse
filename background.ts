@@ -280,6 +280,15 @@ const checkStatus = async () => {
     if (!badgeSet && settings.rcUser) {
       const data = await fetchAccountStats(settings.rcUser, settings);
       if (data) {
+        // Persist RC stats so the content script can read them without its own API call
+        chrome.storage.local.set({
+          rcStats: {
+            username:   data.username,
+            percentage: data.rc.percentage,
+            current:    data.rc.current,
+            max:        data.rc.max,
+          }
+        });
         const metric = settings.badgeMetric || 'VP';
         const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
         const rounded = Math.round(percent);

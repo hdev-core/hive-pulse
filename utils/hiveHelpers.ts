@@ -1,4 +1,4 @@
-import { AccountStats, HiveNotification, HiveNotificationType, TransferRecord } from '../types';
+import { AccountStats, HiveNotification, HiveNotificationType, TransferRecord, TrendingPost, TrendingTag } from '../types';
 import { HIVE_RPC_NODES } from '../constants';
 
 const DEFAULT_HIVE_RPC_NODE = HIVE_RPC_NODES[0];
@@ -532,6 +532,65 @@ export const fetchHbdInterestHistory = async (
     return records;
   } catch (e) {
     console.error('Failed to fetch HBD interest history:', e);
+    return [];
+  }
+};
+
+// ── Trending ──────────────────────────────────────────────────────────────────
+
+export const fetchTrendingPosts = async (
+  limit = 20,
+  tag = '',
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<TrendingPost[]> => {
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const data = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'bridge.get_ranked_posts',
+        params: { sort: 'trending', limit, tag, observer: '' }, id: 1 },
+      primary, fallback, autoSwitch
+    );
+    const posts: any[] = data.result || [];
+    return posts.map(p => ({
+      author:       p.author,
+      permlink:     p.permlink,
+      title:        p.title || '(no title)',
+      pendingPayout: parseFloat(p.pending_payout_value?.split(' ')[0] || '0'),
+      totalPayout:   parseFloat(p.total_payout_value?.split(' ')[0] || '0') +
+                     parseFloat(p.curator_payout_value?.split(' ')[0] || '0'),
+      votes:         p.net_votes ?? 0,
+      comments:      p.children ?? 0,
+      created:       p.created || '',
+      tags:          p.json_metadata ? (() => { try { return JSON.parse(p.json_metadata).tags || []; } catch { return []; } })() : [],
+    }));
+  } catch (e) {
+    console.error('Failed to fetch trending posts:', e);
+    return [];
+  }
+};
+
+export const fetchTrendingTags = async (
+  limit = 20,
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<TrendingTag[]> => {
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const data = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'condenser_api.get_trending_tags',
+        params: ['', limit], id: 1 },
+      primary, fallback, autoSwitch
+    );
+    const tags: any[] = data.result || [];
+    return tags
+      .filter(t => t.name)
+      .map(t => ({
+        name:          t.name,
+        postsToday:    t.total_posts_in_last_24_hours ?? 0,
+        topPostsToday: t.top_posts ?? 0,
+        totalPayouts:  t.total_payouts || '0.000 HBD',
+      }));
+  } catch (e) {
+    console.error('Failed to fetch trending tags:', e);
     return [];
   }
 };

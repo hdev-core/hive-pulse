@@ -7,6 +7,7 @@ import { PortfolioCard } from '../PortfolioCard';
 import { EarningExplainer } from '../EarningExplainer';
 import { OnboardingBanner } from '../OnboardingBanner';
 import { SendForm } from '../SendForm';
+import { RcBudget } from '../RcBudget';
 
 interface WalletViewProps {
   settings: AppSettings;
@@ -178,6 +179,9 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
           <div className="text-center py-6 text-slate-400 text-sm">{settings.rcUser ? 'Loading saved user...' : 'Enter a Hive username to view wallet.'}</div>
         )}
       </div>
+
+      {/* RC Budget — shown whenever stats are loaded */}
+      {!loading && stats && <RcBudget stats={stats} />}
 
       {/* Send / Receive / History — only shown for own account */}
       {isOwnAccount && stats?.balances && (

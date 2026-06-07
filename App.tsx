@@ -29,6 +29,7 @@ import { ShareView } from './components/views/ShareView';
 import { StatsView } from './components/views/StatsView';
 import { ChatView } from './components/views/ChatView';
 import { WalletView } from './components/views/WalletView';
+import { TrendingView } from './components/views/TrendingView';
 import { SettingsView } from './components/views/SettingsView';
 
 declare const chrome: any;
@@ -896,6 +897,9 @@ const App: React.FC = () => {
             )}
             {currentView === AppView.WALLET && (
             <WalletView key={settings.rcUser || settings.ecencyUsername} settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} />
+            )}
+            {currentView === AppView.TRENDING && (
+            <TrendingView settings={settings} allFrontends={allFrontends} />
             )}
             {currentView === AppView.SETTINGS && (
             <SettingsView 

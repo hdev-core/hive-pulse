@@ -1,6 +1,10 @@
 export {};
 declare const chrome: any;
 
+// Wrapped in IIFE so Rollup/terser keeps all vars in one closure scope,
+// preventing duplicate const $ declarations from minifier name reuse.
+(function () {
+
 // ── Config ──────────────────────────────────────────────────────────────────
 const HIVE_API = 'https://api.hive.blog';
 const PANEL_ID = 'hivepulse-smart-compose';
@@ -318,18 +322,37 @@ if (composePattern) {
     }
   };
 
-  // Intercept SPA history.pushState so we catch in-app navigation
-  const origPush = history.pushState.bind(history);
-  history.pushState = function (...args: Parameters<typeof history.pushState>) {
-    origPush(...args);
-    setTimeout(checkAndMount, 600);
+  // Intercept pushState AND replaceState — SPAs use both
+  const origPush    = history.pushState.bind(history);
+  const origReplace = history.replaceState.bind(history);
+  const onNav = () => {
+    setTimeout(checkAndMount, 300);
+    setTimeout(checkAndMount, 900);
+    setTimeout(checkAndMount, 2200);
   };
-  window.addEventListener('popstate', () => setTimeout(checkAndMount, 600));
+  history.pushState = function (...args: Parameters<typeof history.pushState>) {
+    origPush(...args); onNav();
+  };
+  history.replaceState = function (...args: Parameters<typeof history.replaceState>) {
+    origReplace(...args); onNav();
+  };
+  window.addEventListener('popstate', onNav);
 
-  // Initial mount
+  // Re-inject if PeakD's React app removes our panel
+  new MutationObserver(() => {
+    if (active && isComposePage() && !document.getElementById(PANEL_ID)) {
+      injectPanel();
+    }
+  }).observe(document.body, { childList: true });
+
+  // Initial mount — retry once in case SPA hasn't settled yet
+  const initialMount = () => { checkAndMount(); setTimeout(checkAndMount, 1200); };
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', checkAndMount);
+    document.addEventListener('DOMContentLoaded', initialMount);
   } else {
-    checkAndMount();
+    initialMount();
   }
-}
+
+} // end if (composePattern)
+
+})(); // end IIFE

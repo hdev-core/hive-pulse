@@ -162,6 +162,7 @@ export interface AccountStats {
     current: number;
     max: number;
     isLow: boolean;
+    vestingRatio: number; // totalVestingFundHive / hivepower — scales absolute RC costs
   };
   vp: {
     percentage: number;

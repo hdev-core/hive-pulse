@@ -233,9 +233,9 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
         </div>
       )}
 
-      {lastFetched && (
+      {lastFetched[sort] > 0 && (
         <p className="text-center text-[9px] text-slate-300 uppercase tracking-widest font-semibold pb-1">
-          Updated {timeAgo(new Date(lastFetched).toISOString())} · auto-refreshes hourly
+          Updated {timeAgo(new Date(lastFetched[sort]).toISOString())} · auto-refreshes hourly
         </p>
       )}
     </div>

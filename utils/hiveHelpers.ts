@@ -271,13 +271,16 @@ export const fetchAccountStats = async (
       delegatedHp: parseBalance(account.delegated_vesting_shares) / totalVestingShares * totalVestingFundHive
     };
 
+    const vestingRatio = hp > 0 ? totalVestingFundHive / hp : 1;
+
     return {
       username: rcAccount.account,
       rc: {
         percentage: Math.min(Math.max(rcPercentage, 0), 100),
         current: actualCurrentRc,
         max: maxRc,
-        isLow: rcPercentage < 20
+        isLow: rcPercentage < 20,
+        vestingRatio,
       },
       vp: {
         percentage: Math.min(Math.max(vpPercentage, 0), 100),
@@ -571,6 +574,9 @@ export const fetchTrendingPosts = async (
 };
 
 // ── RC Operation Costs ───────────────────────────────────────────────────────
+// Formula: op_cost = max_rc × vestingRatio × Σ(usage_r / (budget_r × REGEN_TIME))
+// where vestingRatio = total_vesting_fund_hive / account_hp
+// This gives absolute RC cost in the same units as max_rc, valid for all account sizes.
 
 export interface RcOperationCosts {
   vote: number;
@@ -580,46 +586,48 @@ export interface RcOperationCosts {
   customJson: number;
 }
 
-const rcPricePerUnit = (
-  coeffA: string, coeffB: number, shift: number, pool: number
-): bigint => {
-  const price = (BigInt(coeffA) * BigInt(Math.round(pool)) >> BigInt(shift)) + BigInt(Math.round(coeffB));
-  return price > 0n ? price : 1n;
-};
+const REGEN_TIME_SEC = 432000; // 5 days in seconds
 
 export const fetchRcOperationCosts = async (
+  maxRc: number,
+  vestingRatio: number,
   settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
 ): Promise<RcOperationCosts | null> => {
   try {
     const { primary, fallback, autoSwitch } = getHiveNodes(settings);
-    const [paramsData, poolData] = await Promise.all([
-      rpcFetchWithFallback({ jsonrpc: '2.0', method: 'rc_api.get_resource_params', params: {}, id: 1 }, primary, fallback, autoSwitch),
-      rpcFetchWithFallback({ jsonrpc: '2.0', method: 'rc_api.get_resource_pool', params: {}, id: 1 }, primary, fallback, autoSwitch),
-    ]);
+    const paramsData = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'rc_api.get_resource_params', params: {}, id: 1 },
+      primary, fallback, autoSwitch
+    );
 
-    const rp  = paramsData.result?.resource_params;
-    const pl  = poolData.result?.resource_pool;
-    const si  = paramsData.result?.size_info;
-    if (!rp || !pl || !si) return null;
+    const rp = paramsData.result?.resource_params;
+    const si = paramsData.result?.size_info;
+    if (!rp || !si) return null;
 
-    const histP  = rcPricePerUnit(rp.resource_history_bytes.price_curve_params.coeff_a,  rp.resource_history_bytes.price_curve_params.coeff_b,  rp.resource_history_bytes.price_curve_params.shift,  pl.resource_history_bytes.pool);
-    const stateP = rcPricePerUnit(rp.resource_state_bytes.price_curve_params.coeff_a,    rp.resource_state_bytes.price_curve_params.coeff_b,    rp.resource_state_bytes.price_curve_params.shift,    pl.resource_state_bytes.pool);
-    const execP  = rcPricePerUnit(rp.resource_execution_time.price_curve_params.coeff_a, rp.resource_execution_time.price_curve_params.coeff_b, rp.resource_execution_time.price_curve_params.shift, pl.resource_execution_time.pool);
+    const execBudget  = rp.resource_execution_time.resource_dynamics_params.budget_per_time_unit;
+    const stateBudget = rp.resource_state_bytes.resource_dynamics_params.budget_per_time_unit;
+    const histBudget  = rp.resource_history_bytes.resource_dynamics_params.budget_per_time_unit;
 
-    const ss = si.resource_state_bytes;
     const se = si.resource_execution_time;
+    const ss = si.resource_state_bytes;
 
-    // Estimated serialized tx bytes that land in history (variable; typical values)
-    const H_VOTE = 112n, H_COMMENT = 250n, H_TRANSFER = 128n, H_CJSON = 200n;
+    // Estimated serialized history bytes per operation type
+    const H: Record<string, number> = { vote: 112, comment: 250, transfer: 128, cjson: 200 };
 
-    const toBig = (n: number) => BigInt(Math.round(n));
+    const opCost = (execT: number, stateB: number, histB: number): number =>
+      maxRc * vestingRatio * (
+        execT  / (execBudget  * REGEN_TIME_SEC) +
+        stateB / (stateBudget * REGEN_TIME_SEC) +
+        histB  / (histBudget  * REGEN_TIME_SEC)
+      );
 
-    const vote     = Number(toBig(ss.vote_size)          * stateP + toBig(se.vote_time)         * execP + H_VOTE     * histP);
-    const comment  = Number(toBig(ss.comment_base_size)  * stateP + toBig(se.comment_time)      * execP + H_COMMENT  * histP);
-    const transfer = Number(                                         toBig(se.transfer_time)     * execP + H_TRANSFER * histP);
-    const cjson    = Number(                                         toBig(se.custom_json_time)  * execP + H_CJSON    * histP);
-
-    return { vote, comment, post: comment, transfer, customJson: cjson };
+    return {
+      vote:       opCost(se.vote_time,        ss.vote_size,          H.vote),
+      comment:    opCost(se.comment_time,     ss.comment_base_size,  H.comment),
+      post:       opCost(se.comment_time,     ss.comment_base_size,  H.comment),
+      transfer:   opCost(se.transfer_time,    0,                     H.transfer),
+      customJson: opCost(se.custom_json_time, 0,                     H.cjson),
+    };
   } catch (e) {
     console.error('Failed to fetch RC operation costs:', e);
     return null;

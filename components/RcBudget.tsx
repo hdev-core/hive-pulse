@@ -34,7 +34,7 @@ export const RcBudget: React.FC<RcBudgetProps> = ({ stats, settings }) => {
         setCosts(stored[RC_COSTS_CACHE_KEY]);
         return;
       }
-      const fresh = await fetchRcOperationCosts(settings);
+      const fresh = await fetchRcOperationCosts(stats.rc.max, stats.rc.vestingRatio, settings);
       if (fresh) {
         setCosts(fresh);
         chrome.storage.local.set({ [RC_COSTS_CACHE_KEY]: fresh, [RC_COSTS_TS_KEY]: Date.now() });

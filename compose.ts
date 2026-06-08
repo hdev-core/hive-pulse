@@ -58,17 +58,25 @@ const analyzePayouts = (posts: any[]): PayoutRange | null => {
 
 const topPublishHoursUTC = (posts: any[]): number[] => {
   if (!posts?.length) return [];
-  const byHour: number[][] = Array.from({ length: 24 }, () => []);
+  const byHour: { payout: number[]; count: number }[] =
+    Array.from({ length: 24 }, () => ({ payout: [], count: 0 }));
   for (const p of posts) {
     const d = new Date((p.created || '') + (p.created?.endsWith?.('Z') ? '' : 'Z'));
     if (isNaN(d.getTime())) continue;
     const val = parseFloat((p.pending_payout_value || p.total_payout_value || '0').replace(/[^\d.]/g, ''));
-    byHour[d.getUTCHours()].push(isNaN(val) ? 0 : val);
+    const h = d.getUTCHours();
+    byHour[h].count++;
+    if (!isNaN(val) && val > 0) byHour[h].payout.push(val);
   }
-  return byHour
-    .map((vs, h) => ({ h, avg: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : 0 }))
-    .filter(x => x.avg > 0)
-    .sort((a, b) => b.avg - a.avg)
+  const scored = byHour.map((b, h) => ({
+    h,
+    avg: b.payout.length ? b.payout.reduce((a, v) => a + v, 0) / b.payout.length : 0,
+    count: b.count,
+  })).filter(x => x.count > 0);
+  // Sort by avg payout if available, otherwise by post count (busiest hours)
+  const hasPayouts = scored.some(x => x.avg > 0);
+  return scored
+    .sort((a, b) => hasPayouts ? b.avg - a.avg : b.count - a.count)
     .slice(0, 3)
     .map(x => x.h);
 };
@@ -157,10 +165,12 @@ const section = (id: string, extraStyles: Partial<CSSStyleDeclaration> = {}): HT
 };
 
 const updatePanel = (data: {
-  payout:    PayoutRange | null;
-  hours:     number[];
-  community: { title: string; subscribers: number; sum_pending: number } | null;
-  noBene:    boolean;
+  payout:      PayoutRange | null;
+  hours:       number[];
+  hoursLabel:  string;
+  community:   { title: string; subscribers: number; sum_pending: number } | null;
+  noBene:      boolean;
+  noUsername:  boolean;
 }) => {
   const body = document.getElementById(`${PANEL_ID}-body`);
   if (!body) return;
@@ -189,13 +199,17 @@ const updatePanel = (data: {
         median $${data.payout.median.toFixed(2)} &nbsp;·&nbsp; ${data.payout.count} recent posts
       </div>`;
     body.appendChild(s);
+  } else if (data.noUsername) {
+    const s = section('payout', { marginBottom: '10px', padding: '7px 10px', borderRadius: '7px', background: 'rgba(255,255,255,0.04)', border: '1px solid #2d3f55' });
+    s.innerHTML = `<div style="color:#475569;font-size:10px">Set your Hive username in HivePulse settings to see payout predictions.</div>`;
+    body.appendChild(s);
   }
 
   // ── Best publish times ────────────────────────────────
   if (data.hours.length > 0) {
     const s = section('timing', { marginBottom: '12px', paddingTop: '10px', borderTop: '1px solid #2d3f55' });
     s.innerHTML = `
-      <div style="color:#94a3b8;font-size:9px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Best Publish Times (UTC)</div>
+      <div style="color:#94a3b8;font-size:9px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">${data.hoursLabel}</div>
       <div style="display:flex;gap:5px">
         ${data.hours.map((h, i) => `
           <span style="
@@ -281,13 +295,20 @@ if (composePattern) {
       community ? rpc('bridge.get_community', { name: community }) : Promise.resolve(null),
     ]);
 
+    const postPool = communityPosts ?? authorPosts ?? [];
+    const hasPayoutData = postPool.some((p: any) => {
+      const v = parseFloat((p.pending_payout_value || p.total_payout_value || '0').replace(/[^\d.]/g, ''));
+      return !isNaN(v) && v > 0;
+    });
     updatePanel({
-      payout:    analyzePayouts(authorPosts),
-      hours:     topPublishHoursUTC(communityPosts ?? authorPosts ?? []),
-      community: communityInfo
+      payout:     analyzePayouts(authorPosts),
+      hours:      topPublishHoursUTC(postPool),
+      hoursLabel: hasPayoutData ? 'Best Publish Times (UTC)' : 'Most Active Hours (UTC)',
+      community:  communityInfo
         ? { title: communityInfo.title ?? community, subscribers: communityInfo.subscribers ?? 0, sum_pending: communityInfo.sum_pending ?? 0 }
         : null,
-      noBene:    !hasBeneficiarySet(),
+      noBene:     !hasBeneficiarySet(),
+      noUsername: !username,
     });
   };
 

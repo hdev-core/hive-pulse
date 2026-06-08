@@ -40,7 +40,8 @@
         "https://hive.blog/*",
         "https://inleo.io/*",
         "https://leofinance.io/*",
-        "https://3speak.tv/*"
+        "https://3speak.tv/*",
+        "https://actifit.io/*"
       ],
       "js": ["assets/compose.js"],
       "run_at": "document_idle"
@@ -70,6 +71,7 @@
     "https://inleo.io/*",
     "https://leofinance.io/*",
     "https://3speak.tv/*",
+    "https://actifit.io/*",
     "https://api.hive.blog/*",
     "https://images.ecency.com/*",
     "https://api.hive-engine.com/*",

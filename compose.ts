@@ -16,6 +16,7 @@ const COMPOSE_HOSTS: Record<string, RegExp> = {
   'inleo.io':       /\/publish|\/post/,
   'leofinance.io':  /\/submit/,
   '3speak.tv':      /\/upload/,
+  'actifit.io':     /\/blog\/new|\/videos\/new/,
 };
 
 // ── RPC helper ───────────────────────────────────────────────────────────────

@@ -35,12 +35,10 @@
     },
     {
       "matches": [
-        "https://peakd.com/publish*",
-        "https://peakd.com/e/@*",
-        "https://ecency.com/publish*",
-        "https://ecency.com/@*/edit*",
-        "https://inleo.io/publish*",
-        "https://leofinance.io/submit*"
+        "https://peakd.com/*",
+        "https://ecency.com/*",
+        "https://inleo.io/*",
+        "https://leofinance.io/*"
       ],
       "js": ["assets/compose.js"],
       "run_at": "document_idle"
@@ -65,6 +63,9 @@
   ],
   "host_permissions": [
     "https://ecency.com/*",
+    "https://peakd.com/*",
+    "https://inleo.io/*",
+    "https://leofinance.io/*",
     "https://api.hive.blog/*",
     "https://images.ecency.com/*",
     "https://api.hive-engine.com/*",

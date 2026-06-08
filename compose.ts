@@ -11,9 +11,11 @@ const PANEL_ID = 'hivepulse-smart-compose';
 
 const COMPOSE_HOSTS: Record<string, RegExp> = {
   'peakd.com':      /\/publish|\/e\/@/,
-  'ecency.com':     /\/publish|\/post|\/edit/,
+  'ecency.com':     /\/submit/,
+  'hive.blog':      /\/submit\.html/,
   'inleo.io':       /\/publish|\/post/,
   'leofinance.io':  /\/submit/,
+  '3speak.tv':      /\/upload/,
 };
 
 // ── RPC helper ───────────────────────────────────────────────────────────────

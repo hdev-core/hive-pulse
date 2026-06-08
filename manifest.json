@@ -37,8 +37,10 @@
       "matches": [
         "https://peakd.com/*",
         "https://ecency.com/*",
+        "https://hive.blog/*",
         "https://inleo.io/*",
-        "https://leofinance.io/*"
+        "https://leofinance.io/*",
+        "https://3speak.tv/*"
       ],
       "js": ["assets/compose.js"],
       "run_at": "document_idle"
@@ -64,8 +66,10 @@
   "host_permissions": [
     "https://ecency.com/*",
     "https://peakd.com/*",
+    "https://hive.blog/*",
     "https://inleo.io/*",
     "https://leofinance.io/*",
+    "https://3speak.tv/*",
     "https://api.hive.blog/*",
     "https://images.ecency.com/*",
     "https://api.hive-engine.com/*",

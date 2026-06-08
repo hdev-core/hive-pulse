@@ -166,9 +166,16 @@ const updatePanel = (data: {
   if (!body) return;
 
   // Remove loading + stale sections
-  ['loading', 'payout', 'timing', 'community', 'bene', 'footer'].forEach(k =>
+  ['loading', 'payout', 'timing', 'community', 'bene', 'nodata', 'footer'].forEach(k =>
     document.getElementById(`${PANEL_ID}-${k}`)?.remove()
   );
+
+  const hasAny = data.payout || data.hours.length || data.community;
+  if (!hasAny) {
+    const s = section('nodata', { color: '#475569', fontSize: '11px', textAlign: 'center', padding: '8px 0 4px' });
+    s.textContent = 'Add a community tag to see insights.';
+    body.appendChild(s);
+  }
 
   // ── Payout range ──────────────────────────────────────
   if (data.payout) {
@@ -254,16 +261,19 @@ if (composePattern) {
   let username: string | null      = null;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-  // Load username from extension settings
-  chrome.storage.local.get(['settings'], (res: any) => {
-    const s = res?.settings;
-    username = s?.ecencyUsername || s?.rcUser || null;
-  });
+  // Load username — returns a promise so callers can await it
+  const loadUsername = (): Promise<void> =>
+    new Promise(res => chrome.storage.local.get(['settings'], (r: any) => {
+      const s = r?.settings;
+      username = s?.ecencyUsername || s?.rcUser || null;
+      res();
+    }));
 
   const isComposePage = () => composePattern.test(location.pathname);
 
   const runIntelligence = async (community: string | null) => {
     if (!document.getElementById(PANEL_ID)) return;
+    if (username === null) await loadUsername();
 
     const [authorPosts, communityPosts, communityInfo] = await Promise.all([
       username ? rpc('bridge.get_account_posts', { sort: 'posts', account: username, limit: 30 }) : Promise.resolve(null),

@@ -65,6 +65,7 @@ interface AccountResponse {
   savings_hbd_last_interest_payment?: string;
   vesting_shares: string;
   delegated_vesting_shares: string;
+  received_vesting_shares: string;
   reward_hive_balance: string;
   reward_hbd_balance: string;
   reward_vesting_balance: string;
@@ -268,7 +269,8 @@ export const fetchAccountStats = async (
       pendingHive: parseBalance(account.reward_hive_balance),
       pendingHbd: parseBalance(account.reward_hbd_balance),
       pendingVests: parseBalance(account.reward_vesting_balance),
-      delegatedHp: parseBalance(account.delegated_vesting_shares) / totalVestingShares * totalVestingFundHive
+      delegatedHp: parseBalance(account.delegated_vesting_shares) / totalVestingShares * totalVestingFundHive,
+      receivedDelegations: parseBalance(account.received_vesting_shares) / totalVestingShares * totalVestingFundHive,
     };
 
     const vestingRatio = hp > 0 ? totalVestingFundHive / hp : 1;

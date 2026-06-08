@@ -320,6 +320,10 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   }, [hiveEngineTokens, heSortMode, heFilter]);
 
   // Calculate breakdown
+  const receivedDelegations = balances.receivedDelegations ?? 0;
+  const delegatedHpVal = balances.delegatedHp ?? 0;
+  const effectiveHp = balances.hivepower - delegatedHpVal + receivedDelegations;
+
   const breakdown = {
     hive: balances.hive * hivePrice,
     hbd: balances.hbd * hbdPrice,
@@ -328,7 +332,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
     hivepower: balances.hivepower * hivePrice,
     pendingHive: balances.pendingHive * hivePrice,
     pendingHbd: balances.pendingHbd * hbdPrice,
-    delegatedHp: (balances.delegatedHp || 0) * hivePrice
+    delegatedHp: delegatedHpVal * hivePrice
   };
 
   const totalValue = Object.values(breakdown).reduce((a, b) => a + b, 0) + hiveEngineTotal;
@@ -370,13 +374,22 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
       color: 'from-amber-50 to-amber-100 border-amber-200',
       section: 'staked'
     },
-    ...(balances.delegatedHp && balances.delegatedHp > 0.01 ? [{
+    ...(delegatedHpVal > 0.01 ? [{
       icon: <Lock size={16} className="opacity-60" />,
       label: 'Delegated HP',
-      amount: balances.delegatedHp,
+      amount: delegatedHpVal,
       token: 'HP',
       valueUSD: breakdown.delegatedHp,
       color: 'from-amber-50/60 to-amber-100/60 border-amber-200',
+      section: 'staked' as const
+    }] : []),
+    ...(receivedDelegations > 0.01 ? [{
+      icon: <Lock size={16} className="text-blue-400" />,
+      label: 'Received Delegations',
+      amount: receivedDelegations,
+      token: 'HP',
+      valueUSD: 0,
+      color: 'from-blue-50/60 to-blue-100/60 border-blue-200',
       section: 'staked' as const
     }] : []),
     // Savings
@@ -432,6 +445,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
     'Liquid HBD': { term: 'HBD (Hive Backed Dollar)', definition: 'A stablecoin soft-pegged to $1 USD. Move it to Savings to earn interest at the current APR set by witnesses.' },
     'Hive Power (HP)': { term: 'Hive Power (HP)', definition: 'Staked HIVE that boosts your voting influence and curation rewards. Unstaking (power down) takes 13 weeks.' },
     'Delegated HP': { term: 'Delegated HP', definition: 'Hive Power you have lent to other accounts. It still counts toward your total but boosts the recipient\'s voting influence.' },
+    'Received Delegations': { term: 'Received Delegations', definition: 'Hive Power delegated to you by other accounts. Boosts your voting influence but does not belong to you and can be withdrawn at any time.' },
     'Savings HIVE': { term: 'Savings HIVE', definition: 'HIVE locked in savings. Requires a 3-day waiting period to withdraw. Useful for security.' },
     'Savings HBD': { term: 'Savings HBD', definition: 'HBD in savings, earning interest at the network APR set by Hive witnesses. 3-day withdrawal delay applies.' },
     'Pending HIVE': { term: 'Pending HIVE', definition: 'HIVE rewards from your posts and curation that have not been claimed yet. Claim them on any Hive frontend.' },
@@ -523,9 +537,25 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                           <p className="text-xs text-slate-600">{asset.amount.toFixed(2)} {asset.token}</p>
                         </div>
                       </div>
-                      <span className="text-sm font-semibold text-slate-900">{formatUSD(asset.valueUSD)}</span>
+                      <span className="text-sm font-semibold text-slate-900">
+                        {asset.valueUSD > 0 ? formatUSD(asset.valueUSD) : '—'}
+                      </span>
                     </div>
                   ))}
+                  {/* Effective HP summary */}
+                  <div className="mt-1 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2 flex items-center justify-between">
+                    <div>
+                      <Tooltip term="Effective HP" definition="Your total active Hive Power = own HP + received delegations − delegated out. This is the voting weight you actually wield." position="top">
+                        <p className="text-xs font-semibold text-violet-800">⚡ Effective HP</p>
+                      </Tooltip>
+                      <p className="text-[10px] text-violet-500 mt-0.5">
+                        {balances.hivepower.toFixed(2)} own
+                        {receivedDelegations > 0.01 ? ` + ${receivedDelegations.toFixed(2)} received` : ''}
+                        {delegatedHpVal > 0.01 ? ` − ${delegatedHpVal.toFixed(2)} delegated` : ''}
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold text-violet-700">{effectiveHp.toFixed(2)} HP</span>
+                  </div>
                 </div>
               )}
             </div>

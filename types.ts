@@ -143,6 +143,7 @@ export interface BalanceInfo {
   pendingHbd: number; // Pending HBD rewards
   pendingVests: number; // Pending VESTS rewards (needed for claim_reward_balance)
   delegatedHp?: number; // Delegated Hive Power (optional)
+  receivedDelegations?: number; // HP received from other accounts (optional)
   savingsHbdLastInterestPayment?: string; // ISO timestamp of last HBD savings interest payment
 }
 

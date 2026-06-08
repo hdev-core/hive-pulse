@@ -541,13 +541,14 @@ export const fetchHbdInterestHistory = async (
 export const fetchTrendingPosts = async (
   limit = 20,
   tag = '',
-  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean },
+  sort: 'trending' | 'hot' | 'created' = 'trending'
 ): Promise<TrendingPost[]> => {
   try {
     const { primary, fallback, autoSwitch } = getHiveNodes(settings);
     const data = await rpcFetchWithFallback(
       { jsonrpc: '2.0', method: 'bridge.get_ranked_posts',
-        params: { sort: 'trending', limit, tag, observer: '' }, id: 1 },
+        params: { sort, limit, tag, observer: '' }, id: 1 },
       primary, fallback, autoSwitch
     );
     const posts: any[] = data.result || [];
@@ -566,6 +567,62 @@ export const fetchTrendingPosts = async (
   } catch (e) {
     console.error('Failed to fetch trending posts:', e);
     return [];
+  }
+};
+
+// ── RC Operation Costs ───────────────────────────────────────────────────────
+
+export interface RcOperationCosts {
+  vote: number;
+  comment: number;
+  post: number;
+  transfer: number;
+  customJson: number;
+}
+
+const rcPricePerUnit = (
+  coeffA: string, coeffB: number, shift: number, pool: number
+): bigint => {
+  const price = (BigInt(coeffA) * BigInt(Math.round(pool)) >> BigInt(shift)) + BigInt(Math.round(coeffB));
+  return price > 0n ? price : 1n;
+};
+
+export const fetchRcOperationCosts = async (
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<RcOperationCosts | null> => {
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const [paramsData, poolData] = await Promise.all([
+      rpcFetchWithFallback({ jsonrpc: '2.0', method: 'rc_api.get_resource_params', params: {}, id: 1 }, primary, fallback, autoSwitch),
+      rpcFetchWithFallback({ jsonrpc: '2.0', method: 'rc_api.get_resource_pool', params: {}, id: 1 }, primary, fallback, autoSwitch),
+    ]);
+
+    const rp  = paramsData.result?.resource_params;
+    const pl  = poolData.result?.resource_pool;
+    const si  = paramsData.result?.size_info;
+    if (!rp || !pl || !si) return null;
+
+    const histP  = rcPricePerUnit(rp.resource_history_bytes.price_curve_params.coeff_a,  rp.resource_history_bytes.price_curve_params.coeff_b,  rp.resource_history_bytes.price_curve_params.shift,  pl.resource_history_bytes.pool);
+    const stateP = rcPricePerUnit(rp.resource_state_bytes.price_curve_params.coeff_a,    rp.resource_state_bytes.price_curve_params.coeff_b,    rp.resource_state_bytes.price_curve_params.shift,    pl.resource_state_bytes.pool);
+    const execP  = rcPricePerUnit(rp.resource_execution_time.price_curve_params.coeff_a, rp.resource_execution_time.price_curve_params.coeff_b, rp.resource_execution_time.price_curve_params.shift, pl.resource_execution_time.pool);
+
+    const ss = si.resource_state_bytes;
+    const se = si.resource_execution_time;
+
+    // Estimated serialized tx bytes that land in history (variable; typical values)
+    const H_VOTE = 112n, H_COMMENT = 250n, H_TRANSFER = 128n, H_CJSON = 200n;
+
+    const toBig = (n: number) => BigInt(Math.round(n));
+
+    const vote     = Number(toBig(ss.vote_size)          * stateP + toBig(se.vote_time)         * execP + H_VOTE     * histP);
+    const comment  = Number(toBig(ss.comment_base_size)  * stateP + toBig(se.comment_time)      * execP + H_COMMENT  * histP);
+    const transfer = Number(                                         toBig(se.transfer_time)     * execP + H_TRANSFER * histP);
+    const cjson    = Number(                                         toBig(se.custom_json_time)  * execP + H_CJSON    * histP);
+
+    return { vote, comment, post: comment, transfer, customJson: cjson };
+  } catch (e) {
+    console.error('Failed to fetch RC operation costs:', e);
+    return null;
   }
 };
 

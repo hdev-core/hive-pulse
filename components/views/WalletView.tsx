@@ -181,7 +181,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
       </div>
 
       {/* RC Budget — shown whenever stats are loaded */}
-      {!loading && stats && <RcBudget stats={stats} />}
+      {!loading && stats && <RcBudget stats={stats} settings={settings} />}
 
       {/* Send / Receive / History — only shown for own account */}
       {isOwnAccount && stats?.balances && (

@@ -2,7 +2,6 @@ export {};
 
 declare const chrome: any;
 
-// Hive frontend hostnames where the RC indicator is shown
 const HIVE_HOSTS = new Set([
   'peakd.com',
   'ecency.com',
@@ -18,9 +17,6 @@ const HIVE_HOSTS = new Set([
 const host = location.hostname.replace(/^www\./, '');
 
 if (HIVE_HOSTS.has(host)) {
-  // Conservative RC cost estimates as % of max RC
-  const RC_COST_PCT = { vote: 0.3, comment: 2, post: 10, transfer: 0.5 };
-
   let widget: HTMLElement | null = null;
 
   const colorForPct = (pct: number) =>
@@ -33,10 +29,33 @@ if (HIVE_HOSTS.has(host)) {
     return n.toString();
   };
 
-  const buildWidget = (pct: number, current: number, max: number) => {
-    const ops = (cost: number) => Math.floor(pct / cost);
-    const color = colorForPct(pct);
+  const fmtOps = (n: number) =>
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` :
+    n >= 1_000 ? `${(n / 1_000).toFixed(1)}k` :
+    `${n}`;
+
+  const buildWidget = (
+    pct: number,
+    current: number,
+    max: number,
+    costs: { vote: number; comment: number; post: number; transfer: number } | null
+  ) => {
+    const color   = colorForPct(pct);
     const rounded = Math.round(pct);
+
+    const opCount = (cost: number | undefined) =>
+      cost && cost > 0 ? Math.floor(current / cost) : null;
+
+    const votes     = costs ? opCount(costs.vote)     : null;
+    const comments  = costs ? opCount(costs.comment)  : null;
+    const posts     = costs ? opCount(costs.post)     : null;
+    const transfers = costs ? opCount(costs.transfer) : null;
+
+    const opLine = (emoji: string, label: string, count: number | null) =>
+      `<span style="color:#94a3b8">${emoji} ${label}</span>` +
+      `<span style="font-weight:600;text-align:right">` +
+      (count != null ? `~${fmtOps(count)}` : '…') +
+      `</span>`;
 
     if (widget) { widget.remove(); widget = null; }
 
@@ -69,12 +88,12 @@ if (HIVE_HOSTS.has(host)) {
       `<div style="font-size:10px;color:#94a3b8;margin-bottom:8px">${fmtRC(current)} / ${fmtRC(max)}</div>`,
       `<div style="font-size:10px;border-top:1px solid #334155;padding-top:7px;color:#cbd5e1;margin-bottom:4px">Approx. operations remaining:</div>`,
       `<div style="font-size:11px;display:grid;grid-template-columns:1fr auto;gap:2px 8px">`,
-      `<span style="color:#94a3b8">👍 Votes</span><span style="font-weight:600;text-align:right">~${ops(RC_COST_PCT.vote).toLocaleString()}</span>`,
-      `<span style="color:#94a3b8">💬 Comments</span><span style="font-weight:600;text-align:right">~${ops(RC_COST_PCT.comment).toLocaleString()}</span>`,
-      `<span style="color:#94a3b8">📝 Posts</span><span style="font-weight:600;text-align:right">~${ops(RC_COST_PCT.post).toLocaleString()}</span>`,
-      `<span style="color:#94a3b8">💸 Transfers</span><span style="font-weight:600;text-align:right">~${ops(RC_COST_PCT.transfer).toLocaleString()}</span>`,
+      opLine('👍', 'Votes',     votes),
+      opLine('💬', 'Comments',  comments),
+      opLine('📝', 'Posts',     posts),
+      opLine('💸', 'Transfers', transfers),
       `</div>`,
-      `<div style="font-size:9px;color:#475569;margin-top:8px">HivePulse · estimates only</div>`,
+      `<div style="font-size:9px;color:#475569;margin-top:8px">HivePulse · live network costs</div>`,
     ].join('');
 
     widget.addEventListener('mouseenter', () => { tooltip.style.display = 'block'; });
@@ -86,10 +105,11 @@ if (HIVE_HOSTS.has(host)) {
   };
 
   const refresh = () => {
-    chrome.storage.local.get(['rcStats'], (result: any) => {
-      const rc = result?.rcStats;
+    chrome.storage.local.get(['rcStats', 'rcOperationCosts'], (result: any) => {
+      const rc    = result?.rcStats;
+      const costs = result?.rcOperationCosts ?? null;
       if (!rc || typeof rc.percentage !== 'number') return;
-      buildWidget(rc.percentage, rc.current, rc.max);
+      buildWidget(rc.percentage, rc.current, rc.max, costs);
     });
   };
 
@@ -99,8 +119,7 @@ if (HIVE_HOSTS.has(host)) {
     refresh();
   }
 
-  // Re-render whenever background refreshes RC data
   chrome.storage.onChanged.addListener((changes: any, area: string) => {
-    if (area === 'local' && changes.rcStats) refresh();
+    if (area === 'local' && (changes.rcStats || changes.rcOperationCosts)) refresh();
   });
 }

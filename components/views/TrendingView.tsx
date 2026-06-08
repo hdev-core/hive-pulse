@@ -8,7 +8,8 @@ interface TrendingViewProps {
   allFrontends: any[];
 }
 
-type Tab = 'posts' | 'communities';
+type Tab  = 'posts' | 'communities';
+type Sort = 'trending' | 'hot' | 'created';
 
 const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 60 minutes
 
@@ -26,12 +27,19 @@ const payout = (post: TrendingPost) => {
   return total > 0 ? `$${total.toFixed(2)}` : null;
 };
 
+const SORT_LABELS: { key: Sort; label: string }[] = [
+  { key: 'trending', label: '🔥 Trending' },
+  { key: 'hot',      label: '⚡ Hot'      },
+  { key: 'created',  label: '🆕 New'      },
+];
+
 export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFrontends }) => {
   const [tab, setTab]                     = useState<Tab>('posts');
+  const [sort, setSort]                   = useState<Sort>('trending');
   const [posts, setPosts]                 = useState<TrendingPost[]>([]);
   const [communities, setCommunities]     = useState<TrendingCommunity[]>([]);
   const [loading, setLoading]             = useState(false);
-  const [lastFetched, setLastFetched]     = useState<number | null>(null);
+  const [lastFetched, setLastFetched]     = useState<Record<Sort, number>>({ trending: 0, hot: 0, created: 0 });
 
   const preferredFrontend = allFrontends.find(f => f.id === settings.preferredFrontendId);
   const baseDomain = preferredFrontend?.domain ?? 'peakd.com';
@@ -40,22 +48,23 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
   const communityUrl = (name: string) => `https://${baseDomain}/trending/${name}`;
 
   const load = useCallback(async (force = false) => {
-    if (!force && lastFetched && Date.now() - lastFetched < REFRESH_INTERVAL_MS) return;
+    const ts = lastFetched[sort];
+    if (!force && ts && Date.now() - ts < REFRESH_INTERVAL_MS) return;
     setLoading(true);
     try {
       const [p, c] = await Promise.all([
-        fetchTrendingPosts(20, '', settings),
+        fetchTrendingPosts(20, '', settings, sort),
         fetchTrendingCommunities(30, settings),
       ]);
       setPosts(p);
       setCommunities(c);
-      setLastFetched(Date.now());
+      setLastFetched(prev => ({ ...prev, [sort]: Date.now() }));
     } finally {
       setLoading(false);
     }
-  }, [lastFetched, settings]);
+  }, [lastFetched, sort, settings]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [sort]);
 
   const openLink = (url: string) => {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
@@ -95,10 +104,29 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
               tab === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            {t === 'posts' ? '🔥 Posts' : '🏘️ Communities'}
+            {t === 'posts' ? '📰 Posts' : '🏘️ Communities'}
           </button>
         ))}
       </div>
+
+      {/* Sort selector — posts only */}
+      {tab === 'posts' && (
+        <div className="flex gap-1.5">
+          {SORT_LABELS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setSort(key)}
+              className={`flex-1 py-1 text-[10px] font-semibold rounded-lg border transition-all ${
+                sort === key
+                  ? 'bg-orange-500 text-white border-orange-500'
+                  : 'bg-white text-slate-500 border-slate-200 hover:border-orange-300 hover:text-orange-600'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Content */}
       {loading && posts.length === 0 ? (

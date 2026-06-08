@@ -89,10 +89,11 @@ const fmtHour = (h: number) => {
 
 // ── DOM helpers ──────────────────────────────────────────────────────────────
 const detectCommunityTag = (): string | null => {
+  // Broad element scan — covers inputs, chips, tag widgets
   const selectors = [
-    'input', 'textarea',
-    '[class*="tag"]', '[class*="chip"]', '[class*="community"]',
-    '[class*="category"]', '[class*="TagInput"]',
+    'input', 'textarea', 'select',
+    '[class*="tag" i]', '[class*="chip" i]', '[class*="community" i]',
+    '[class*="category" i]', '[class*="TagInput" i]',
   ];
   for (const sel of selectors) {
     for (const el of document.querySelectorAll(sel)) {
@@ -101,6 +102,43 @@ const detectCommunityTag = (): string | null => {
       if (m) return m[0];
     }
   }
+  // Scan every selected <option> value (catches custom dropdowns like actifit)
+  for (const opt of document.querySelectorAll('option:checked, option[selected]')) {
+    const val = (opt as HTMLOptionElement).value || opt.textContent || '';
+    const m = val.match(/\bhive-\d{6}\b/);
+    if (m) return m[0];
+  }
+  return null;
+};
+
+// Auto-detect the logged-in Hive username from the page without requiring
+// manual extension settings configuration
+const detectPageUsername = (): string | null => {
+  const hiveUser = /^[a-z][a-z0-9.-]{2,15}$/;
+  // Common localStorage keys used by Hive frontends
+  const lsKeys = ['username', 'user_name', 'hive_username', 'active_user', 'current_user'];
+  for (const k of lsKeys) {
+    try {
+      const v = localStorage.getItem(k);
+      if (v && hiveUser.test(v)) return v;
+    } catch {}
+  }
+  // Vuex-persisted state (Nuxt/Vue apps — actifit uses this)
+  try {
+    const vuex = localStorage.getItem('vuex');
+    if (vuex) {
+      const s = JSON.parse(vuex);
+      const n = s?.user?.account?.name || s?.user?.name || s?.username;
+      if (n && hiveUser.test(n)) return n;
+    }
+  } catch {}
+  // DOM: look for a profile link containing /@username (PeakD, Ecency, etc.)
+  try {
+    for (const a of document.querySelectorAll<HTMLAnchorElement>('a[href*="/@"]')) {
+      const m = a.getAttribute('href')?.match(/\/@([a-z0-9.-]{3,16})/);
+      if (m && hiveUser.test(m[1])) return m[1];
+    }
+  } catch {}
   return null;
 };
 
@@ -275,11 +313,11 @@ if (composePattern) {
   let username: string | null      = null;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-  // Load username — returns a promise so callers can await it
+  // Load username — extension settings first, then page auto-detection
   const loadUsername = (): Promise<void> =>
     new Promise(res => chrome.storage.local.get(['settings'], (r: any) => {
       const s = r?.settings;
-      username = s?.ecencyUsername || s?.rcUser || null;
+      username = s?.ecencyUsername || s?.rcUser || detectPageUsername() || null;
       res();
     }));
 

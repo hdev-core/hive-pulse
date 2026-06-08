@@ -41,7 +41,8 @@ export default defineConfig({
       input: {
         popup: 'index.html',
         background: 'background.ts',
-        content: 'content.ts'
+        content: 'content.ts',
+        compose: 'compose.ts',
       },
       output: {
         entryFileNames: 'assets/[name].js',

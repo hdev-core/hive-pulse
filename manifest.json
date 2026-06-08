@@ -2,7 +2,7 @@
 {
   "manifest_version": 3,
   "name": "HivePulse",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "The heartbeat of your Hive experience. Chat, Stats, and seamless Frontend Switching.",
   "icons": {
     "16": "icon.png",
@@ -32,6 +32,18 @@
       "matches": ["<all_urls>"],
       "js": ["assets/content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://peakd.com/publish*",
+        "https://peakd.com/e/@*",
+        "https://ecency.com/publish*",
+        "https://ecency.com/@*/edit*",
+        "https://inleo.io/publish*",
+        "https://leofinance.io/submit*"
+      ],
+      "js": ["assets/compose.js"],
+      "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
@@ -48,7 +60,8 @@
     "sidePanel",
     "cookies",
     "notifications",
-    "scripting"
+    "scripting",
+    "clipboardWrite"
   ],
   "host_permissions": [
     "https://ecency.com/*",

@@ -8,6 +8,7 @@ import { EarningExplainer } from '../EarningExplainer';
 import { OnboardingBanner } from '../OnboardingBanner';
 import { SendForm } from '../SendForm';
 import { RcBudget } from '../RcBudget';
+import { HiveProofCard } from '../HiveProofCard';
 
 interface WalletViewProps {
   settings: AppSettings;
@@ -182,6 +183,11 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
 
       {/* RC Budget — shown whenever stats are loaded */}
       {!loading && stats && <RcBudget stats={stats} settings={settings} />}
+
+      {/* Shareable proof card — shown when stats + prices are ready */}
+      {!loading && stats && prices && (
+        <HiveProofCard stats={stats} prices={prices} settings={settings} />
+      )}
 
       {/* Send / Receive / History — only shown for own account */}
       {isOwnAccount && stats?.balances && (

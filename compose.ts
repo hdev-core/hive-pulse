@@ -156,11 +156,10 @@ const detectPageUsername = (): string | null => {
 const hasBeneficiarySet = (): boolean =>
   /beneficiar/i.test(document.body.innerText) && /%/.test(document.body.innerText);
 
-// Per-host beneficiary programme suggestions
+// Per-host beneficiary programme suggestions (only include verified, documented programmes)
 const HOST_BENE: Record<string, { account: string; pct: string; reason: string }> = {
-  'ecency.com':    { account: '@ecency',     pct: '1%', reason: 'qualify for Ecency boost votes' },
-  'inleo.io':      { account: '@leofinance', pct: '2%', reason: 'qualify for Leo curation rewards' },
-  'leofinance.io': { account: '@leofinance', pct: '2%', reason: 'qualify for Leo curation rewards' },
+  // Ecency: adding @ecency as 1% beneficiary qualifies posts for automated boost votes
+  'ecency.com': { account: '@ecency', pct: '1%', reason: 'qualify for Ecency boost votes' },
 };
 
 // ── Panel creation ───────────────────────────────────────────────────────────
@@ -371,12 +370,28 @@ if (composePattern) {
     });
   };
 
+  // Fire immediately when a <select> changes — no waiting for the 3s poll
+  const onSelectChange = () => {
+    if (!active) return;
+    const newCommunity = detectCommunityTag();
+    if (newCommunity !== lastCommunity) {
+      lastCommunity = newCommunity;
+      runIntelligence(newCommunity);
+    }
+  };
+
   const injectPanel = () => {
     if (document.getElementById(PANEL_ID)) return;
     document.body.appendChild(createPanel());
     active = true;
     lastCommunity = detectCommunityTag();
     runIntelligence(lastCommunity);
+    // Attach change listener to all selects present now and future
+    document.addEventListener('change', (e) => {
+      if (e.target instanceof HTMLSelectElement || e.target instanceof HTMLInputElement) {
+        onSelectChange();
+      }
+    });
   };
 
   const removePanel = () => {

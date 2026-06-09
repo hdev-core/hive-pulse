@@ -88,24 +88,35 @@ const fmtHour = (h: number) => {
 };
 
 // ── DOM helpers ──────────────────────────────────────────────────────────────
+const HIVE_TAG = /\bhive-\d{6}\b/;
+
 const detectCommunityTag = (): string | null => {
-  // Broad element scan — covers inputs, chips, tag widgets
+  // 1. Direct ID targets for known frontends (most reliable)
+  const directIds = ['targetCommunity', 'community', 'category'];
+  for (const id of directIds) {
+    const el = document.getElementById(id) as HTMLSelectElement | null;
+    if (el?.value) { const m = el.value.match(HIVE_TAG); if (m) return m[0]; }
+  }
+  // 2. All <select> elements
+  for (const sel of document.querySelectorAll<HTMLSelectElement>('select')) {
+    if (sel.value) { const m = sel.value.match(HIVE_TAG); if (m) return m[0]; }
+  }
+  // 3. Broad element scan — inputs, chips, tag widgets (case-insensitive class match)
   const selectors = [
-    'input', 'textarea', 'select',
+    'input', 'textarea',
     '[class*="tag" i]', '[class*="chip" i]', '[class*="community" i]',
     '[class*="category" i]', '[class*="TagInput" i]',
   ];
   for (const sel of selectors) {
     for (const el of document.querySelectorAll(sel)) {
       const text = (el as HTMLInputElement).value || el.textContent || '';
-      const m = text.match(/\bhive-\d{6}\b/);
+      const m = text.match(HIVE_TAG);
       if (m) return m[0];
     }
   }
-  // Scan every selected <option> value (catches custom dropdowns like actifit)
-  for (const opt of document.querySelectorAll('option:checked, option[selected]')) {
-    const val = (opt as HTMLOptionElement).value || opt.textContent || '';
-    const m = val.match(/\bhive-\d{6}\b/);
+  // 4. Any selected <option> value as last resort
+  for (const opt of document.querySelectorAll<HTMLOptionElement>('option:checked')) {
+    const m = (opt.value || opt.textContent || '').match(HIVE_TAG);
     if (m) return m[0];
   }
   return null;
@@ -144,6 +155,13 @@ const detectPageUsername = (): string | null => {
 
 const hasBeneficiarySet = (): boolean =>
   /beneficiar/i.test(document.body.innerText) && /%/.test(document.body.innerText);
+
+// Per-host beneficiary programme suggestions
+const HOST_BENE: Record<string, { account: string; pct: string; reason: string }> = {
+  'ecency.com':    { account: '@ecency',     pct: '1%', reason: 'qualify for Ecency boost votes' },
+  'inleo.io':      { account: '@leofinance', pct: '2%', reason: 'qualify for Leo curation rewards' },
+  'leofinance.io': { account: '@leofinance', pct: '2%', reason: 'qualify for Leo curation rewards' },
+};
 
 // ── Panel creation ───────────────────────────────────────────────────────────
 const createPanel = (): HTMLElement => {
@@ -208,6 +226,7 @@ const updatePanel = (data: {
   hoursLabel:  string;
   community:   { title: string; subscribers: number; sum_pending: number } | null;
   noBene:      boolean;
+  beneInfo:    { account: string; pct: string; reason: string } | null;
   noUsername:  boolean;
 }) => {
   const body = document.getElementById(`${PANEL_ID}-body`);
@@ -277,8 +296,9 @@ const updatePanel = (data: {
     body.appendChild(s);
   }
 
-  // ── Beneficiary nudge ─────────────────────────────────
-  if (data.noBene) {
+  // ── Beneficiary nudge — only for hosts that have a known programme ─────────
+  if (data.noBene && data.beneInfo) {
+    const { account, pct, reason } = data.beneInfo;
     const s = section('bene', {
       padding: '8px 10px', borderRadius: '8px',
       background: 'rgba(245,158,11,0.08)',
@@ -288,7 +308,7 @@ const updatePanel = (data: {
     s.innerHTML = `
       <div style="color:#f59e0b;font-size:11px;font-weight:600">&#128161; Boost tip</div>
       <div style="color:#fcd34d;font-size:10px;margin-top:3px">
-        Add <strong>@ecency</strong> (1%) as a beneficiary to qualify for Ecency boost votes.
+        Add <strong>${account}</strong> (${pct}) as a beneficiary to ${reason}.
       </div>`;
     body.appendChild(s);
   }
@@ -346,6 +366,7 @@ if (composePattern) {
         ? { title: communityInfo.title ?? community, subscribers: communityInfo.subscribers ?? 0, sum_pending: communityInfo.sum_pending ?? 0 }
         : null,
       noBene:     !hasBeneficiarySet(),
+      beneInfo:   HOST_BENE[host] ?? null,
       noUsername: !username,
     });
   };

@@ -88,7 +88,10 @@ export const fetchNotifications = async (
     );
     return data.result || [];
   } catch (e) {
-    console.error("Failed to fetch notifications:", e);
+    // Transient network/node failures are expected — degrade quietly, don't alarm the user
+    const isNetwork = e instanceof TypeError && /fetch/i.test(e.message);
+    if (isNetwork) console.warn("Notifications temporarily unavailable (node unreachable)");
+    else console.error("Failed to fetch notifications:", e);
     return [];
   }
 };

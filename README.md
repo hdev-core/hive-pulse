@@ -2,7 +2,15 @@
 
 **The heartbeat of your Hive experience.**
 
-HivePulse (formerly HiveKit) is a Chrome Extension that transforms your browser into a powerful dashboard for the Hive Blockchain. It combines real-time communication, vital account statistics, and seamless interoperability into one sleek overlay.
+HivePulse (formerly HiveKit) is a browser extension (Chrome & Firefox) that transforms your browser into a powerful dashboard for the Hive Blockchain. It combines real-time communication, vital account statistics, and seamless interoperability into one sleek overlay.
+
+## Get HivePulse
+
+- **Chrome Web Store:** https://chromewebstore.google.com/detail/hivepulse/hakcpohpejoejmlhiphpkjobpjeckdlg
+- **Firefox Add-ons (AMO):** https://addons.mozilla.org/en-US/firefox/addon/hivepulse/
+
+> Maintainer note — manage/submit builds at:
+> Chrome Web Store Developer Dashboard · Firefox AMO Developer Hub: https://addons.mozilla.org/en-US/developers/addon/hivepulse/
 
 ## Key Capabilities
 

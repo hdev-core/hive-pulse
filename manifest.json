@@ -2,7 +2,7 @@
 {
   "manifest_version": 3,
   "name": "HivePulse",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "The heartbeat of your Hive experience. Chat, Stats, and seamless Frontend Switching.",
   "icons": {
     "16": "icon.png",
@@ -61,8 +61,7 @@
     "sidePanel",
     "cookies",
     "notifications",
-    "scripting",
-    "clipboardWrite"
+    "scripting"
   ],
   "host_permissions": [
     "https://ecency.com/*",

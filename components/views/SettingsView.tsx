@@ -5,7 +5,7 @@ import { FrontendIcon } from '../FrontendIcon';
 import { NodeSelector } from '../NodeSelector';
 import { HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from '../../constants';
 import { 
-  ShieldCheck, User, Activity, KeyRound, LogOut, Check, Bell, GripVertical, Grid, PlusCircle, Trash2, Server
+  ShieldCheck, User, Activity, KeyRound, LogOut, Check, Bell, GripVertical, Grid, PlusCircle, Trash2, Server, ChevronDown
 } from 'lucide-react'; // Added GripVertical for drag handle
 
 interface SettingsViewProps {
@@ -36,6 +36,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [inputError, setInputError] = useState<string | null>(null);
   const [showAddFrontendForm, setShowAddFrontendForm] = useState(false); // New state to control form visibility
   const [isCustomFrontendsSectionOpen, setIsCustomFrontendsSectionOpen] = useState(false); // New state for section visibility
+  // Collapsible sections (default collapsed to reduce clutter)
+  const [isFrontendOrderOpen, setIsFrontendOrderOpen] = useState(false);
+  const [isHiveNodeOpen, setIsHiveNodeOpen]           = useState(false);
+  const [isHeNodeOpen, setIsHeNodeOpen]               = useState(false);
 
   // Generate a unique ID for custom frontends
   const getNextCustomId = () => {
@@ -572,11 +576,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </section>
       
             {/* Frontend Display Order Section */}      <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
+        <button
+          onClick={() => setIsFrontendOrderOpen(o => !o)}
+          className="flex items-center justify-between w-full"
+        >
+          <div className="flex items-center gap-2">
             <Grid size={18} className="text-slate-500" />
             <span className="font-semibold text-sm text-slate-800">Frontend Display Order</span>
-        </div>
-        <p className="text-xs text-slate-500 mb-4">
+          </div>
+          <ChevronDown size={16} className={`text-slate-400 transition-transform ${isFrontendOrderOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {isFrontendOrderOpen && (<>
+        <p className="text-xs text-slate-500 mb-4 mt-3">
           Drag and drop to reorder active frontends. Toggle to activate/deactivate.
         </p>
 
@@ -617,6 +629,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           ))}
         </div>
+        </>)}
       </section>
 
       {/* Node Settings */}
@@ -628,7 +641,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         <div className="space-y-4">
           <div>
-            <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Hive RPC Node</h4>
+            <button
+              onClick={() => setIsHiveNodeOpen(o => !o)}
+              className="flex items-center justify-between w-full mb-2"
+            >
+              <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Hive RPC Node</h4>
+              <ChevronDown size={15} className={`text-slate-400 transition-transform ${isHiveNodeOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isHiveNodeOpen && (
             <NodeSelector
               label="Hive RPC"
               selectedNode={settings.hiveRpcNode || HIVE_RPC_NODES[0]}
@@ -639,10 +659,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               onCustomNodesChange={(nodes) => updateSettings({ customHiveRpcNodes: nodes })}
               onAutoSwitchChange={(enabled) => updateSettings({ autoSwitchHiveNode: enabled })}
             />
+            )}
           </div>
 
           <div className="border-t border-slate-100 pt-3">
-            <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Hive-Engine RPC Node</h4>
+            <button
+              onClick={() => setIsHeNodeOpen(o => !o)}
+              className="flex items-center justify-between w-full mb-2"
+            >
+              <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Hive-Engine RPC Node</h4>
+              <ChevronDown size={15} className={`text-slate-400 transition-transform ${isHeNodeOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isHeNodeOpen && (
             <NodeSelector
               label="Hive-Engine RPC"
               selectedNode={settings.heRpcNode || HIVE_ENGINE_RPC_NODES[0]}
@@ -653,6 +681,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               onCustomNodesChange={(nodes) => updateSettings({ customHeRpcNodes: nodes })}
               onAutoSwitchChange={(enabled) => updateSettings({ autoSwitchHeNode: enabled })}
             />
+            )}
           </div>
         </div>
       </section>
@@ -694,6 +723,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
                 </div>
 
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-slate-600">On-Page Overlay</span>
+                    <span className="text-[10px] text-slate-400">Floating badge shown on Hive sites</span>
+                  </div>
+                  <div className="flex bg-slate-200 rounded p-0.5">
+                    {(['RC', 'VP', 'both', 'off'] as const).map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => updateSettings({ overlayMetric: opt })}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded transition-all capitalize ${
+                          (settings.overlayMetric ?? 'RC') === opt ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'
+                        }`}
+                      >{opt === 'both' ? 'Both' : opt === 'off' ? 'Off' : opt}</button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Show saved RC user in settings */}
                 <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                    <span className="text-sm text-slate-600">Monitored User</span>
@@ -703,7 +750,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
       </section>
 
-      <p className="text-center text-[10px] text-slate-400 pb-2">HivePulse v1.6.1</p>
+      <p className="text-center text-[10px] text-slate-400 pb-2">
+        HivePulse v{typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '1.7.1'}
+      </p>
 
     </div>
   );

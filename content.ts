@@ -17,6 +17,7 @@ const HIVE_HOSTS = new Set([
 const host = location.hostname.replace(/^www\./, '');
 
 if (HIVE_HOSTS.has(host)) {
+  const WIDGET_ID = 'hivepulse-rc-widget';
   let widget: HTMLElement | null = null;
 
   const colorForPct = (pct: number) =>
@@ -34,48 +35,57 @@ if (HIVE_HOSTS.has(host)) {
     n >= 1_000 ? `${(n / 1_000).toFixed(1)}k` :
     `${n}`;
 
-  const buildWidget = (
-    pct: number,
-    current: number,
-    max: number,
-    costs: { vote: number; comment: number; post: number; transfer: number } | null
-  ) => {
-    const color   = colorForPct(pct);
-    const rounded = Math.round(pct);
+  const removeWidget = () => {
+    if (widget) { widget.remove(); widget = null; }
+    document.getElementById(WIDGET_ID)?.remove();
+  };
+
+  const pill = (icon: string, label: string, pct: number) => {
+    const color = colorForPct(pct);
+    return (
+      `<div style="background:${color};color:#fff;border-radius:999px;padding:4px 10px;` +
+      `font-weight:700;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,0.25);` +
+      `display:flex;align-items:center;gap:5px">` +
+      `<span style="opacity:0.8;font-size:10px">${icon}${label}</span><span>${Math.round(pct)}%</span></div>`
+    );
+  };
+
+  const buildWidget = (opts: {
+    showRc: boolean;
+    showVp: boolean;
+    rcPct: number;
+    rcCur: number;
+    rcMax: number;
+    vpPct: number | null;
+    costs: { vote: number; comment: number; post: number; transfer: number } | null;
+  }) => {
+    const { showRc, showVp, rcPct, rcCur, rcMax, vpPct, costs } = opts;
+    removeWidget();
+    if (!showRc && !showVp) return;
 
     const opCount = (cost: number | undefined) =>
-      cost && cost > 0 ? Math.floor(current / cost) : null;
-
-    const votes     = costs ? opCount(costs.vote)     : null;
-    const comments  = costs ? opCount(costs.comment)  : null;
-    const posts     = costs ? opCount(costs.post)     : null;
-    const transfers = costs ? opCount(costs.transfer) : null;
-
+      cost && cost > 0 ? Math.floor(rcCur / cost) : null;
     const opLine = (emoji: string, label: string, count: number | null) =>
       `<span style="color:#94a3b8">${emoji} ${label}</span>` +
       `<span style="font-weight:600;text-align:right">` +
-      (count != null ? `~${fmtOps(count)}` : '…') +
-      `</span>`;
-
-    if (widget) { widget.remove(); widget = null; }
+      (count != null ? `~${fmtOps(count)}` : '…') + `</span>`;
 
     widget = document.createElement('div');
-    widget.id = 'hivepulse-rc-widget';
+    widget.id = WIDGET_ID;
     widget.setAttribute('style', [
       'position:fixed', 'bottom:20px', 'right:20px', 'z-index:2147483647',
       'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
       'font-size:12px', 'cursor:default', 'user-select:none',
     ].join(';'));
 
-    const badge = document.createElement('div');
-    badge.setAttribute('style', [
-      `background:${color}`, 'color:#fff', 'border-radius:999px',
-      'padding:4px 10px', 'font-weight:700', 'font-size:11px',
-      'box-shadow:0 2px 8px rgba(0,0,0,0.25)',
-      'display:flex', 'align-items:center', 'gap:5px',
-    ].join(';'));
-    badge.innerHTML = `<span style="opacity:0.8;font-size:10px">⚡RC</span><span>${rounded}%</span>`;
+    // Badge row — one or two pills
+    const badgeRow = document.createElement('div');
+    badgeRow.setAttribute('style', 'display:flex;gap:6px;align-items:center;justify-content:flex-end');
+    badgeRow.innerHTML =
+      (showRc ? pill('⚡', 'RC', rcPct) : '') +
+      (showVp && vpPct != null ? pill('👍', 'VP', vpPct) : '');
 
+    // Tooltip — combined sections for whatever is shown
     const tooltip = document.createElement('div');
     tooltip.setAttribute('style', [
       'display:none', 'position:absolute', 'bottom:calc(100% + 8px)', 'right:0',
@@ -83,33 +93,56 @@ if (HIVE_HOSTS.has(host)) {
       'padding:10px 12px', 'min-width:185px',
       'box-shadow:0 4px 20px rgba(0,0,0,0.4)', 'line-height:1.6',
     ].join(';'));
-    tooltip.innerHTML = [
-      `<div style="font-weight:700;font-size:12px;margin-bottom:4px;color:${color}">⚡ Resource Credits</div>`,
-      `<div style="font-size:10px;color:#94a3b8;margin-bottom:8px">${fmtRC(current)} / ${fmtRC(max)}</div>`,
-      `<div style="font-size:10px;border-top:1px solid #334155;padding-top:7px;color:#cbd5e1;margin-bottom:4px">Approx. operations remaining:</div>`,
-      `<div style="font-size:11px;display:grid;grid-template-columns:1fr auto;gap:2px 8px">`,
-      opLine('👍', 'Votes',     votes),
-      opLine('💬', 'Comments',  comments),
-      opLine('📝', 'Posts',     posts),
-      opLine('💸', 'Transfers', transfers),
-      `</div>`,
-      `<div style="font-size:9px;color:#475569;margin-top:8px">HivePulse · live network costs</div>`,
-    ].join('');
+
+    const sections: string[] = [];
+    if (showRc) {
+      sections.push(
+        `<div style="font-weight:700;font-size:12px;margin-bottom:4px;color:${colorForPct(rcPct)}">⚡ Resource Credits</div>`,
+        `<div style="font-size:10px;color:#94a3b8;margin-bottom:8px">${fmtRC(rcCur)} / ${fmtRC(rcMax)}</div>`,
+        `<div style="font-size:10px;border-top:1px solid #334155;padding-top:7px;color:#cbd5e1;margin-bottom:4px">Approx. operations remaining:</div>`,
+        `<div style="font-size:11px;display:grid;grid-template-columns:1fr auto;gap:2px 8px">`,
+        opLine('👍', 'Votes',     costs ? opCount(costs.vote)     : null),
+        opLine('💬', 'Comments',  costs ? opCount(costs.comment)  : null),
+        opLine('📝', 'Posts',     costs ? opCount(costs.post)     : null),
+        opLine('💸', 'Transfers', costs ? opCount(costs.transfer) : null),
+        `</div>`,
+      );
+    }
+    if (showVp && vpPct != null) {
+      sections.push(
+        `<div style="font-weight:700;font-size:12px;margin-bottom:4px;color:${colorForPct(vpPct)}${showRc ? ';border-top:1px solid #334155;padding-top:8px;margin-top:8px' : ''}">👍 Voting Power</div>`,
+        `<div style="font-size:10px;color:#94a3b8">${Math.round(vpPct)}% of full mana. Regenerates ~20% per day; full votes cost ~2%.</div>`,
+      );
+    }
+    sections.push(`<div style="font-size:9px;color:#475569;margin-top:8px">HivePulse · live network data</div>`);
+    tooltip.innerHTML = sections.join('');
 
     widget.addEventListener('mouseenter', () => { tooltip.style.display = 'block'; });
     widget.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
 
     widget.appendChild(tooltip);
-    widget.appendChild(badge);
+    widget.appendChild(badgeRow);
     document.body.appendChild(widget);
   };
 
   const refresh = () => {
-    chrome.storage.local.get(['rcStats', 'rcOperationCosts'], (result: any) => {
+    chrome.storage.local.get(['rcStats', 'rcOperationCosts', 'settings'], (result: any) => {
+      const mode: 'RC' | 'VP' | 'both' | 'off' = result?.settings?.overlayMetric ?? 'RC';
+      if (mode === 'off') { removeWidget(); return; }
+
       const rc    = result?.rcStats;
       const costs = result?.rcOperationCosts ?? null;
-      if (!rc || typeof rc.percentage !== 'number') return;
-      buildWidget(rc.percentage, rc.current, rc.max, costs);
+      if (!rc || typeof rc.percentage !== 'number') { removeWidget(); return; }
+
+      buildWidget({
+        showRc: mode === 'RC' || mode === 'both',
+        showVp: mode === 'VP' || mode === 'both',
+        rcPct:  rc.percentage,
+        rcCur:  rc.current,
+        rcMax:  rc.max,
+        vpPct:  typeof rc.vp === 'number' ? rc.vp : null,
+        costs,
+      });
     });
   };
 
@@ -120,6 +153,6 @@ if (HIVE_HOSTS.has(host)) {
   }
 
   chrome.storage.onChanged.addListener((changes: any, area: string) => {
-    if (area === 'local' && (changes.rcStats || changes.rcOperationCosts)) refresh();
+    if (area === 'local' && (changes.rcStats || changes.rcOperationCosts || changes.settings)) refresh();
   });
 }

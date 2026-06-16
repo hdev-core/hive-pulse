@@ -48,6 +48,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   notificationInterval: 1,
   rcUser: '',
   badgeMetric: 'VP',
+  overlayMetric: 'RC',
   ecencyUsername: '',
   ecencyAccessToken: '',
   ecencyChatToken: '',

@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   notificationsEnabled: true,
   notificationInterval: 1,
   badgeMetric: 'VP',
+  overlayMetric: 'RC',
   ecencyUsername: '',
   ecencyAccessToken: '',
   ecencyChatToken: '',
@@ -277,32 +278,38 @@ const checkStatus = async () => {
       }
     }
 
-    if (!badgeSet && settings.rcUser) {
+    // Always refresh RC/VP stats when a user is monitored — the on-page overlay
+    // and content script depend on this data regardless of what the icon badge shows.
+    if (settings.rcUser) {
       const data = await fetchAccountStats(settings.rcUser, settings);
       if (data) {
-        // Persist RC stats so the content script can read them without its own API call
+        // Persist RC + VP so the content script can read them without its own API call
         chrome.storage.local.set({
           rcStats: {
             username:   data.username,
             percentage: data.rc.percentage,
             current:    data.rc.current,
             max:        data.rc.max,
+            vp:         data.vp.percentage,
           }
         });
-        const metric = settings.badgeMetric || 'VP';
-        const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
-        const rounded = Math.round(percent);
-        const isLow = rounded < 20;
-        const icon = metric === 'RC' ? '⚡' : '👍';
-        const text = `${icon}${rounded}`;
-        chrome.action.setBadgeText({ text });
-        if (isLow) {
-          chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
-        } else {
-          const color = metric === 'RC' ? '#a855f7' : '#10b981';
-          chrome.action.setBadgeBackgroundColor({ color });
+        // Only drive the icon badge if nothing higher-priority (chat/notifications) claimed it
+        if (!badgeSet) {
+          const metric = settings.badgeMetric || 'VP';
+          const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
+          const rounded = Math.round(percent);
+          const isLow = rounded < 20;
+          const icon = metric === 'RC' ? '⚡' : '👍';
+          const text = `${icon}${rounded}`;
+          chrome.action.setBadgeText({ text });
+          if (isLow) {
+            chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
+          } else {
+            const color = metric === 'RC' ? '#a855f7' : '#10b981';
+            chrome.action.setBadgeBackgroundColor({ color });
+          }
+          badgeSet = true;
         }
-        badgeSet = true;
       }
     }
 

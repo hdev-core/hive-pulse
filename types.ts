@@ -117,6 +117,7 @@ export interface AppSettings {
 
   rcUser?: string;
   badgeMetric: 'RC' | 'VP';
+  overlayMetric?: 'RC' | 'VP' | 'both' | 'off'; // on-page floating badge: which metric to show (default RC)
   hiveRpcNode?: string;
   heRpcNode?: string;
   customHiveRpcNodes?: string[];

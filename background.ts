@@ -18,6 +18,9 @@ import { HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from './constants';
 
 declare const chrome: any;
 
+// Firefox clips wide emoji in the toolbar badge — strip them there; Chrome renders them fine.
+const IS_FIREFOX = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+
 const ALARM_NAME = 'checkStatus';
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -216,7 +219,7 @@ const checkStatus = async () => {
          await chrome.storage.local.set({ channelState: currentMap, channels });
 
          if (settings.overrideBadgeWithUnreadMessages && totalUnread > 0) {
-           const text = totalUnread > 9 ? `💬9+` : `💬${totalUnread}`;
+           const text = `${IS_FIREFOX ? '' : '💬'}${totalUnread > 9 ? '9+' : totalUnread}`;
            chrome.action.setBadgeText({ text });
            chrome.action.setBadgeBackgroundColor({ color: '#3b82f6' });
            badgeSet = true;
@@ -256,7 +259,7 @@ const checkStatus = async () => {
             // Of those, only ones we haven't already shown a badge for
             const freshNotifs = unreadNotifs.filter(n => n.id > (lastShownId ?? 0));
             if (freshNotifs.length > 0) {
-              const text = freshNotifs.length > 9 ? '🔔9+' : `🔔${freshNotifs.length}`;
+              const text = `${IS_FIREFOX ? '' : '🔔'}${freshNotifs.length > 9 ? '9+' : freshNotifs.length}`;
               chrome.action.setBadgeText({ text });
               chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
               badgeSet = true;
@@ -299,7 +302,7 @@ const checkStatus = async () => {
           const percent = metric === 'RC' ? data.rc.percentage : data.vp.percentage;
           const rounded = Math.round(percent);
           const isLow = rounded < 20;
-          const icon = metric === 'RC' ? '⚡' : '👍';
+          const icon = IS_FIREFOX ? '' : (metric === 'RC' ? '⚡' : '👍');
           const text = `${icon}${rounded}`;
           chrome.action.setBadgeText({ text });
           if (isLow) {

@@ -145,12 +145,16 @@ const App: React.FC = () => {
   const updateBadge = useCallback((stats: AccountStats | null, unreads: Record<string, number>) => {
     if (typeof chrome === 'undefined' || !chrome.action) return;
 
+    // Firefox clips wide emoji in the toolbar badge — drop them there and rely on
+    // the badge colour + number (Chrome renders emoji fine, so keep them).
+    const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+
     const totalUnread = Object.values(unreads).reduce((sum, count) => sum + count, 0);
 
     // If overrideBadgeWithUnreadMessages is true, prioritize unread messages
     // Otherwise, skip message badge and go straight to stats badge logic
     if (settings.overrideBadgeWithUnreadMessages && totalUnread > 0) {
-      const text = totalUnread > 9 ? `💬9+` : `💬${totalUnread}`;
+      const text = `${isFirefox ? '' : '💬'}${totalUnread > 9 ? '9+' : totalUnread}`;
       chrome.action.setBadgeText({ text });
       chrome.action.setBadgeBackgroundColor({ color: '#3b82f6' }); // Blue for chat
     } else if (stats) {
@@ -158,8 +162,8 @@ const App: React.FC = () => {
       const percent = metric === 'RC' ? stats.rc.percentage : stats.vp.percentage;
       const rounded = Math.round(percent);
       const isLow = rounded < 20;
-      const icon = metric === 'RC' ? '⚡' : '👍';
-      
+      const icon = isFirefox ? '' : (metric === 'RC' ? '⚡' : '👍');
+
       /**
        * Chrome badge width is fixed. Emojis occupy a lot of space.
        * Icon + 3 digits is the maximum reliable length (e.g., 👍100).

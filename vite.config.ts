@@ -3,52 +3,56 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { copyFileSync, cpSync, existsSync } from 'node:fs';
 
-export default defineConfig({
-  plugins: [
-    react(),
-    {
-      name: 'copy-assets',
-      closeBundle() {
-        try {
-          // Copy manifest and main icon
-          copyFileSync('manifest.json', 'dist/manifest.json');
-          copyFileSync('icon.svg', 'dist/icon.svg');
-          
-          // Copy PNG icon if it exists (for header usage)
-          if (existsSync('icon.png')) {
-            copyFileSync('icon.png', 'dist/icon.png');
-          }
+// Build target is selected via `--mode firefox`. Chrome is the default.
+//   npm run build           → dist/         (Chrome, manifest.json)
+//   npm run build:firefox   → dist-firefox/ (Firefox, manifest.firefox.json)
+export default defineConfig(({ mode }) => {
+  const isFirefox   = mode === 'firefox';
+  const outDir      = isFirefox ? 'dist-firefox' : 'dist';
+  const manifestSrc = isFirefox ? 'manifest.firefox.json' : 'manifest.json';
 
-          // Copy Logos folder if it exists
-          if (existsSync('logos')) {
-            cpSync('logos', 'dist/logos', { recursive: true });
-            console.log('✓ Copied logos folder to dist');
-          } else {
-            console.warn('⚠ "logos" folder not found in root. Icons may be missing.');
+  return {
+    plugins: [
+      react(),
+      {
+        name: 'copy-assets',
+        closeBundle() {
+          try {
+            // Copy the target-specific manifest as manifest.json
+            copyFileSync(manifestSrc, `${outDir}/manifest.json`);
+            if (existsSync('icon.svg')) copyFileSync('icon.svg', `${outDir}/icon.svg`);
+            if (existsSync('icon.png')) copyFileSync('icon.png', `${outDir}/icon.png`);
+
+            if (existsSync('logos')) {
+              cpSync('logos', `${outDir}/logos`, { recursive: true });
+              console.log(`✓ Copied logos folder to ${outDir}`);
+            } else {
+              console.warn('⚠ "logos" folder not found in root. Icons may be missing.');
+            }
+
+            console.log(`✓ Copied ${manifestSrc} → ${outDir}/manifest.json`);
+          } catch (e) {
+            console.error('Failed to copy assets:', e);
           }
-          
-          console.log('✓ Copied manifest and icon to dist');
-        } catch (e) {
-          console.error('Failed to copy assets:', e);
         }
       }
-    }
-  ],
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        popup: 'index.html',
-        background: 'background.ts',
-        content: 'content.ts',
-        compose: 'compose.ts',
-      },
-      output: {
-        entryFileNames: 'assets/[name].js',
-        chunkFileNames: 'assets/[name].js',
-        assetFileNames: 'assets/[name].[ext]'
+    ],
+    build: {
+      outDir,
+      emptyOutDir: true,
+      rollupOptions: {
+        input: {
+          popup: 'index.html',
+          background: 'background.ts',
+          content: 'content.ts',
+          compose: 'compose.ts',
+        },
+        output: {
+          entryFileNames: 'assets/[name].js',
+          chunkFileNames: 'assets/[name].js',
+          assetFileNames: 'assets/[name].[ext]'
+        }
       }
-    }
-  },
+    },
+  };
 });

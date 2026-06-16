@@ -751,7 +751,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </section>
 
       <p className="text-center text-[10px] text-slate-400 pb-2">
-        HivePulse v{typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '1.7.1'}
+        HivePulse v{typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '1.8.0'}
       </p>
 
     </div>

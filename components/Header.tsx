@@ -22,13 +22,20 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ username, onLoginClick, onLogoutClick, stats, prices, savedAccounts, activeUsername, onSwitchAccount, onRemoveAccount, onAddAccount }) => {
   const openSidePanel = () => {
+    // Chrome: side panel API
     if (typeof chrome !== 'undefined' && chrome.sidePanel) {
       chrome.windows.getCurrent((window: any) => {
          chrome.sidePanel.open({ windowId: window.id });
       });
-    } else {
-      alert("Side Panel not supported in this browser version.");
+      return;
     }
+    // Firefox: sidebar action
+    const ff = (globalThis as any).browser;
+    if (ff?.sidebarAction) {
+      ff.sidebarAction.toggle();
+      return;
+    }
+    alert("Side panel not supported in this browser version.");
   };
 
   return (

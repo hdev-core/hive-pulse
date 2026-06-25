@@ -7,6 +7,7 @@ import { PortfolioCard } from '../PortfolioCard';
 import { EarningExplainer } from '../EarningExplainer';
 import { OnboardingBanner } from '../OnboardingBanner';
 import { SendForm } from '../SendForm';
+import { StakeForm } from '../StakeForm';
 import { RcBudget } from '../RcBudget';
 import { HiveProofCard } from '../HiveProofCard';
 
@@ -98,7 +99,41 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
       'Posting'
     );
     if (!result.success) throw new Error(result.error || 'Claim failed.');
-    await refreshStats();
+
+    // The API node often lags a few seconds before it reflects the claim, so an
+    // immediate refetch would re-show stale pending rewards (button stays, balance
+    // unchanged). Instead: optimistically clear pending + credit liquid, then
+    // reconcile with the chain once it has actually applied the claim.
+    setTimeout(() => {
+      setStats(prev => (prev && prev.balances) ? {
+        ...prev,
+        balances: {
+          ...prev.balances,
+          hive: prev.balances.hive + pendingHive,
+          hbd: prev.balances.hbd + pendingHbd,
+          pendingHive: 0,
+          pendingHbd: 0,
+          pendingVests: 0,
+        },
+      } : prev);
+    }, 1800);
+
+    // Reconcile with authoritative chain data (HP from claimed VESTS, exact figures).
+    // Retry while the node still reports pending — never commit stale data that
+    // would bring the claim button back.
+    const reconcile = async (attempt = 0) => {
+      const data = await fetchAccountStats(stats.username, settings);
+      if (!data) return;
+      const b = data.balances;
+      const stillPending = !!b && (b.pendingHive > 0.0005 || b.pendingHbd > 0.0005 || b.pendingVests > 0.5);
+      if (stillPending && attempt < 3) {
+        setTimeout(() => reconcile(attempt + 1), 3000);
+        return;
+      }
+      setStats(data);
+      if (onDataFetched) onDataFetched(data);
+    };
+    setTimeout(() => { reconcile(); }, 5000);
   };
 
   // Trigger HBD savings interest credit via a minimal transfer_to_savings.
@@ -194,6 +229,22 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
         <SendForm
           username={stats.username}
           balances={{ hive: stats.balances.hive, hbd: stats.balances.hbd }}
+          settings={settings}
+          onSuccess={refreshStats}
+        />
+      )}
+
+      {/* Power Up / Power Down / Savings — only shown for own account */}
+      {isOwnAccount && stats?.balances && (
+        <StakeForm
+          username={stats.username}
+          balances={{
+            hive: stats.balances.hive,
+            hbd: stats.balances.hbd,
+            hivepower: stats.balances.hivepower,
+            savingsHive: stats.balances.savingsHive,
+            savingsHbd: stats.balances.savingsHbd,
+          }}
           settings={settings}
           onSuccess={refreshStats}
         />

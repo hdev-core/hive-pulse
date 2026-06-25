@@ -665,3 +665,26 @@ export const fetchTrendingCommunities = async (
     return [];
   }
 };
+
+// HP <-> VESTS conversion factor from global dynamic properties.
+// withdraw_vesting (power down) takes VESTS, but users think in HP — convert with this.
+export const fetchHpVestConversion = async (
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<{ vestsPerHive: number; hivePerVests: number } | null> => {
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const data = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'condenser_api.get_dynamic_global_properties', params: [], id: 1 },
+      primary, fallback, autoSwitch
+    );
+    const g = data.result;
+    if (!g) return null;
+    const num = (s: string) => { const m = String(s).match(/[\d.]+/); return m ? parseFloat(m[0]) : 0; };
+    const totalVests = num(g.total_vesting_shares);
+    const totalHive  = num(g.total_vesting_fund_hive);
+    if (totalVests <= 0 || totalHive <= 0) return null;
+    return { vestsPerHive: totalVests / totalHive, hivePerVests: totalHive / totalVests };
+  } catch {
+    return null;
+  }
+};

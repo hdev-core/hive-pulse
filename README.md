@@ -49,6 +49,37 @@ HivePulse (formerly HiveKit) is a browser extension (Chrome & Firefox) that tran
     *   Enable **Developer Mode**
     *   Click **Load unpacked** -> Select the `dist` folder.
 
+## Firefox Development
+
+The Firefox build outputs to `dist-firefox/` (using `manifest.firefox.json`, which adds the sidebar and Gecko settings).
+
+**Run it (one command):**
+```bash
+npm run firefox          # build dist-firefox/, then launch Firefox with the add-on loaded
+```
+
+**Live-reload dev loop:**
+```bash
+npm run firefox:watch    # rebuild on every source edit AND auto-reload the add-on
+```
+Edit any `.ts`/`.tsx` → Vite rebuilds `dist-firefox/` → `web-ext` reloads the extension automatically.
+
+**Run with your real profile (Hive Keychain + existing extensions):**
+```bash
+npm run firefox:real          # launch on your default-release profile (persists changes)
+npm run firefox:watch:real    # same, with live-reload on source edits
+```
+These use `--firefox-profile=default-release --keep-profile-changes`, so your installed extensions (including Hive Keychain) are present and any changes persist.
+
+> ⚠️ **Close your normal Firefox first.** A profile can only be open in one Firefox instance at a time; running this while your daily Firefox is open will fail with a profile-lock error. `web-ext` also temporarily adjusts dev-related prefs in that profile.
+
+**Notes:**
+*   The plain `npm run firefox` / `firefox:watch` commands launch a **clean throwaway profile** (nothing but HivePulse) — safe, but **Hive Keychain is not there**. Use the `:real` variants above when you need Keychain.
+*   To target Developer Edition / Nightly, append `--firefox=firefoxdeveloperedition` (or a binary path) to the script.
+*   Prefer loading manually? Open `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → select `dist-firefox/manifest.json` (requires Firefox 115+).
+
+> For upload-ready store packages (Chrome + Firefox zips), run `package.bat`.
+
 ## Privacy & Security
 
 *   **No Keys Stored:** HivePulse uses Hive Keychain for authentication. Your private keys never touch this application.

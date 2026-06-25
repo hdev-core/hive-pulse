@@ -32,6 +32,28 @@ HivePulse (formerly HiveKit) is a browser extension (Chrome & Firefox) that tran
 *   **Supported Frontends:** PeakD, Ecency, Hive.blog, InLeo, Actifit, Waivio, Liketu, HiveScan.
 *   **Action Modes:** Jump straight to the **Wallet** or **Post Editor** of your favorite frontend.
 
+### 4. The Analyzer (Post SEO & GEO Scoring)
+*   **Real-Time Feedback:** As you write in a Hive post editor (PeakD, Ecency, Hive.blog, InLeo, Actifit), HivePulse injects a live **Post Analyzer** that scores your draft out of 100.
+*   **SEO Tab:** Grades focus-keyword placement, title & meta-description length, heading structure, media/alt text, internal & external links, tags, and readability — each row with an ⓘ explainer.
+*   **AI · GEO Tab:** Scores **Generative Engine Optimization** (how extractable your content is for AI answer engines), and is **content-type aware** so personal/creative posts aren't nagged for stats, FAQs, or definitions.
+*   **Keyword Auto-Detection:** If you don't set a focus keyword, HivePulse infers a likely long-tail keyword from your title and body.
+
+## How the Scores Work
+
+The Post Analyzer's SEO and GEO scores are **entirely custom** — built from scratch in [`compose.ts`](compose.ts). There is **no third-party SEO or readability library** (no Yoast, no npm scoring package); the analyzer script imports nothing and runs fully client-side. Here's an honest breakdown of what's principled versus what's our own heuristic judgment.
+
+**Based on established formulas / industry standards:**
+*   **Readability** uses the real **Flesch Reading Ease** and **Flesch–Kincaid Grade** formulas (public-domain), implemented by hand — including a heuristic **syllable counter** (regex-based vowel-group counting). The syllable estimate is an approximation, not a dictionary lookup.
+*   **The SEO checks** map to widely-accepted best practices: title ~50–60 chars (Google's SERP truncation point), meta description ~120–160 chars, focus keyword in title / first 100 words / a subheading / the URL, keyword density under ~3%, `##` heading hierarchy, image alt text, and internal vs. external links.
+*   **Transition words** are matched against a hardcoded connector list (the same concept Yoast uses).
+
+**Our own custom heuristics (not from any library or validated dataset):**
+*   **All point weights and thresholds** — e.g. Keyword 35 / Title 12 / Meta 10 / Structure 11 / Media 9 / Links 7 / Tags 8 / Readability 8, summing to 100. These were chosen as reasonable; they are not calibrated against ranking data.
+*   **The entire GEO / AI score** — hook detection, "self-contained sentences" (pronoun-start ratio), named-entity proxying (third-person pronoun density), definitional-sentence regex, and the content-type detector. These are sensible proxies we designed, not an established methodology.
+*   **Keyword auto-detection** — extracts adjacent title phrases ranked by body frequency.
+
+**The honest caveat:** this is a transparent, explainable rules engine — every number is visible (which is why each row has an ⓘ explainer) — but it is **heuristic, not machine-learned or benchmarked** against real SERP or AI-citation outcomes. It reliably catches the obvious wins (missing meta, short title, no keyword in headings, thin content) and is genuinely useful for that, but it won't perfectly predict ranking, and the GEO checks especially are English-only and pattern-based. Realistic future upgrades would be swapping the syllable heuristic for a small syllable dictionary and calibrating the weights/thresholds against actual Hive post performance.
+
 ## Installation
 
 1.  **Initialize:**

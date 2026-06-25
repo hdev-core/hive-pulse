@@ -187,7 +187,9 @@ const enrichHiveEngineTokens = (
   const enriched = filtered.map(b => {
     const symbol = (b.symbol || '').toUpperCase().trim();
     const balanceValue = typeof b.balance === 'string' ? parseFloat(b.balance) : b.balance;
-    const priceInHive = pricesInHive[symbol] || 0;
+    // SWAP.HIVE is the market's base currency, so it has no metric against
+    // itself — but it's pegged 1:1 to HIVE, so its price in HIVE is exactly 1.
+    const priceInHive = symbol === 'SWAP.HIVE' ? 1 : (pricesInHive[symbol] || 0);
     const priceUSD = priceInHive * hivePriceUSD;
     const info = tokenInfo[symbol];
     const name = info?.name || symbol;

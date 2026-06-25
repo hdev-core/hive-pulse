@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, RefreshCw, Loader, ExternalLink, Users, MessageSquare, ThumbsUp } from 'lucide-react';
+import { Sparkles, RefreshCw, Loader, ExternalLink, Users, MessageSquare, ThumbsUp } from 'lucide-react';
 import { AppSettings, TrendingPost, TrendingCommunity } from '../../types';
-import { fetchTrendingPosts, fetchTrendingCommunities } from '../../utils/hiveHelpers';
+import { fetchTrendingPosts, fetchTrendingCommunities, fetchFypPosts } from '../../utils/hiveHelpers';
 
 interface TrendingViewProps {
   settings: AppSettings;
@@ -9,7 +9,7 @@ interface TrendingViewProps {
 }
 
 type Tab  = 'posts' | 'communities';
-type Sort = 'trending' | 'hot' | 'created';
+type Sort = 'foryou' | 'trending' | 'hot' | 'created';
 
 const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 60 minutes
 
@@ -28,18 +28,31 @@ const payout = (post: TrendingPost) => {
 };
 
 const SORT_LABELS: { key: Sort; label: string }[] = [
+  { key: 'foryou',   label: '✨ For You'  },
   { key: 'trending', label: '🔥 Trending' },
   { key: 'hot',      label: '⚡ Hot'      },
   { key: 'created',  label: '🆕 New'      },
 ];
 
+// A short, human reason explaining why a post was surfaced in the For You feed.
+const fypReason = (post: TrendingPost): string | null => {
+  const f = post.fyp;
+  if (!f) return null;
+  if (f.boostSource) return `✨ ${f.boostSource}`;
+  if (f.scoreRelevance != null) return `${Math.round(f.scoreRelevance * 100)}% match`;
+  return '✨ For You';
+};
+
 export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFrontends }) => {
   const [tab, setTab]                     = useState<Tab>('posts');
-  const [sort, setSort]                   = useState<Sort>('trending');
+  const [sort, setSort]                   = useState<Sort>('foryou');
   const [posts, setPosts]                 = useState<TrendingPost[]>([]);
   const [communities, setCommunities]     = useState<TrendingCommunity[]>([]);
   const [loading, setLoading]             = useState(false);
-  const [lastFetched, setLastFetched]     = useState<Record<Sort, number>>({ trending: 0, hot: 0, created: 0 });
+  const [lastFetched, setLastFetched]     = useState<Record<Sort, number>>({ foryou: 0, trending: 0, hot: 0, created: 0 });
+
+  // When logged in we get a personalized For You feed; otherwise the public global feed.
+  const fypUser = settings.ecencyUsername || settings.rcUser || '';
 
   const preferredFrontend = allFrontends.find(f => f.id === settings.preferredFrontendId);
   const baseDomain = preferredFrontend?.domain ?? 'peakd.com';
@@ -52,8 +65,11 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
     if (!force && ts && Date.now() - ts < REFRESH_INTERVAL_MS) return;
     setLoading(true);
     try {
+      const postsPromise = sort === 'foryou'
+        ? fetchFypPosts(fypUser || undefined, 20)
+        : fetchTrendingPosts(20, '', settings, sort);
       const [p, c] = await Promise.all([
-        fetchTrendingPosts(20, '', settings, sort),
+        postsPromise,
         fetchTrendingCommunities(30, settings),
       ]);
       setPosts(p);
@@ -62,7 +78,7 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
     } finally {
       setLoading(false);
     }
-  }, [lastFetched, sort, settings]);
+  }, [lastFetched, sort, settings, fypUser]);
 
   useEffect(() => { load(); }, [sort]);
 
@@ -80,9 +96,9 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="bg-orange-100 rounded-lg p-1.5">
-            <TrendingUp size={14} className="text-orange-600" />
+            <Sparkles size={14} className="text-orange-600" />
           </div>
-          <h2 className="text-sm font-bold text-slate-800">Trending on Hive</h2>
+          <h2 className="text-sm font-bold text-slate-800">Hive Feed</h2>
         </div>
         <button
           onClick={() => load(true)}
@@ -128,6 +144,15 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
         </div>
       )}
 
+      {/* For You context — personalized vs global */}
+      {tab === 'posts' && sort === 'foryou' && (
+        <p className="text-[10px] text-violet-500 bg-violet-50 border border-violet-100 rounded-lg px-2.5 py-1.5 -mt-1">
+          {fypUser
+            ? <>✨ Personalized for <span className="font-semibold">@{fypUser}</span> — ranked by your interests &amp; communities</>
+            : <>✨ Global picks — <span className="font-semibold">log in</span> to personalize your feed</>}
+        </p>
+      )}
+
       {/* Content */}
       {loading && posts.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 py-12 text-slate-400">
@@ -138,6 +163,7 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
         <div className="flex flex-col gap-2">
           {posts.map((post, i) => {
             const reward = payout(post);
+            const reason = sort === 'foryou' ? fypReason(post) : null;
             return (
               <button
                 key={`${post.author}/${post.permlink}`}
@@ -173,6 +199,11 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
                     {post.tags[0] && (
                       <span className="text-[10px] text-slate-300 bg-slate-50 px-1.5 py-0.5 rounded-full">
                         #{post.tags[0]}
+                      </span>
+                    )}
+                    {reason && (
+                      <span className="text-[10px] font-semibold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full">
+                        {reason}
                       </span>
                     )}
                   </div>

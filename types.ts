@@ -27,6 +27,18 @@ export enum AppView {
   SETTINGS = 'SETTINGS'
 }
 
+// Ranking metadata attached to posts coming from the HAF FYP service.
+export interface FypScore {
+  rank: number;
+  finalScore: number;
+  boostSource: string | null;        // e.g. "subscribed" — why the post was surfaced
+  scoreRecency: number | null;
+  scoreRelevance: number | null;     // null on the global (unpersonalized) feed
+  scoreEngagement: number | null;
+  scoreCredibility: number | null;
+  communityBoostApplied: boolean;
+}
+
 export interface TrendingPost {
   author: string;
   permlink: string;
@@ -37,6 +49,7 @@ export interface TrendingPost {
   comments: number;
   created: string;
   tags: string[];
+  fyp?: FypScore;                     // present only for "For You" posts
 }
 
 export interface TrendingCommunity {

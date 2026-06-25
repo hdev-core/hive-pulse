@@ -367,6 +367,10 @@ export const HIVE_RPC_NODES = [
   'https://hive.atexoras.com:2096'
 ];
 
+// HAF "For You Page" (FYP) ranking service — returns posts in bridge.get_ranked_posts
+// shape plus a nested `fyp` scoring object, so it drops in alongside trending/hot/new.
+export const FYP_API_BASE = 'https://testapi.hivescan.info/haf-fyp-api';
+
 export const HIVE_ENGINE_RPC_NODES = [
   'https://api.hive-engine.com/rpc',
   'https://v6-he.atexoras.com:2083',

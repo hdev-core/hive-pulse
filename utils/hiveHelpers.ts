@@ -1,5 +1,5 @@
 import { AccountStats, HiveNotification, HiveNotificationType, TransferRecord, TrendingPost, TrendingCommunity } from '../types';
-import { HIVE_RPC_NODES } from '../constants';
+import { HIVE_RPC_NODES, FYP_API_BASE } from '../constants';
 
 const DEFAULT_HIVE_RPC_NODE = HIVE_RPC_NODES[0];
 
@@ -574,6 +574,64 @@ export const fetchTrendingPosts = async (
     }));
   } catch (e) {
     console.error('Failed to fetch trending posts:', e);
+    return [];
+  }
+};
+
+// ── For You (FYP) ───────────────────────────────────────────────────────────
+// The HAF FYP service returns posts in bridge.get_ranked_posts shape (so the
+// mapping mirrors fetchTrendingPosts) with two differences: json_metadata is
+// already an object, and each post carries a nested `fyp` scoring object.
+
+const parsePayoutNum = (v: any): number => parseFloat(String(v ?? '').split(' ')[0] || '0') || 0;
+
+const mapFypPost = (p: any): TrendingPost => {
+  const meta = typeof p.json_metadata === 'string'
+    ? (() => { try { return JSON.parse(p.json_metadata); } catch { return {}; } })()
+    : (p.json_metadata || {});
+  const f = p.fyp || {};
+  return {
+    author:        p.author,
+    permlink:      p.permlink,
+    title:         p.title || '(no title)',
+    pendingPayout: parsePayoutNum(p.pending_payout_value),
+    totalPayout:   parsePayoutNum(p.author_payout_value) + parsePayoutNum(p.curator_payout_value),
+    votes:         p.stats?.total_votes ?? p.net_votes ?? (p.active_votes?.length ?? 0),
+    comments:      p.children ?? 0,
+    created:       p.created || '',
+    tags:          Array.isArray(meta.tags) ? meta.tags : [],
+    fyp: {
+      rank:                  f.rank ?? 0,
+      finalScore:            f.final_score ?? 0,
+      boostSource:           f.boost_source ?? null,
+      scoreRecency:          f.score_recency ?? null,
+      scoreRelevance:        f.score_relevance ?? null,
+      scoreEngagement:       f.score_engagement ?? null,
+      scoreCredibility:      f.score_credibility ?? null,
+      communityBoostApplied: !!f.community_boost_applied,
+    },
+  };
+};
+
+// Personalized "For You" feed when a username is provided (the ranker falls back
+// to the global feed until it has built a profile for that user); otherwise the
+// public global feed. Both return the same post shape.
+export const fetchFypPosts = async (
+  username?: string,
+  limit = 20,
+  page = 1
+): Promise<TrendingPost[]> => {
+  try {
+    const qs = `page=${page}&page-size=${limit}&truncate_body=1`;
+    const url = username
+      ? `${FYP_API_BASE}/v1/fyp/feed/${encodeURIComponent(username)}?${qs}`
+      : `${FYP_API_BASE}/v1/fyp/global?${qs}`;
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!response.ok) throw new Error(`FYP API ${response.status}`);
+    const posts = await response.json();
+    return Array.isArray(posts) ? posts.map(mapFypPost) : [];
+  } catch (e) {
+    console.error('Failed to fetch For You feed:', e);
     return [];
   }
 };

@@ -2,7 +2,7 @@
 import React from 'react';
 import { AppView } from '../types';
 import {
-  ArrowLeftRight, MessageCircle, Share2, Bell, Wallet, TrendingUp, Settings
+  ArrowLeftRight, MessageCircle, Share2, Bell, Wallet, Sparkles, Settings
 } from 'lucide-react';
 
 interface BottomNavProps {
@@ -17,7 +17,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, setCurrentVie
     { id: AppView.CHAT,          icon: MessageCircle,  label: 'Chat' },
     { id: AppView.NOTIFICATIONS, icon: Bell,           label: 'Pulse' },
     { id: AppView.WALLET,        icon: Wallet,         label: 'Wallet' },
-    { id: AppView.TRENDING,      icon: TrendingUp,     label: 'Trending' },
+    { id: AppView.TRENDING,      icon: Sparkles,       label: 'Feed' },
     { id: AppView.SHARE,         icon: Share2,         label: 'Share' },
     { id: AppView.SETTINGS,      icon: Settings,       label: 'Settings' },
   ];

@@ -13,6 +13,7 @@ import {
   toggleReaction,
   fetchUnreads,
   setMmPatCookie,
+  exchangeHsCode,
   UnauthorizedError
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
@@ -635,8 +636,14 @@ const App: React.FC = () => {
       const response = wrapperResp.result;
 
       if (response.success) {
-        const token = createEcencyToken(payload, response.result);
-        const bootstrap = await bootstrapEcencyChat(targetUsername, token);
+        // The Keychain-signed payload is a HiveSigner "code". Chat bootstrap now
+        // requires a real HiveSigner access token, so exchange the code first.
+        const code = createEcencyToken(payload, response.result);
+        const hsTokens = await exchangeHsCode(code);
+        const accessToken = hsTokens?.access_token || code; // fall back to code if exchange is down
+        const hsRefreshToken = hsTokens?.refresh_token;
+
+        const bootstrap = await bootstrapEcencyChat(targetUsername, accessToken);
         const chatToken = bootstrap?.token || '';
 
         // Preserve any previously stored chat credentials — mm_pat tokens are valid for 30 days.
@@ -646,23 +653,24 @@ const App: React.FC = () => {
         const prevIsBearer = prevToken && prevToken !== 'cookie-session' && prevToken !== '';
         const effectiveChatToken = chatToken || (prevIsBearer ? prevToken : '') || '';
         const effectiveMmPat = bootstrap?.mmPat || existingAccount?.mmPat;
+        const effectiveRefreshToken = hsRefreshToken || bootstrap?.refreshToken || existingAccount?.ecencyRefreshToken || '';
 
         const newAccount: SavedAccount = {
           username: targetUsername,
-          ecencyAccessToken: token,
+          ecencyAccessToken: accessToken,
           ecencyChatToken: effectiveChatToken,
           ecencyUserId: bootstrap?.userId || existingAccount?.ecencyUserId || '',
-          ecencyRefreshToken: bootstrap?.refreshToken || existingAccount?.ecencyRefreshToken || '',
+          ecencyRefreshToken: effectiveRefreshToken,
           mmPat: effectiveMmPat,
         };
         const updatedAccounts = [...savedAccounts.filter(a => a.username !== targetUsername), newAccount];
         const updatedSettings: AppSettings = {
           ...settings,
           ecencyUsername: targetUsername,
-          ecencyAccessToken: token,
+          ecencyAccessToken: accessToken,
           ecencyChatToken: effectiveChatToken,
           ecencyUserId: bootstrap?.userId || existingAccount?.ecencyUserId,
-          ecencyRefreshToken: bootstrap?.refreshToken || existingAccount?.ecencyRefreshToken,
+          ecencyRefreshToken: effectiveRefreshToken,
           rcUser: targetUsername,
         };
         setSettings(updatedSettings);
@@ -853,7 +861,7 @@ const App: React.FC = () => {
         />
       )}
       
-      <main className="flex-1 overflow-hidden relative flex flex-col">
+      <main className="flex-1 overflow-hidden relative flex flex-col isolate">
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
             {currentView === AppView.SWITCHER && (
             <SwitcherView 

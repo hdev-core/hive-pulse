@@ -340,7 +340,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     </div>
                   )}
 
-                  <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%]`}>
+                  <div className={`flex flex-col min-w-0 ${isMe ? 'items-end' : 'items-start'} max-w-[75%]`}>
                     
                     {!isMe && (
                       <span className="text-[10px] text-slate-500 mb-0.5 ml-1 font-medium h-3.5 block">
@@ -411,9 +411,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </div>
 
                           <div className={`
-                            px-3 py-2 rounded-2xl text-sm break-words shadow-sm relative
-                            ${isMe 
-                              ? 'bg-blue-600 text-white rounded-br-none' 
+                            px-3 py-2 rounded-2xl text-sm shadow-sm relative max-w-full
+                            whitespace-pre-wrap break-words [overflow-wrap:anywhere]
+                            ${isMe
+                              ? 'bg-blue-600 text-white rounded-br-none'
                               : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
                             }
                           `}>

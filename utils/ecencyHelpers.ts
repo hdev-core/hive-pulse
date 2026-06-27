@@ -12,6 +12,38 @@ export class UnauthorizedError extends Error {
 }
 
 const ECENCY_CHAT_BASE = 'https://ecency.com/api/mattermost';
+// Ecency's auth proxy. It exchanges a Keychain-signed HiveSigner "code" (or a
+// refresh_token) for a real HiveSigner access_token — which chat bootstrap now
+// requires (it validates the token against hivesigner.com/api/me).
+const ECENCY_HS_TOKEN_URL = 'https://ecency.com/auth-api/hs-token-refresh';
+
+export interface HsTokenResult {
+  username: string;
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+}
+
+// Exchange a signed login code OR a refresh_token for fresh HiveSigner tokens.
+// Both are passed in the `code` field — the same endpoint handles initial login
+// and renewal (mirrors Ecency's own hsTokenRenew).
+export const exchangeHsCode = async (code: string): Promise<HsTokenResult | null> => {
+  try {
+    const response = await fetch(ECENCY_HS_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({ code }),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data && data.access_token) return data as HsTokenResult;
+    return null;
+  } catch (e) {
+    console.error('[EcencyChat] HS token exchange failed:', e);
+    return null;
+  }
+};
 
 export interface UnreadChannel {
   channelId: string;
@@ -122,20 +154,14 @@ export const bootstrapEcencyChat = async (username: string, accessToken: string)
   }
 };
 
+// Renew an expired HiveSigner access token using the stored refresh_token.
+// (The legacy /api/mattermost/refresh endpoint was removed by Ecency; renewal
+// now goes through the same HS token exchange.)
 export const refreshEcencySession = async (refreshToken: string): Promise<{ token: string, refreshToken?: string } | null> => {
-  try {
-    const response = await fetch(`${ECENCY_CHAT_BASE}/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: refreshToken })
-    });
-    if (response.ok) {
-      const data = await response.json();
-      if (data && (data.token || data.access_token)) {
-        return { token: data.token || data.access_token, refreshToken: data.refresh_token || data.refreshToken || refreshToken };
-      }
-    }
-  } catch (e) {}
+  const result = await exchangeHsCode(refreshToken);
+  if (result) {
+    return { token: result.access_token, refreshToken: result.refresh_token || refreshToken };
+  }
   return null;
 };
 

@@ -206,6 +206,7 @@ interface PortfolioCardProps {
   onClaimRewards?: () => Promise<void>;
   onClaimInterest?: () => Promise<void>;
   onAction?: (req: PortfolioActionRequest) => void;
+  refreshKey?: number;
 }
 
 interface AssetRow {
@@ -228,6 +229,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   onClaimRewards,
   onClaimInterest,
   onAction,
+  refreshKey,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [hiveEngineTokens, setHiveEngineTokens] = useState<HiveEngineToken[]>([]);
@@ -268,6 +270,17 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
         .finally(() => setLoadingHE(false));
     }
   }, [isExpanded, username, hivePrice]);
+
+  // Re-pull Hive-Engine tokens after an action (refreshKey bumps), so staked
+  // amounts / balances reflect the new on-chain state.
+  useEffect(() => {
+    if (!refreshKey || !isExpanded || !username || hivePrice <= 0) return;
+    setLoadingHE(true);
+    getHiveEnginePortfolioValue(username, hivePrice, heRpcNode)
+      .then(result => { setHiveEngineTokens(result.tokens); setHiveEngineTotal(result.totalUSD); })
+      .catch(() => {})
+      .finally(() => setLoadingHE(false));
+  }, [refreshKey]);
 
   // Fetch live HBD interest rate from chain
   useEffect(() => {
@@ -315,17 +328,18 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
       const q = heFilter.trim().toLowerCase();
       list = list.filter(t => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q));
     }
+    const holdings = (t: HiveEngineToken) => t.balance + t.stake;
     const sorted = [...list];
     switch (heSortMode) {
       case 'name':
         sorted.sort((a, b) => a.symbol.localeCompare(b.symbol));
         break;
       case 'balance':
-        sorted.sort((a, b) => b.balance - a.balance);
+        sorted.sort((a, b) => holdings(b) - holdings(a));
         break;
       case 'value':
       default:
-        sorted.sort((a, b) => (b.balance * b.priceUSD) - (a.balance * a.priceUSD));
+        sorted.sort((a, b) => (holdings(b) * b.priceUSD) - (holdings(a) * a.priceUSD));
         break;
     }
     return sorted;
@@ -780,15 +794,19 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                             )}
                             <div>
                               <p className="text-sm font-medium text-slate-800">{token.name}</p>
-                              <p className="text-xs text-slate-600">{token.balance.toFixed(2)} {token.symbol}</p>
+                              <p className="text-xs text-slate-600">
+                                {token.balance.toFixed(2)} {token.symbol}
+                                {token.stake > 0 && <span className="text-purple-500 font-medium"> + {token.stake.toFixed(2)} staked</span>}
+                              </p>
                             </div>
                           </div>
-                          <span className="text-sm font-semibold text-slate-900">{formatUSD(token.balance * token.priceUSD)}</span>
+                          <span className="text-sm font-semibold text-slate-900">{formatUSD((token.balance + token.stake) * token.priceUSD)}</span>
                         </div>
                         {onAction && (
                           <div className="flex gap-1.5 mt-2 pt-2 border-t border-purple-200/70">
-                            {actionPill('Send',  { target: 'he', heTab: 'send',  heSymbol: token.symbol }, `he-send-${token.symbol}`)}
-                            {actionPill('Stake', { target: 'he', heTab: 'stake', heSymbol: token.symbol }, `he-stk-${token.symbol}`)}
+                            {actionPill('Send', { target: 'he', heTab: 'send', heSymbol: token.symbol }, `he-send-${token.symbol}`)}
+                            {token.stakingEnabled && actionPill('Stake', { target: 'he', heTab: 'stake', heSymbol: token.symbol }, `he-stk-${token.symbol}`)}
+                            {token.stake > 0 && actionPill('Unstake', { target: 'he', heTab: 'unstake', heSymbol: token.symbol }, `he-unstk-${token.symbol}`)}
                           </div>
                         )}
                       </div>

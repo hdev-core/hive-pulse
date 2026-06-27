@@ -636,6 +636,65 @@ export const fetchFypPosts = async (
   }
 };
 
+// ── Power-down status ───────────────────────────────────────────────────────
+// HP power-down lives on the account object: vesting_withdraw_rate (VESTS/week),
+// to_withdraw / withdrawn (µVESTS), and next_vesting_withdrawal (next payout).
+
+export interface PowerDownStatus {
+  active: boolean;
+  weeklyRateHp: number;
+  remainingHp: number;
+  totalHp: number;
+  nextDate: string | null;
+  weeksLeft: number;
+}
+
+const INACTIVE_POWER_DOWN: PowerDownStatus = {
+  active: false, weeklyRateHp: 0, remainingHp: 0, totalHp: 0, nextDate: null, weeksLeft: 0,
+};
+
+export const fetchPowerDownStatus = async (
+  username: string,
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<PowerDownStatus> => {
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const [acctData, conv] = await Promise.all([
+      rpcFetchWithFallback(
+        { jsonrpc: '2.0', method: 'condenser_api.get_accounts', params: [[username]], id: 1 },
+        primary, fallback, autoSwitch
+      ),
+      fetchHpVestConversion(settings),
+    ]);
+    const a = acctData.result?.[0];
+    if (!a || !conv) return INACTIVE_POWER_DOWN;
+
+    const num = (s: any) => { const m = String(s).match(/[\d.]+/); return m ? parseFloat(m[0]) : 0; };
+    const rateVests = num(a.vesting_withdraw_rate);
+    const nextMs = new Date(a.next_vesting_withdrawal + 'Z').getTime();
+    const active = rateVests > 0 && nextMs > Date.now();
+    if (!active) return INACTIVE_POWER_DOWN;
+
+    // to_withdraw / withdrawn are integers in µVESTS (VESTS × 1e6).
+    const remainingVests = Math.max(0, (Number(a.to_withdraw) - Number(a.withdrawn)) / 1e6);
+    const totalVests = Number(a.to_withdraw) / 1e6;
+    const hp = (v: number) => v * conv.hivePerVests;
+    const weeklyRateHp = hp(rateVests);
+
+    return {
+      active: true,
+      weeklyRateHp,
+      remainingHp: hp(remainingVests),
+      totalHp: hp(totalVests),
+      nextDate: a.next_vesting_withdrawal,
+      weeksLeft: weeklyRateHp > 0 ? Math.ceil(hp(remainingVests) / weeklyRateHp) : 0,
+    };
+  } catch (e) {
+    console.error('Failed to fetch power-down status:', e);
+    return INACTIVE_POWER_DOWN;
+  }
+};
+
 // ── Balance history (HAF Balance Tracker) ───────────────────────────────────
 // Monthly aggregated balances for a coin. Raw values are integers in the coin's
 // smallest unit (HIVE/HBD = 3 decimals, VESTS = 6), so we scale to whole tokens.

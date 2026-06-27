@@ -10,6 +10,7 @@ import { SendForm } from '../SendForm';
 import { StakeForm } from '../StakeForm';
 import { HiveEngineActions } from '../HiveEngineActions';
 import { PortfolioHistoryChart } from '../PortfolioHistoryChart';
+import { UnstakingStatus } from '../UnstakingStatus';
 import { RcBudget } from '../RcBudget';
 import { HiveProofCard } from '../HiveProofCard';
 
@@ -94,6 +95,14 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
       if (onDataFetched) onDataFetched(data);
     }
   }, [stats, settings]);
+
+  // Bumped after any signed action so the HE token list, balance breakdown, and
+  // unstaking panel all refetch (HE/chain state lags a few seconds, so re-pull).
+  const [refreshKey, setRefreshKey] = useState(0);
+  const handleActionSuccess = useCallback(() => {
+    refreshStats();
+    setTimeout(() => setRefreshKey(k => k + 1), 3500);
+  }, [refreshStats]);
 
   // Only show claim button when viewing your own account
   const isOwnAccount = !!settings.ecencyUsername && stats?.username === settings.ecencyUsername;
@@ -224,6 +233,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
             onClaimRewards={isOwnAccount ? handleClaimRewards : undefined}
             onClaimInterest={isOwnAccount ? handleClaimInterest : undefined}
             onAction={isOwnAccount ? handlePortfolioAction : undefined}
+            refreshKey={refreshKey}
           />
         )}
 
@@ -245,6 +255,11 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
         <HiveProofCard stats={stats} prices={prices} settings={settings} />
       )}
 
+      {/* Anything currently powering down / unstaking — own account only (cancel needs signing) */}
+      {isOwnAccount && stats?.username && (
+        <UnstakingStatus username={stats.username} settings={settings} onSuccess={handleActionSuccess} refreshKey={refreshKey} />
+      )}
+
       {/* Send / Receive / History — only shown for own account */}
       {isOwnAccount && stats?.balances && (
         <div ref={sendRef} className="scroll-mt-2">
@@ -252,7 +267,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
             username={stats.username}
             balances={{ hive: stats.balances.hive, hbd: stats.balances.hbd }}
             settings={settings}
-            onSuccess={refreshStats}
+            onSuccess={handleActionSuccess}
             focusSignal={actionFocus?.target === 'send' ? { currency: actionFocus.sendCurrency, nonce: actionFocus.nonce } : undefined}
           />
         </div>
@@ -271,7 +286,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
               savingsHbd: stats.balances.savingsHbd,
             }}
             settings={settings}
-            onSuccess={refreshStats}
+            onSuccess={handleActionSuccess}
             focusSignal={actionFocus?.target === 'stake' ? { tab: actionFocus.stakeTab, nonce: actionFocus.nonce } : undefined}
           />
         </div>
@@ -283,7 +298,8 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
           <HiveEngineActions
             username={stats.username}
             settings={settings}
-            onSuccess={refreshStats}
+            onSuccess={handleActionSuccess}
+            refreshKey={refreshKey}
             focusSignal={actionFocus?.target === 'he' ? { tab: actionFocus.heTab, symbol: actionFocus.heSymbol, nonce: actionFocus.nonce } : undefined}
           />
         </div>

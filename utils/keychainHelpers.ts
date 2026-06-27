@@ -46,10 +46,41 @@ async function executeInTab<TArgs extends any[]>(
   }
 }
 
-// Mirrors the login flow exactly:
-// 1. Use active tab if it's not a restricted URL.
-// 2. Otherwise open ecency.com in a background tab, wait for it to fully load,
-//    inject, then close the tab.
+// A host-permission failure means we can't inject into the active tab — e.g. in
+// side-panel mode (no activeTab grant) when the tab's host isn't in
+// host_permissions (hivescan.info, arbitrary sites). We recover via ecency.com.
+function isHostPermissionError(msg?: string): boolean {
+  return !!msg && /cannot access|host permission|must request permission|access this host|access the respective host|missing host/i.test(msg);
+}
+
+// Open ecency.com (a host we always hold permission for) in a background tab,
+// wait for load, inject, then close it.
+function runInEcencyTab<TArgs extends any[]>(
+  func: (...args: TArgs) => Promise<KeychainResult>,
+  args: TArgs
+): Promise<KeychainResult> {
+  return new Promise(resolve => {
+    chrome.tabs.create({ url: 'https://ecency.com', active: false }, (tab: any) => {
+      if (!tab?.id) {
+        resolve({ success: false, error: 'Could not open background tab for Keychain.' });
+        return;
+      }
+      const tabId = tab.id;
+      const onUpdated = (updatedTabId: number, changeInfo: any) => {
+        if (updatedTabId === tabId && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(onUpdated);
+          executeInTab(tabId, func, args, true).then(resolve);
+        }
+      };
+      chrome.tabs.onUpdated.addListener(onUpdated);
+    });
+  });
+}
+
+// 1. Use the active tab if it's not a restricted URL.
+// 2. If that injection fails for lack of host permission (common in side-panel
+//    mode on hosts outside host_permissions), fall back to an ecency.com tab.
+// 3. Restricted active tab → go straight to the ecency.com fallback.
 function runWithKeychainTab<TArgs extends any[]>(
   func: (...args: TArgs) => Promise<KeychainResult>,
   args: TArgs
@@ -58,22 +89,15 @@ function runWithKeychainTab<TArgs extends any[]>(
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
       const activeTab = tabs?.[0];
       if (activeTab?.id && !isRestrictedUrl(activeTab.url || '')) {
-        executeInTab(activeTab.id, func, args).then(resolve);
-      } else {
-        chrome.tabs.create({ url: 'https://ecency.com', active: false }, (tab: any) => {
-          if (!tab?.id) {
-            resolve({ success: false, error: 'Could not open background tab for Keychain.' });
-            return;
+        executeInTab(activeTab.id, func, args).then(r => {
+          if (!r.success && isHostPermissionError(r.error)) {
+            runInEcencyTab(func, args).then(resolve);
+          } else {
+            resolve(r);
           }
-          const tabId = tab.id;
-          const onUpdated = (updatedTabId: number, changeInfo: any) => {
-            if (updatedTabId === tabId && changeInfo.status === 'complete') {
-              chrome.tabs.onUpdated.removeListener(onUpdated);
-              executeInTab(tabId, func, args, true).then(resolve);
-            }
-          };
-          chrome.tabs.onUpdated.addListener(onUpdated);
         });
+      } else {
+        runInEcencyTab(func, args).then(resolve);
       }
     });
   });

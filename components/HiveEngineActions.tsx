@@ -15,6 +15,7 @@ interface HiveEngineActionsProps {
   settings: AppSettings;
   onSuccess?: () => void;
   focusSignal?: { tab?: Tab; symbol?: string; nonce: number };
+  refreshKey?: number;
 }
 
 const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
@@ -23,7 +24,7 @@ const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
   { key: 'unstake', label: 'Unstake', icon: <ArrowDownCircle size={13} /> },
 ];
 
-export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, settings, onSuccess, focusSignal }) => {
+export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, settings, onSuccess, focusSignal, refreshKey }) => {
   const [holdings, setHoldings] = useState<HiveEngineHolding[]>([]);
   const [loading, setLoading]   = useState(true);
   const [symbol, setSymbol]     = useState('');
@@ -47,6 +48,9 @@ export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, 
   }, [username, settings.heRpcNode]);
 
   useEffect(() => { loadHoldings(); }, [loadHoldings]);
+
+  // Re-pull holdings after a signed action elsewhere in the wallet.
+  useEffect(() => { if (refreshKey) loadHoldings(); }, [refreshKey]);
 
   // Debounced recipient validation (send tab only)
   useEffect(() => {
@@ -82,6 +86,15 @@ export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, 
       setPendingSymbol(null);
     }
   }, [pendingSymbol, holdings]);
+
+  // If the selected token doesn't support the current tab (e.g. picked a
+  // non-stakeable token while on Stake), fall back to Send.
+  useEffect(() => {
+    const sel = holdings.find(h => h.symbol === symbol);
+    if (!sel) return;
+    if (tab === 'stake' && !sel.stakingEnabled) setTab('send');
+    if (tab === 'unstake' && !(sel.stake > 0)) setTab('send');
+  }, [symbol, holdings]);
 
   const submit = async () => {
     if (!selected) return;
@@ -135,6 +148,13 @@ export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, 
   const submitDisabled = busy || !selected || isNaN(parsed) || parsed <= 0 ||
     (tab === 'send' && (!recipient.trim() || recipientValid === false));
 
+  // Only show actions the selected token actually supports.
+  const visibleTabs = TABS.filter(t =>
+    t.key === 'send' ||
+    (t.key === 'stake' && !!selected?.stakingEnabled) ||
+    (t.key === 'unstake' && (selected?.stake ?? 0) > 0)
+  );
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Header */}
@@ -145,7 +165,7 @@ export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, 
 
       {/* Tabs */}
       <div className="flex border-b border-slate-200">
-        {TABS.map(t => (
+        {visibleTabs.map(t => (
           <button key={t.key} onClick={() => switchTab(t.key)}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
               tab === t.key ? 'text-purple-600 border-b-2 border-purple-500 bg-purple-50/50' : 'text-slate-500 hover:text-slate-700'

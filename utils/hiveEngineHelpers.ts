@@ -8,7 +8,9 @@
 export interface HiveEngineToken {
   symbol: string;
   name: string;
-  balance: number;
+  balance: number;          // liquid
+  stake: number;            // staked (still owned — counts toward holdings & value)
+  stakingEnabled: boolean;  // whether this token supports stake/unstake
   priceUSD: number;
   iconUrl?: string;
 }
@@ -63,10 +65,14 @@ export const fetchHiveEngineBalances = async (username: string, heRpcNode?: stri
   }
 };
 
+interface HiveEngineTokenInfo { name: string; logo: string; stakingEnabled: boolean }
+
 /**
- * Fetches token metadata (name, logo) from Hive-Engine for specific symbols.
+ * Fetches token metadata (name, logo, whether staking is enabled) from
+ * Hive-Engine for specific symbols. stakingEnabled gates the stake/unstake
+ * actions — many tokens (SWAP.HIVE, DEC, SWAP.HBD, …) don't support staking.
  */
-const fetchHiveEngineTokenInfo = async (symbols: string[], heRpcNode?: string): Promise<Record<string, { name: string; logo: string }>> => {
+const fetchHiveEngineTokenInfo = async (symbols: string[], heRpcNode?: string): Promise<Record<string, HiveEngineTokenInfo>> => {
   if (symbols.length === 0) return {};
 
   try {
@@ -90,7 +96,7 @@ const fetchHiveEngineTokenInfo = async (symbols: string[], heRpcNode?: string): 
     const data = await response.json();
     if (!data.result || !Array.isArray(data.result)) return {};
 
-    const info: Record<string, { name: string; logo: string }> = {};
+    const info: Record<string, HiveEngineTokenInfo> = {};
     for (const token of data.result) {
       let logo = '';
       if (token.metadata && typeof token.metadata === 'string') {
@@ -101,9 +107,10 @@ const fetchHiveEngineTokenInfo = async (symbols: string[], heRpcNode?: string): 
       } else if (token.metadata?.icon) {
         logo = token.metadata.icon;
       }
-      info[token.symbol] = {
+      info[(token.symbol || '').toUpperCase().trim()] = {
         name: token.name || token.symbol,
-        logo
+        logo,
+        stakingEnabled: !!token.stakingEnabled,
       };
     }
     return info;
@@ -156,11 +163,14 @@ const fetchHiveEngineMarketPrices = async (symbols: string[], heRpcNode?: string
 };
 
 /**
- * Token precision (decimal places) per symbol, from the tokens table.
- * Balance strings don't reliably carry full precision, so transfer/stake
- * quantities must be formatted against this authoritative value.
+ * Per-symbol token metadata from the tokens table: precision (balance strings
+ * don't reliably carry it, so quantities are formatted against this) and
+ * stakingEnabled (gates the stake/unstake actions).
  */
-const fetchHiveEngineTokenPrecisions = async (symbols: string[], heRpcNode?: string): Promise<Record<string, number>> => {
+const fetchHiveEngineTokenMeta = async (
+  symbols: string[],
+  heRpcNode?: string
+): Promise<Record<string, { precision: number; stakingEnabled: boolean }>> => {
   if (symbols.length === 0) return {};
   try {
     const nodeUrl = getHeNode(heRpcNode);
@@ -174,10 +184,13 @@ const fetchHiveEngineTokenPrecisions = async (symbols: string[], heRpcNode?: str
       }),
     });
     const data = await response.json();
-    const out: Record<string, number> = {};
+    const out: Record<string, { precision: number; stakingEnabled: boolean }> = {};
     if (Array.isArray(data.result)) {
       for (const t of data.result) {
-        out[(t.symbol || '').toUpperCase().trim()] = typeof t.precision === 'number' ? t.precision : 3;
+        out[(t.symbol || '').toUpperCase().trim()] = {
+          precision: typeof t.precision === 'number' ? t.precision : 3,
+          stakingEnabled: !!t.stakingEnabled,
+        };
       }
     }
     return out;
@@ -188,14 +201,16 @@ const fetchHiveEngineTokenPrecisions = async (symbols: string[], heRpcNode?: str
 
 export interface HiveEngineHolding {
   symbol: string;
-  balance: number;   // liquid — sendable / stakeable
-  stake: number;     // staked — unstakeable
+  balance: number;          // liquid — sendable / stakeable
+  stake: number;            // staked — unstakeable
   precision: number;
+  stakingEnabled: boolean;  // whether stake/unstake is allowed for this token
 }
 
 /**
- * A user's Hive-Engine holdings including both liquid and staked amounts,
- * with token precision — everything the send/stake/unstake actions need.
+ * A user's Hive-Engine holdings including both liquid and staked amounts, with
+ * token precision and staking support — everything the send/stake/unstake
+ * actions need.
  */
 export const fetchHiveEngineHoldings = async (username: string, heRpcNode?: string): Promise<HiveEngineHolding[]> => {
   const rows = await fetchHiveEngineBalances(username, heRpcNode);
@@ -209,21 +224,28 @@ export const fetchHiveEngineHoldings = async (username: string, heRpcNode?: stri
 
   if (held.length === 0) return [];
 
-  const precisions = await fetchHiveEngineTokenPrecisions(held.map(h => h.symbol), heRpcNode);
+  const meta = await fetchHiveEngineTokenMeta(held.map(h => h.symbol), heRpcNode);
   return held
-    .map(h => ({ ...h, precision: precisions[h.symbol] ?? 3 }))
+    .map(h => ({
+      ...h,
+      precision: meta[h.symbol]?.precision ?? 3,
+      stakingEnabled: !!meta[h.symbol]?.stakingEnabled,
+    }))
     .sort((a, b) => a.symbol.localeCompare(b.symbol));
 };
 
 // ── Hive-Engine custom_json action builders (active auth) ────────────────────
 // All Hive-Engine token actions are custom_json ops with id "ssc-mainnet-hive".
+// The sidechain processor reads the canonical keys contractName / contractAction
+// / contractPayload — any other shape broadcasts to Hive but is silently ignored
+// by Hive-Engine, so balances never change.
 const heCustomJson = (username: string, action: string, payload: Record<string, any>): any[] => ([
   'custom_json',
   {
     required_auths: [username],
     required_posting_auths: [],
     id: 'ssc-mainnet-hive',
-    json: JSON.stringify({ contract: 'tokens', action, payload }),
+    json: JSON.stringify({ contractName: 'tokens', contractAction: action, contractPayload: payload }),
   },
 ]);
 
@@ -235,6 +257,47 @@ export const heStakeOp = (username: string, symbol: string, quantity: string, to
 
 export const heUnstakeOp = (username: string, symbol: string, quantity: string): any[] =>
   heCustomJson(username, 'unstake', { symbol, quantity });
+
+export const heCancelUnstakeOp = (username: string, txID: string): any[] =>
+  heCustomJson(username, 'cancelUnstake', { txID });
+
+export interface HivePendingUnstake {
+  txID: string;
+  symbol: string;
+  quantity: number;       // original amount being unstaked
+  quantityLeft: number;   // amount still to be released
+  nextTimestamp: number;  // ms epoch of the next release
+  periodsLeft: number;    // remaining release installments
+}
+
+/** A user's in-progress Hive-Engine token unstakes (tokens.pendingUnstakes). */
+export const fetchHiveEnginePendingUnstakes = async (username: string, heRpcNode?: string): Promise<HivePendingUnstake[]> => {
+  try {
+    const nodeUrl = getHeNode(heRpcNode);
+    const response = await fetch(nodeUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', method: 'find',
+        params: { contract: 'tokens', table: 'pendingUnstakes', query: { account: username }, limit: 100 },
+        id: 8,
+      }),
+    });
+    const data = await response.json();
+    if (!Array.isArray(data.result)) return [];
+    return data.result.map((u: any) => ({
+      txID: u.txID,
+      symbol: (u.symbol || '').toUpperCase().trim(),
+      quantity: parseFloat(u.quantity) || 0,
+      quantityLeft: parseFloat(u.quantityLeft) || 0,
+      nextTimestamp: Number(u.nextTransactionTimestamp) || 0,
+      periodsLeft: Number(u.numberTransactionsLeft) || 0,
+    }));
+  } catch (e) {
+    console.error('Failed to fetch Hive-Engine pending unstakes:', e);
+    return [];
+  }
+};
 
 /**
  * Resolves a Hive-Engine logo value to a usable image URL.
@@ -255,19 +318,18 @@ const resolveLogoUrl = (logo: string): string | undefined => {
 const enrichHiveEngineTokens = (
   balances: any[],
   pricesInHive: Record<string, number>,
-  tokenInfo: Record<string, { name: string; logo: string }>,
+  tokenInfo: Record<string, HiveEngineTokenInfo>,
   hivePriceUSD: number
 ): HiveEngineToken[] => {
   if (!balances || !Array.isArray(balances)) return [];
 
-  const filtered = balances.filter(b => {
-    const balanceValue = typeof b.balance === 'string' ? parseFloat(b.balance) : b.balance;
-    return balanceValue > 0;
-  });
+  const num = (v: any) => (typeof v === 'string' ? parseFloat(v) : v) || 0;
+  const holdings = (t: { balance: number; stake: number }) => t.balance + t.stake;
 
-  const enriched = filtered.map(b => {
+  const enriched = balances.map(b => {
     const symbol = (b.symbol || '').toUpperCase().trim();
-    const balanceValue = typeof b.balance === 'string' ? parseFloat(b.balance) : b.balance;
+    const balance = num(b.balance);
+    const stake = num(b.stake);
     // SWAP.HIVE is the market's base currency, so it has no metric against
     // itself — but it's pegged 1:1 to HIVE, so its price in HIVE is exactly 1.
     const priceInHive = symbol === 'SWAP.HIVE' ? 1 : (pricesInHive[symbol] || 0);
@@ -276,10 +338,10 @@ const enrichHiveEngineTokens = (
     const name = info?.name || symbol;
     const iconUrl = resolveLogoUrl(info?.logo || '');
 
-    return { symbol, name, balance: balanceValue, priceUSD, iconUrl };
-  }).filter(t => t.symbol && t.balance > 0);
+    return { symbol, name, balance, stake, stakingEnabled: !!info?.stakingEnabled, priceUSD, iconUrl };
+  }).filter(t => t.symbol && holdings(t) > 0);
 
-  return enriched.sort((a, b) => (b.balance * b.priceUSD) - (a.balance * a.priceUSD));
+  return enriched.sort((a, b) => (holdings(b) * b.priceUSD) - (holdings(a) * a.priceUSD));
 };
 
 /**
@@ -321,8 +383,9 @@ export const getHiveEnginePortfolioValue = async (
   try {
     const balances = await fetchHiveEngineBalances(username, heRpcNode);
 
+    const num = (v: any) => (typeof v === 'string' ? parseFloat(v) : v) || 0;
     const heldSymbols = balances
-      .filter(b => (typeof b.balance === 'string' ? parseFloat(b.balance) : b.balance) > 0)
+      .filter(b => num(b.balance) + num(b.stake) > 0)   // include staked-only tokens
       .map(b => b.symbol);
 
     if (heldSymbols.length === 0) {
@@ -335,7 +398,7 @@ export const getHiveEnginePortfolioValue = async (
     ]);
 
     const tokens = enrichHiveEngineTokens(balances, pricesInHive, tokenInfo, hivePriceUSD);
-    const totalUSD = tokens.reduce((sum, token) => sum + (token.balance * token.priceUSD), 0);
+    const totalUSD = tokens.reduce((sum, token) => sum + ((token.balance + token.stake) * token.priceUSD), 0);
 
     return { tokens, totalUSD };
   } catch (error) {

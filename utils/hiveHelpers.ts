@@ -1,5 +1,5 @@
 import { AccountStats, HiveNotification, HiveNotificationType, TransferRecord, TrendingPost, TrendingCommunity } from '../types';
-import { HIVE_RPC_NODES, FYP_API_BASE } from '../constants';
+import { HIVE_RPC_NODES, FYP_API_BASE, BALANCE_API_BASE } from '../constants';
 
 const DEFAULT_HIVE_RPC_NODE = HIVE_RPC_NODES[0];
 
@@ -632,6 +632,43 @@ export const fetchFypPosts = async (
     return Array.isArray(posts) ? posts.map(mapFypPost) : [];
   } catch (e) {
     console.error('Failed to fetch For You feed:', e);
+    return [];
+  }
+};
+
+// ── Balance history (HAF Balance Tracker) ───────────────────────────────────
+// Monthly aggregated balances for a coin. Raw values are integers in the coin's
+// smallest unit (HIVE/HBD = 3 decimals, VESTS = 6), so we scale to whole tokens.
+
+export interface BalancePoint {
+  date: string;   // ISO month bucket
+  value: number;  // whole tokens (VESTS still in VESTS — convert to HP at the call site)
+}
+
+export const fetchHiveBalanceHistory = async (
+  username: string,
+  coin: 'HIVE' | 'HBD' | 'VESTS',
+  months = 18
+): Promise<BalancePoint[]> => {
+  try {
+    const url = `${BALANCE_API_BASE}/accounts/${encodeURIComponent(username)}/aggregated-history?coin-type=${coin}&granularity=monthly&direction=asc`;
+    const resp = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!resp.ok) throw new Error(`balance-api ${resp.status}`);
+    const data = await resp.json();
+    if (!Array.isArray(data)) return [];
+
+    const divisor = coin === 'VESTS' ? 1e6 : 1000;
+    const points: BalancePoint[] = data.map((d: any) => ({
+      date: d.date,
+      value: (parseFloat(d.balance?.balance ?? '0') || 0) / divisor,
+    }));
+
+    // Drop the long all-zero prefix before the account first held this coin.
+    const firstNonZero = points.findIndex(p => p.value > 0);
+    const trimmed = firstNonZero >= 0 ? points.slice(firstNonZero) : points;
+    return trimmed.slice(-months);
+  } catch (e) {
+    console.error('Failed to fetch balance history:', e);
     return [];
   }
 };

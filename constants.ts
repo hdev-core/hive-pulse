@@ -371,6 +371,9 @@ export const HIVE_RPC_NODES = [
 // shape plus a nested `fyp` scoring object, so it drops in alongside trending/hot/new.
 export const FYP_API_BASE = 'https://testapi.hivescan.info/haf-fyp-api';
 
+// HAF Balance Tracker — historical account balances (used for the wallet history chart).
+export const BALANCE_API_BASE = 'https://testapi.hivescan.info/balance-api';
+
 export const HIVE_ENGINE_RPC_NODES = [
   'https://api.hive-engine.com/rpc',
   'https://v6-he.atexoras.com:2083',

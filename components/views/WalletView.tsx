@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppSettings, AccountStats } from '../../types';
 import { fetchAccountStats } from '../../utils/hiveHelpers';
 import { broadcastKeychainOp } from '../../utils/keychainHelpers';
 import { Search, Activity } from 'lucide-react';
-import { PortfolioCard } from '../PortfolioCard';
+import { PortfolioCard, PortfolioActionRequest } from '../PortfolioCard';
 import { EarningExplainer } from '../EarningExplainer';
 import { OnboardingBanner } from '../OnboardingBanner';
 import { SendForm } from '../SendForm';
 import { StakeForm } from '../StakeForm';
+import { HiveEngineActions } from '../HiveEngineActions';
+import { PortfolioHistoryChart } from '../PortfolioHistoryChart';
 import { RcBudget } from '../RcBudget';
 import { HiveProofCard } from '../HiveProofCard';
 
@@ -23,6 +25,19 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
   const [stats, setStats] = useState<AccountStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Scroll targets + focus signal for the "act on this asset" pills in PortfolioCard.
+  const sendRef  = useRef<HTMLDivElement>(null);
+  const stakeRef = useRef<HTMLDivElement>(null);
+  const heRef    = useRef<HTMLDivElement>(null);
+  const [actionFocus, setActionFocus] = useState<(PortfolioActionRequest & { nonce: number }) | null>(null);
+
+  const handlePortfolioAction = (req: PortfolioActionRequest) => {
+    setActionFocus({ ...req, nonce: (actionFocus?.nonce ?? 0) + 1 });
+    const ref = req.target === 'send' ? sendRef : req.target === 'stake' ? stakeRef : heRef;
+    // Let the form apply its tab/currency change first, then scroll it into view.
+    setTimeout(() => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  };
 
   useEffect(() => {
     const fetchPrices = async () => {
@@ -208,6 +223,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
             hiveRpcNode={settings.hiveRpcNode}
             onClaimRewards={isOwnAccount ? handleClaimRewards : undefined}
             onClaimInterest={isOwnAccount ? handleClaimInterest : undefined}
+            onAction={isOwnAccount ? handlePortfolioAction : undefined}
           />
         )}
 
@@ -219,6 +235,11 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
       {/* RC Budget — shown whenever stats are loaded */}
       {!loading && stats && <RcBudget stats={stats} settings={settings} />}
 
+      {/* Balance history chart — read-only, any loaded account */}
+      {!loading && stats?.username && (
+        <PortfolioHistoryChart username={stats.username} settings={settings} />
+      )}
+
       {/* Shareable proof card — shown when stats + prices are ready */}
       {!loading && stats && prices && (
         <HiveProofCard stats={stats} prices={prices} settings={settings} />
@@ -226,28 +247,46 @@ export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings
 
       {/* Send / Receive / History — only shown for own account */}
       {isOwnAccount && stats?.balances && (
-        <SendForm
-          username={stats.username}
-          balances={{ hive: stats.balances.hive, hbd: stats.balances.hbd }}
-          settings={settings}
-          onSuccess={refreshStats}
-        />
+        <div ref={sendRef} className="scroll-mt-2">
+          <SendForm
+            username={stats.username}
+            balances={{ hive: stats.balances.hive, hbd: stats.balances.hbd }}
+            settings={settings}
+            onSuccess={refreshStats}
+            focusSignal={actionFocus?.target === 'send' ? { currency: actionFocus.sendCurrency, nonce: actionFocus.nonce } : undefined}
+          />
+        </div>
       )}
 
-      {/* Power Up / Power Down / Savings — only shown for own account */}
+      {/* Power Up / Power Down / Delegate / Savings — only shown for own account */}
       {isOwnAccount && stats?.balances && (
-        <StakeForm
-          username={stats.username}
-          balances={{
-            hive: stats.balances.hive,
-            hbd: stats.balances.hbd,
-            hivepower: stats.balances.hivepower,
-            savingsHive: stats.balances.savingsHive,
-            savingsHbd: stats.balances.savingsHbd,
-          }}
-          settings={settings}
-          onSuccess={refreshStats}
-        />
+        <div ref={stakeRef} className="scroll-mt-2">
+          <StakeForm
+            username={stats.username}
+            balances={{
+              hive: stats.balances.hive,
+              hbd: stats.balances.hbd,
+              hivepower: stats.balances.hivepower,
+              savingsHive: stats.balances.savingsHive,
+              savingsHbd: stats.balances.savingsHbd,
+            }}
+            settings={settings}
+            onSuccess={refreshStats}
+            focusSignal={actionFocus?.target === 'stake' ? { tab: actionFocus.stakeTab, nonce: actionFocus.nonce } : undefined}
+          />
+        </div>
+      )}
+
+      {/* Hive-Engine token actions (send / stake / unstake) — own account only */}
+      {isOwnAccount && stats?.username && (
+        <div ref={heRef} className="scroll-mt-2">
+          <HiveEngineActions
+            username={stats.username}
+            settings={settings}
+            onSuccess={refreshStats}
+            focusSignal={actionFocus?.target === 'he' ? { tab: actionFocus.heTab, symbol: actionFocus.heSymbol, nonce: actionFocus.nonce } : undefined}
+          />
+        </div>
       )}
 
       <EarningExplainer />

@@ -11,9 +11,10 @@ interface SendFormProps {
   balances: { hive: number; hbd: number };
   settings: AppSettings;
   onSuccess?: () => void;
+  focusSignal?: { currency?: 'HIVE' | 'HBD'; nonce: number };
 }
 
-export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings, onSuccess }) => {
+export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings, onSuccess, focusSignal }) => {
   const [tab, setTab] = useState<Tab>('send');
 
   // Send state
@@ -79,6 +80,14 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
   useEffect(() => {
     if (tab === 'history') loadHistory();
   }, [tab]);
+
+  // Jump to the Send tab and preselect a currency when an asset-row pill is tapped.
+  useEffect(() => {
+    if (!focusSignal) return;
+    setTab('send');
+    setSendResult(null);
+    if (focusSignal.currency) setCurrency(focusSignal.currency);
+  }, [focusSignal?.nonce]);
 
   const availableBalance = currency === 'HIVE' ? balances.hive : balances.hbd;
 

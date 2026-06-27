@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowUpCircle, ArrowDownCircle, PiggyBank, Download, Loader, AlertTriangle } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, PiggyBank, Download, Loader, AlertTriangle, Share2, CheckCircle, XCircle } from 'lucide-react';
 import { AppSettings } from '../types';
-import { fetchHpVestConversion } from '../utils/hiveHelpers';
+import { fetchHpVestConversion, validateHiveAccount } from '../utils/hiveHelpers';
 import { broadcastKeychainOp } from '../utils/keychainHelpers';
 
-type Tab = 'powerup' | 'powerdown' | 'savings' | 'withdraw';
+type Tab = 'powerup' | 'powerdown' | 'savings' | 'withdraw' | 'delegate';
 
 interface StakeBalances {
   hive: number;
@@ -19,19 +19,24 @@ interface StakeFormProps {
   balances: StakeBalances;
   settings: AppSettings;
   onSuccess?: () => void;
+  focusSignal?: { tab?: Tab; nonce: number };
 }
 
 const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
   { key: 'powerup',   label: 'Power Up',   icon: <ArrowUpCircle size={13} /> },
   { key: 'powerdown', label: 'Power Down', icon: <ArrowDownCircle size={13} /> },
+  { key: 'delegate',  label: 'Delegate',   icon: <Share2 size={13} /> },
   { key: 'savings',   label: 'Savings',    icon: <PiggyBank size={13} /> },
   { key: 'withdraw',  label: 'Withdraw',   icon: <Download size={13} /> },
 ];
 
-export const StakeForm: React.FC<StakeFormProps> = ({ username, balances, settings, onSuccess }) => {
+export const StakeForm: React.FC<StakeFormProps> = ({ username, balances, settings, onSuccess, focusSignal }) => {
   const [tab, setTab]           = useState<Tab>('powerup');
   const [amount, setAmount]     = useState('');
   const [memo, setMemo]         = useState('');
+  const [recipient, setRecipient]     = useState('');
+  const [recipientValid, setRecipientValid] = useState<boolean | null>(null);
+  const [validating, setValidating]   = useState(false);
   const [savingsCur, setSavingsCur]   = useState<'HIVE' | 'HBD'>('HIVE');
   const [withdrawCur, setWithdrawCur] = useState<'HIVE' | 'HBD'>('HIVE');
   const [pdAck, setPdAck]       = useState(false);
@@ -43,8 +48,27 @@ export const StakeForm: React.FC<StakeFormProps> = ({ username, balances, settin
     fetchHpVestConversion(settings).then(c => { if (c) setVestsPerHive(c.vestsPerHive); });
   }, []);
 
-  const reset = () => { setAmount(''); setMemo(''); setPdAck(false); };
+  // Debounced recipient validation (delegate tab only)
+  useEffect(() => {
+    setRecipientValid(null);
+    if (tab !== 'delegate' || !recipient.trim() || recipient.trim().length < 3) return;
+    const t = setTimeout(async () => {
+      setValidating(true);
+      const clean = recipient.replace('@', '').trim().toLowerCase();
+      const valid = await validateHiveAccount(clean, settings);
+      setRecipientValid(valid);
+      setValidating(false);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [recipient, tab]);
+
+  const reset = () => { setAmount(''); setMemo(''); setPdAck(false); setRecipient(''); setRecipientValid(null); };
   const switchTab = (t: Tab) => { setTab(t); setResult(null); reset(); };
+
+  // Jump to a specific tab when an asset-row pill is tapped (Power Up / Power Down / Delegate).
+  useEffect(() => {
+    if (focusSignal?.tab) switchTab(focusSignal.tab);
+  }, [focusSignal?.nonce]);
 
   const finish = (ok: boolean, msg: string) => {
     setResult({ ok, msg });
@@ -107,6 +131,21 @@ export const StakeForm: React.FC<StakeFormProps> = ({ username, balances, settin
     broadcast(
       ['transfer_from_savings', { from: username, request_id: requestId, to: username, amount: `${parsed.toFixed(3)} ${withdrawCur}`, memo }],
       `Withdrawal of ${parsed.toFixed(3)} ${withdrawCur} requested (3-day delay).`
+    );
+  };
+
+  const doDelegate = () => {
+    const clean = recipient.replace('@', '').trim().toLowerCase();
+    if (!clean) return finish(false, 'Enter a recipient account.');
+    if (recipientValid === false) return finish(false, 'Recipient account not found.');
+    if (isNaN(parsed) || parsed < 0) return finish(false, 'Enter an amount (0 to remove a delegation).');
+    if (parsed > balances.hivepower) return finish(false, 'Amount exceeds your Hive Power.');
+    if (!vestsPerHive) return finish(false, 'Conversion rate not loaded yet — try again in a moment.');
+    // delegate_vesting_shares takes an absolute target, not a delta. Delegating 0 removes it.
+    const vests = parsed * vestsPerHive;
+    broadcast(
+      ['delegate_vesting_shares', { delegator: username, delegatee: clean, vesting_shares: `${vests.toFixed(6)} VESTS` }],
+      parsed === 0 ? `Removed delegation to @${clean}.` : `Delegated ${parsed.toFixed(3)} HP to @${clean}.`
     );
   };
 
@@ -230,6 +269,39 @@ export const StakeForm: React.FC<StakeFormProps> = ({ username, balances, settin
           </div>
           {resultBox()}
           {submitBtn('Request Withdrawal', doWithdraw, !parsed || parsed <= 0, <Download size={15} />)}
+        </>)}
+
+        {/* Delegate */}
+        {tab === 'delegate' && (<>
+          <p className="text-xs text-slate-500">Delegate Hive Power to another account to boost their voting weight. It stays yours — reclaim it anytime by removing the delegation.</p>
+          {/* Recipient */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Delegate to</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">@</span>
+              <input
+                type="text" value={recipient} onChange={e => setRecipient(e.target.value)}
+                placeholder="hive-username"
+                className="w-full pl-7 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              />
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                {validating && <Loader size={14} className="animate-spin text-slate-400" />}
+                {!validating && recipientValid === true  && <CheckCircle size={14} className="text-green-500" />}
+                {!validating && recipientValid === false && <XCircle size={14} className="text-red-400" />}
+              </span>
+            </div>
+            {recipientValid === false && <p className="text-[11px] text-red-400 mt-1">Account not found on Hive</p>}
+          </div>
+          {amountField(balances.hivepower, 'HP')}
+          {parsed > 0 && vestsPerHive && (
+            <p className="text-[11px] text-slate-400">≈ {(parsed * vestsPerHive).toFixed(6)} VESTS delegated</p>
+          )}
+          <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+            <Share2 size={14} className="text-blue-500 shrink-0 mt-0.5" />
+            <p className="text-[11px] text-blue-700">Delegating sets a new <strong>total</strong> for this account (not additive). Enter <strong>0</strong> to remove an existing delegation — funds return after a 5-day cooldown.</p>
+          </div>
+          {resultBox()}
+          {submitBtn(parsed === 0 ? 'Remove Delegation' : 'Delegate HP', doDelegate, !recipient.trim() || isNaN(parsed) || parsed < 0 || recipientValid === false, <Share2 size={15} />)}
         </>)}
       </div>
     </div>

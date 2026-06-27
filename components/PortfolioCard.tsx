@@ -186,6 +186,16 @@ const HbdSavingsWidget: React.FC<HbdSavingsWidgetProps> = ({
 
 type HESortMode = 'value' | 'name' | 'balance';
 
+// Emitted when a user taps an action pill on an asset row; WalletView scrolls to
+// the matching form and preselects the tab/token.
+export interface PortfolioActionRequest {
+  target: 'send' | 'stake' | 'he';
+  sendCurrency?: 'HIVE' | 'HBD';
+  stakeTab?: 'powerup' | 'powerdown' | 'delegate';
+  heTab?: 'send' | 'stake' | 'unstake';
+  heSymbol?: string;
+}
+
 interface PortfolioCardProps {
   balances: BalanceInfo;
   hivePrice: number;
@@ -195,6 +205,7 @@ interface PortfolioCardProps {
   hiveRpcNode?: string;
   onClaimRewards?: () => Promise<void>;
   onClaimInterest?: () => Promise<void>;
+  onAction?: (req: PortfolioActionRequest) => void;
 }
 
 interface AssetRow {
@@ -216,6 +227,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   hiveRpcNode,
   onClaimRewards,
   onClaimInterest,
+  onAction,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [hiveEngineTokens, setHiveEngineTokens] = useState<HiveEngineToken[]>([]);
@@ -462,6 +474,37 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
     );
   };
 
+  // Small "scroll to action" pills shown beneath HIVE/HBD/HP rows.
+  const actionPill = (label: string, req: PortfolioActionRequest, key: string) => (
+    <button
+      key={key}
+      onClick={() => onAction?.(req)}
+      className="flex items-center gap-1 text-[10px] font-semibold text-slate-700 bg-white/70 hover:bg-white border border-slate-200 px-2.5 py-1 rounded-full transition-colors"
+    >
+      {label}
+    </button>
+  );
+
+  const renderRowActions = (label: string) => {
+    if (!onAction) return null;
+    let pills: React.ReactNode[] = [];
+    if (label === 'Liquid HIVE') {
+      pills = [
+        actionPill('Send', { target: 'send', sendCurrency: 'HIVE' }, 'h-send'),
+        actionPill('Power Up', { target: 'stake', stakeTab: 'powerup' }, 'h-pu'),
+      ];
+    } else if (label === 'Liquid HBD') {
+      pills = [actionPill('Send', { target: 'send', sendCurrency: 'HBD' }, 'd-send')];
+    } else if (label === 'Hive Power (HP)') {
+      pills = [
+        actionPill('Power Down', { target: 'stake', stakeTab: 'powerdown' }, 'p-pd'),
+        actionPill('Delegate', { target: 'stake', stakeTab: 'delegate' }, 'p-del'),
+      ];
+    }
+    if (!pills.length) return null;
+    return <div className="flex gap-1.5 mt-2 pt-2 border-t border-white/50">{pills}</div>;
+  };
+
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm overflow-hidden">
       {/* Main Card Header */}
@@ -500,15 +543,18 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
               {expandedSections.liquid && (
                 <div className="px-4 pb-3 space-y-2">
                   {assets.filter(a => a.section === 'liquid').map((asset, idx) => (
-                    <div key={idx} className={`bg-gradient-to-r ${asset.color} border rounded-lg p-3 flex items-center justify-between`}>
-                      <div className="flex items-center gap-2">
-                        <div className="text-slate-600">{asset.icon}</div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-800">{renderLabel(asset.label)}</p>
-                          <p className="text-xs text-slate-600">{asset.amount.toFixed(2)} {asset.token}</p>
+                    <div key={idx} className={`bg-gradient-to-r ${asset.color} border rounded-lg p-3`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="text-slate-600">{asset.icon}</div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-800">{renderLabel(asset.label)}</p>
+                            <p className="text-xs text-slate-600">{asset.amount.toFixed(2)} {asset.token}</p>
+                          </div>
                         </div>
+                        <span className="text-sm font-semibold text-slate-900">{formatUSD(asset.valueUSD)}</span>
                       </div>
-                      <span className="text-sm font-semibold text-slate-900">{formatUSD(asset.valueUSD)}</span>
+                      {renderRowActions(asset.label)}
                     </div>
                   ))}
                 </div>
@@ -529,17 +575,20 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
               {expandedSections.staked && (
                 <div className="px-4 pb-3 space-y-2">
                   {assets.filter(a => a.section === 'staked').map((asset, idx) => (
-                    <div key={idx} className={`bg-gradient-to-r ${asset.color} border rounded-lg p-3 flex items-center justify-between`}>
-                      <div className="flex items-center gap-2">
-                        <div className="text-slate-600">{asset.icon}</div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-800">{renderLabel(asset.label)}</p>
-                          <p className="text-xs text-slate-600">{asset.amount.toFixed(2)} {asset.token}</p>
+                    <div key={idx} className={`bg-gradient-to-r ${asset.color} border rounded-lg p-3`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="text-slate-600">{asset.icon}</div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-800">{renderLabel(asset.label)}</p>
+                            <p className="text-xs text-slate-600">{asset.amount.toFixed(2)} {asset.token}</p>
+                          </div>
                         </div>
+                        <span className="text-sm font-semibold text-slate-900">
+                          {asset.valueUSD > 0 ? formatUSD(asset.valueUSD) : '—'}
+                        </span>
                       </div>
-                      <span className="text-sm font-semibold text-slate-900">
-                        {asset.valueUSD > 0 ? formatUSD(asset.valueUSD) : '—'}
-                      </span>
+                      {renderRowActions(asset.label)}
                     </div>
                   ))}
                   {/* Effective HP summary */}
@@ -713,27 +762,35 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                     </div>
 
                     {filteredSortedTokens.length > 0 ? filteredSortedTokens.map((token, idx) => (
-                      <div key={idx} className="bg-gradient-to-r from-purple-50 to-pink-100 border border-purple-200 rounded-lg p-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {iconDataUrls[token.symbol] ? (
-                            <img
-                              src={iconDataUrls[token.symbol]}
-                              alt={token.symbol}
-                              className="w-7 h-7 rounded"
-                            />
-                          ) : !iconErrors[token.symbol] && token.iconUrl ? (
-                            <div className="w-7 h-7 rounded bg-purple-100 flex items-center justify-center animate-pulse" />
-                          ) : (
-                            <div className="text-xs font-bold text-purple-700 bg-purple-200 rounded px-2 py-1 min-w-[28px] text-center">
-                              {token.symbol.length > 4 ? token.symbol.slice(0, 4) : token.symbol}
+                      <div key={idx} className="bg-gradient-to-r from-purple-50 to-pink-100 border border-purple-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {iconDataUrls[token.symbol] ? (
+                              <img
+                                src={iconDataUrls[token.symbol]}
+                                alt={token.symbol}
+                                className="w-7 h-7 rounded"
+                              />
+                            ) : !iconErrors[token.symbol] && token.iconUrl ? (
+                              <div className="w-7 h-7 rounded bg-purple-100 flex items-center justify-center animate-pulse" />
+                            ) : (
+                              <div className="text-xs font-bold text-purple-700 bg-purple-200 rounded px-2 py-1 min-w-[28px] text-center">
+                                {token.symbol.length > 4 ? token.symbol.slice(0, 4) : token.symbol}
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-sm font-medium text-slate-800">{token.name}</p>
+                              <p className="text-xs text-slate-600">{token.balance.toFixed(2)} {token.symbol}</p>
                             </div>
-                          )}
-                          <div>
-                            <p className="text-sm font-medium text-slate-800">{token.name}</p>
-                            <p className="text-xs text-slate-600">{token.balance.toFixed(2)} {token.symbol}</p>
                           </div>
+                          <span className="text-sm font-semibold text-slate-900">{formatUSD(token.balance * token.priceUSD)}</span>
                         </div>
-                        <span className="text-sm font-semibold text-slate-900">{formatUSD(token.balance * token.priceUSD)}</span>
+                        {onAction && (
+                          <div className="flex gap-1.5 mt-2 pt-2 border-t border-purple-200/70">
+                            {actionPill('Send',  { target: 'he', heTab: 'send',  heSymbol: token.symbol }, `he-send-${token.symbol}`)}
+                            {actionPill('Stake', { target: 'he', heTab: 'stake', heSymbol: token.symbol }, `he-stk-${token.symbol}`)}
+                          </div>
+                        )}
                       </div>
                     )) : (
                       <p className="text-xs text-slate-500 text-center py-2">No tokens match your filter.</p>

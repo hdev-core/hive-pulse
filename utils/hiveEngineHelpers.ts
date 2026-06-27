@@ -156,6 +156,87 @@ const fetchHiveEngineMarketPrices = async (symbols: string[], heRpcNode?: string
 };
 
 /**
+ * Token precision (decimal places) per symbol, from the tokens table.
+ * Balance strings don't reliably carry full precision, so transfer/stake
+ * quantities must be formatted against this authoritative value.
+ */
+const fetchHiveEngineTokenPrecisions = async (symbols: string[], heRpcNode?: string): Promise<Record<string, number>> => {
+  if (symbols.length === 0) return {};
+  try {
+    const nodeUrl = getHeNode(heRpcNode);
+    const response = await fetch(nodeUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', method: 'find',
+        params: { contract: 'tokens', table: 'tokens', query: { symbol: { $in: symbols } }, limit: 1000 },
+        id: 7,
+      }),
+    });
+    const data = await response.json();
+    const out: Record<string, number> = {};
+    if (Array.isArray(data.result)) {
+      for (const t of data.result) {
+        out[(t.symbol || '').toUpperCase().trim()] = typeof t.precision === 'number' ? t.precision : 3;
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+};
+
+export interface HiveEngineHolding {
+  symbol: string;
+  balance: number;   // liquid — sendable / stakeable
+  stake: number;     // staked — unstakeable
+  precision: number;
+}
+
+/**
+ * A user's Hive-Engine holdings including both liquid and staked amounts,
+ * with token precision — everything the send/stake/unstake actions need.
+ */
+export const fetchHiveEngineHoldings = async (username: string, heRpcNode?: string): Promise<HiveEngineHolding[]> => {
+  const rows = await fetchHiveEngineBalances(username, heRpcNode);
+  const held = rows
+    .map(r => ({
+      symbol: (r.symbol || '').toUpperCase().trim(),
+      balance: parseFloat(r.balance) || 0,
+      stake: parseFloat(r.stake) || 0,
+    }))
+    .filter(h => h.symbol && (h.balance > 0 || h.stake > 0));
+
+  if (held.length === 0) return [];
+
+  const precisions = await fetchHiveEngineTokenPrecisions(held.map(h => h.symbol), heRpcNode);
+  return held
+    .map(h => ({ ...h, precision: precisions[h.symbol] ?? 3 }))
+    .sort((a, b) => a.symbol.localeCompare(b.symbol));
+};
+
+// ── Hive-Engine custom_json action builders (active auth) ────────────────────
+// All Hive-Engine token actions are custom_json ops with id "ssc-mainnet-hive".
+const heCustomJson = (username: string, action: string, payload: Record<string, any>): any[] => ([
+  'custom_json',
+  {
+    required_auths: [username],
+    required_posting_auths: [],
+    id: 'ssc-mainnet-hive',
+    json: JSON.stringify({ contract: 'tokens', action, payload }),
+  },
+]);
+
+export const heTransferOp = (username: string, symbol: string, to: string, quantity: string, memo = ''): any[] =>
+  heCustomJson(username, 'transfer', { symbol, to, quantity, ...(memo ? { memo } : {}) });
+
+export const heStakeOp = (username: string, symbol: string, quantity: string, to?: string): any[] =>
+  heCustomJson(username, 'stake', { symbol, to: to || username, quantity });
+
+export const heUnstakeOp = (username: string, symbol: string, quantity: string): any[] =>
+  heCustomJson(username, 'unstake', { symbol, quantity });
+
+/**
  * Resolves a Hive-Engine logo value to a usable image URL.
  * Logo can be: a full URL, an IPFS hash, or empty.
  */

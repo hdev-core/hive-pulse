@@ -1,18 +1,16 @@
 export {};
 
+import { FRONTENDS } from './constants';
+
 declare const chrome: any;
 
-const HIVE_HOSTS = new Set([
-  'peakd.com',
-  'ecency.com',
-  'hive.blog',
-  'wallet.hive.blog',
-  'inleo.io',
-  'leofinance.io',
-  'waivio.com',
-  'liketu.com',
-  '3speak.tv',
-]);
+// Show the RC/VP overlay on every Hive frontend the extension knows about.
+// Derived from the canonical FRONTENDS list (domains + aliases) so new
+// frontends are covered automatically without touching this file.
+const HIVE_HOSTS = new Set<string>(
+  FRONTENDS.flatMap(f => [f.domain, ...(f.aliases || [])])
+    .map(h => h.replace(/^www\./, ''))
+);
 
 const host = location.hostname.replace(/^www\./, '');
 

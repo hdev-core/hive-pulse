@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "HivePulse",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "The heartbeat of your Hive experience. Chat, Stats, and seamless Frontend Switching.",
   "browser_specific_settings": {
     "gecko": {

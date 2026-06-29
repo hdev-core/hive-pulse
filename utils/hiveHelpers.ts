@@ -1,5 +1,5 @@
 import { AccountStats, HiveNotification, HiveNotificationType, TransferRecord, TrendingPost, TrendingCommunity } from '../types';
-import { HIVE_RPC_NODES, FYP_API_BASE, BALANCE_API_BASE } from '../constants';
+import { HIVE_RPC_NODES, FYP_API_BASE, BALANCE_API_BASE, HAF_STATS_API_BASE } from '../constants';
 
 const DEFAULT_HIVE_RPC_NODE = HIVE_RPC_NODES[0];
 
@@ -733,9 +733,16 @@ export const fetchHiveBalanceHistory = async (
 };
 
 // ── RC Operation Costs ───────────────────────────────────────────────────────
-// Formula: op_cost = max_rc × vestingRatio × Σ(usage_r / (budget_r × REGEN_TIME))
-// where vestingRatio = total_vesting_fund_hive / account_hp
-// This gives absolute RC cost in the same units as max_rc, valid for all account sizes.
+// Average RC consumed per operation, used to show "how many X can I do with my
+// current RC" in the RC budget card. Standard Hive nodes don't expose a real
+// per-op RC price, so we use the HAF Stats `rc-footprint` endpoint, which prices
+// each op type from the calibrated `rc_op_stats_daily` rates. These rates are
+// effectively network constants (near-identical across all accounts), so we seed
+// from a stable fallback table and override with the account's own live rates
+// wherever its on-chain history covers that op type.
+//
+// Note: posts and comments are both `comment_operation` on-chain, so they share
+// the same RC cost.
 
 export interface RcOperationCosts {
   vote: number;
@@ -745,52 +752,54 @@ export interface RcOperationCosts {
   customJson: number;
 }
 
-const REGEN_TIME_SEC = 432000; // 5 days in seconds
+// Network-calibrated fallback rates (avg RC per op), harvested from HAF Stats
+// rc_op_stats_daily (2026). Stable to within ~1% across accounts; used when the
+// stats node is unreachable or the account has no history for a given op type.
+const RC_RATE_FALLBACK = {
+  vote:       97_300_000,
+  comment:    1_200_000_000, // comment_operation — covers both posts and comments
+  transfer:   166_000_000,
+  customJson: 167_700_000,
+};
 
 export const fetchRcOperationCosts = async (
-  maxRc: number,
-  vestingRatio: number,
-  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+  username: string
 ): Promise<RcOperationCosts | null> => {
+  const rates = { ...RC_RATE_FALLBACK };
   try {
-    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
-    const paramsData = await rpcFetchWithFallback(
-      { jsonrpc: '2.0', method: 'rc_api.get_resource_params', params: {}, id: 1 },
-      primary, fallback, autoSwitch
-    );
-
-    const rp = paramsData.result?.resource_params;
-    const si = paramsData.result?.size_info;
-    if (!rp || !si) return null;
-
-    const execBudget  = rp.resource_execution_time.resource_dynamics_params.budget_per_time_unit;
-    const stateBudget = rp.resource_state_bytes.resource_dynamics_params.budget_per_time_unit;
-    const histBudget  = rp.resource_history_bytes.resource_dynamics_params.budget_per_time_unit;
-
-    const se = si.resource_execution_time;
-    const ss = si.resource_state_bytes;
-
-    // Estimated serialized history bytes per operation type
-    const H: Record<string, number> = { vote: 112, comment: 250, transfer: 128, cjson: 200 };
-
-    const opCost = (execT: number, stateB: number, histB: number): number =>
-      maxRc * vestingRatio * (
-        execT  / (execBudget  * REGEN_TIME_SEC) +
-        stateB / (stateBudget * REGEN_TIME_SEC) +
-        histB  / (histBudget  * REGEN_TIME_SEC)
-      );
-
-    return {
-      vote:       opCost(se.vote_time,        ss.vote_size,          H.vote),
-      comment:    opCost(se.comment_time,     ss.comment_base_size,  H.comment),
-      post:       opCost(se.comment_time,     ss.comment_base_size,  H.comment),
-      transfer:   opCost(se.transfer_time,    0,                     H.transfer),
-      customJson: opCost(se.custom_json_time, 0,                     H.cjson),
-    };
+    // Wide window so an active account's footprint covers as many op types as
+    // possible; missing op types simply keep their calibrated fallback rate.
+    const from = new Date(Date.now() - 180 * 86_400_000).toISOString().slice(0, 10);
+    const url = `${HAF_STATS_API_BASE}/account/${encodeURIComponent(username)}/rc-footprint?group_by=op_type&from_date=${from}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const rows = await res.json();
+      if (Array.isArray(rows)) {
+        for (const r of rows) {
+          const count = Number(r.op_count);
+          const consumed = Number(r.rc_consumed);
+          if (!count || !consumed) continue;
+          const avg = consumed / count;
+          switch (r.label) {
+            case 'vote_operation':        rates.vote = avg;       break;
+            case 'comment_operation':     rates.comment = avg;    break;
+            case 'transfer_operation':    rates.transfer = avg;   break;
+            case 'custom_json_operation': rates.customJson = avg; break;
+          }
+        }
+      }
+    }
   } catch (e) {
-    console.error('Failed to fetch RC operation costs:', e);
-    return null;
+    console.error('Failed to fetch RC footprint, using calibrated fallback rates:', e);
   }
+
+  return {
+    vote:       rates.vote,
+    comment:    rates.comment,
+    post:       rates.comment, // same on-chain op as comment
+    transfer:   rates.transfer,
+    customJson: rates.customJson,
+  };
 };
 
 export const fetchTrendingCommunities = async (

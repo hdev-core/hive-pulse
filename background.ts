@@ -1,6 +1,6 @@
 
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
-import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice, fetchNotifications } from './utils/hiveHelpers';
+import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice, fetchNotifications, fetchRcOperationCosts } from './utils/hiveHelpers';
 import {
   fetchChannels,
   bootstrapEcencyChat,
@@ -296,6 +296,10 @@ const checkStatus = async () => {
             vp:         data.vp.percentage,
           }
         });
+        // Refresh the calibrated per-op RC costs for the on-page overlay tooltip.
+        // (The popup caches these per-account; the overlay reads this global key.)
+        const costs = await fetchRcOperationCosts(data.username);
+        if (costs) chrome.storage.local.set({ rcOperationCosts: costs });
         // Only drive the icon badge if nothing higher-priority (chat/notifications) claimed it
         if (!badgeSet) {
           const metric = settings.badgeMetric || 'VP';

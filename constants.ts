@@ -374,6 +374,9 @@ export const FYP_API_BASE = 'https://testapi.hivescan.info/haf-fyp-api';
 // HAF Balance Tracker — historical account balances (used for the wallet history chart).
 export const BALANCE_API_BASE = 'https://testapi.hivescan.info/balance-api';
 
+// HAF Stats — network/account analytics, incl. calibrated per-op RC costs (RC budget).
+export const HAF_STATS_API_BASE = 'https://testapi.hivescan.info/haf-stats-api';
+
 export const HIVE_ENGINE_RPC_NODES = [
   'https://api.hive-engine.com/rpc',
   'https://v6-he.atexoras.com:2083',

@@ -20,6 +20,13 @@ const fmt = (n: number) =>
   n >= 1_000 ? `${(n / 1_000).toFixed(1)}k` :
   `${n}`;
 
+// RC values run into the trillions — render with G/T suffixes (Hive RC convention).
+const fmtRc = (n: number) =>
+  n >= 1e12 ? `${(n / 1e12).toFixed(2)}T` :
+  n >= 1e9  ? `${(n / 1e9).toFixed(2)}G` :
+  n >= 1e6  ? `${(n / 1e6).toFixed(2)}M` :
+  `${Math.round(n)}`;
+
 const RC_COSTS_CACHE_KEY = 'rcOperationCosts';
 const RC_COSTS_TS_KEY    = 'rcOperationCostsTs';
 const CACHE_TTL          = 60 * 60 * 1000; // 1 hour
@@ -28,19 +35,21 @@ export const RcBudget: React.FC<RcBudgetProps> = ({ stats, settings }) => {
   const [costs, setCosts] = useState<RcOperationCosts | null>(null);
 
   useEffect(() => {
-    chrome.storage.local.get([RC_COSTS_CACHE_KEY, RC_COSTS_TS_KEY], async (stored) => {
-      const ts: number | undefined = stored[RC_COSTS_TS_KEY];
-      if (stored[RC_COSTS_CACHE_KEY] && ts && Date.now() - ts < CACHE_TTL) {
-        setCosts(stored[RC_COSTS_CACHE_KEY]);
+    const cacheKey = `${RC_COSTS_CACHE_KEY}:${stats.username}`;
+    const tsKey    = `${RC_COSTS_TS_KEY}:${stats.username}`;
+    chrome.storage.local.get([cacheKey, tsKey], async (stored) => {
+      const ts: number | undefined = stored[tsKey];
+      if (stored[cacheKey] && ts && Date.now() - ts < CACHE_TTL) {
+        setCosts(stored[cacheKey]);
         return;
       }
-      const fresh = await fetchRcOperationCosts(stats.rc.max, stats.rc.vestingRatio, settings);
+      const fresh = await fetchRcOperationCosts(stats.username);
       if (fresh) {
         setCosts(fresh);
-        chrome.storage.local.set({ [RC_COSTS_CACHE_KEY]: fresh, [RC_COSTS_TS_KEY]: Date.now() });
+        chrome.storage.local.set({ [cacheKey]: fresh, [tsKey]: Date.now() });
       }
     });
-  }, []);
+  }, [stats.username]);
 
   const pct     = stats.rc.percentage;
   const current = stats.rc.current;
@@ -71,11 +80,18 @@ export const RcBudget: React.FC<RcBudgetProps> = ({ stats, settings }) => {
         <span className={`text-sm font-bold ${textColor}`}>{rounded}%</span>
       </div>
 
-      <div className="w-full bg-slate-100 rounded-full h-2 mb-4">
+      <div className="w-full bg-slate-100 rounded-full h-2 mb-1.5">
         <div
           className={`h-2 rounded-full transition-all ${barColor}`}
           style={{ width: `${Math.max(1, rounded)}%` }}
         />
+      </div>
+
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-xs font-semibold text-slate-700">
+          {fmtRc(current)} <span className="text-slate-400 font-normal">RC available</span>
+        </span>
+        <span className="text-[11px] text-slate-400">of {fmtRc(stats.rc.max)}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-2">

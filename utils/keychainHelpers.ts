@@ -49,7 +49,7 @@ async function executeInTab<TArgs extends any[]>(
 // A host-permission failure means we can't inject into the active tab — e.g. in
 // side-panel mode (no activeTab grant) when the tab's host isn't in
 // host_permissions (hivescan.info, arbitrary sites). We recover via ecency.com.
-function isHostPermissionError(msg?: string): boolean {
+export function isHostPermissionError(msg?: string): boolean {
   return !!msg && /cannot access|host permission|must request permission|access this host|access the respective host|missing host/i.test(msg);
 }
 

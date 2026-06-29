@@ -17,6 +17,7 @@ import {
   UnauthorizedError
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
+import { isHostPermissionError } from './utils/keychainHelpers';
 import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message, HivePrices, SavedAccount, HiveNotificationType } from './types';
 import { FRONTENDS, HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from './constants';
 import { Activity } from 'lucide-react';
@@ -580,8 +581,22 @@ const App: React.FC = () => {
                      reject("Script execution returned no result.");
                   }
                } catch (e: any) {
-                  if (closeTabAfter) chrome.tabs.remove(closeTabAfter);
-                  reject(e.message || "Script injection failed.");
+                  const msg = e?.message || "Script injection failed.";
+                  if (closeTabAfter) {
+                     // Already in the fallback ecency tab — don't loop, give up.
+                     chrome.tabs.remove(closeTabAfter);
+                     reject(msg);
+                     return;
+                  }
+                  // Active-tab injection failed. On Firefox, restricted hosts like
+                  // addons.mozilla.org reject with a host-permission error even
+                  // though the URL doesn't look restricted. Fall back to a
+                  // background ecency.com tab (a host we always hold permission for).
+                  if (isHostPermissionError(msg)) {
+                     openBackgroundTabAndInject();
+                  } else {
+                     reject(msg);
+                  }
                }
             };
 

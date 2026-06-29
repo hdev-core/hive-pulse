@@ -1,16 +1,26 @@
 export {};
 
-import { FRONTENDS } from './constants';
-
 declare const chrome: any;
 
-// Show the RC/VP overlay on every Hive frontend the extension knows about.
-// Derived from the canonical FRONTENDS list (domains + aliases) so new
-// frontends are covered automatically without touching this file.
-const HIVE_HOSTS = new Set<string>(
-  FRONTENDS.flatMap(f => [f.domain, ...(f.aliases || [])])
-    .map(h => h.replace(/^www\./, ''))
-);
+// Show the RC/VP overlay on every Hive frontend the extension supports.
+// This is a content script (a classic, non-module script), so it must stay
+// fully self-contained — it cannot `import` shared modules without Vite
+// emitting a chunk reference that fails to load. Keep this list in sync with
+// the FRONTENDS domains/aliases in constants.ts. (www. is stripped before
+// matching, so bare domains are enough.)
+const HIVE_HOSTS = new Set([
+  'peakd.com',
+  'ecency.com',
+  'hive.blog',
+  'wallet.hive.blog',
+  'inleo.io',
+  'leofinance.io',
+  'actifit.io',
+  'waivio.com',
+  'liketu.com',
+  'hivescan.info',
+  '3speak.tv',
+]);
 
 const host = location.hostname.replace(/^www\./, '');
 

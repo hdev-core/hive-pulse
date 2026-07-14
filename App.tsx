@@ -20,6 +20,7 @@ import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin
 import { isHostPermissionError } from './utils/keychainHelpers';
 import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message, HivePrices, SavedAccount, HiveNotificationType } from './types';
 import { FRONTENDS, HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from './constants';
+import { DEFAULT_SETTINGS, patchSettings } from './utils/settingsStore';
 import { Activity } from 'lucide-react';
 
 // Components
@@ -41,40 +42,6 @@ declare global {
     hive_keychain: any;
   }
 }
-
-const DEFAULT_SETTINGS: AppSettings = {
-  autoRedirect: false,
-  preferredFrontendId: FrontendId.PEAKD,
-  openInNewTab: false,
-  notificationsEnabled: true,
-  notificationInterval: 1,
-  rcUser: '',
-  badgeMetric: 'VP',
-  overlayMetric: 'RC',
-  ecencyUsername: '',
-  ecencyAccessToken: '',
-  ecencyChatToken: '',
-  ecencyUserId: '',
-  ecencyRefreshToken: '',
-  overrideBadgeWithUnreadMessages: true,
-  hiveNotificationBadgeEnabled: true,
-  hiveNotificationFilterTypes: [
-    HiveNotificationType.REPLY,
-    HiveNotificationType.MENTION,
-    HiveNotificationType.FOLLOW,
-    HiveNotificationType.TRANSFER,
-    HiveNotificationType.DELEGATIONS,
-    HiveNotificationType.REBLOG,
-  ],
-  activeFrontendIds: FRONTENDS.map(f => f.id),
-  customFrontends: [],
-  hiveRpcNode: HIVE_RPC_NODES[0],
-  heRpcNode: HIVE_ENGINE_RPC_NODES[0],
-  customHiveRpcNodes: [],
-  customHeRpcNodes: [],
-  autoSwitchHiveNode: false,
-  autoSwitchHeNode: false,
-};
 
 const App: React.FC = () => {
   // Navigation State
@@ -432,9 +399,10 @@ const App: React.FC = () => {
     if (updated.ecencyUserId && updated.ecencyUsername) {
        setUserMap(prev => ({ ...prev, [updated.ecencyUserId!]: updated.ecencyUsername! }));
     }
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({ settings: updated });
-    }
+    // Persist only the changed keys. `settings` may still be DEFAULT_SETTINGS if the user
+    // acted before hydration resolved, and writing that whole snapshot would wipe
+    // customFrontends and anything else already in storage.
+    void patchSettings(newSettings);
   };
 
   const updateBadgeFromData = (data: AccountStats) => {
@@ -474,8 +442,7 @@ const App: React.FC = () => {
       setChatSessionExpired(true);
     }
 
-    const updatedSettings: AppSettings = {
-      ...settings,
+    const settingsPatch: Partial<AppSettings> = {
       ecencyUsername: account.username,
       ecencyAccessToken: account.ecencyAccessToken,
       ecencyChatToken: account.ecencyChatToken,
@@ -483,6 +450,7 @@ const App: React.FC = () => {
       ecencyRefreshToken: account.ecencyRefreshToken,
       rcUser: account.username,
     };
+    const updatedSettings: AppSettings = { ...settings, ...settingsPatch };
 
     setSettings(updatedSettings);
     if (account.ecencyUserId) {
@@ -492,7 +460,7 @@ const App: React.FC = () => {
     fetchAccountStats(account.username, updatedSettings).then(data => data && setAccountStats(data));
 
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({ settings: updatedSettings });
+      await patchSettings(settingsPatch);
       chrome.storage.local.remove(['unreadCounts', 'channelTotals', 'channelReadState', 'channels'], () => {
         if (account.ecencyChatToken) refreshChat(account.ecencyChatToken);
       });
@@ -679,8 +647,7 @@ const App: React.FC = () => {
           mmPat: effectiveMmPat,
         };
         const updatedAccounts = [...savedAccounts.filter(a => a.username !== targetUsername), newAccount];
-        const updatedSettings: AppSettings = {
-          ...settings,
+        const settingsPatch: Partial<AppSettings> = {
           ecencyUsername: targetUsername,
           ecencyAccessToken: accessToken,
           ecencyChatToken: effectiveChatToken,
@@ -688,12 +655,12 @@ const App: React.FC = () => {
           ecencyRefreshToken: effectiveRefreshToken,
           rcUser: targetUsername,
         };
-        setSettings(updatedSettings);
+        setSettings(prev => ({ ...prev, ...settingsPatch }));
         const resolvedUserId = bootstrap?.userId || existingAccount?.ecencyUserId;
         if (resolvedUserId) setUserMap(prev => ({ ...prev, [resolvedUserId]: targetUsername }));
         persistSavedAccounts(updatedAccounts, targetUsername);
         if (typeof chrome !== 'undefined' && chrome.storage) {
-          chrome.storage.local.set({ settings: updatedSettings });
+          await patchSettings(settingsPatch);
         }
         setAddingAccount(false);
 

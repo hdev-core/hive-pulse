@@ -141,9 +141,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       color: '#64748b', // Default color for custom frontends
       textColor: '#ffffff',
       description: 'User-defined custom frontend.',
-      paths: { // Default paths for custom frontends, can be extended later
+      // Serializable only — this object gets persisted to storage.local. A function here
+      // makes the whole settings write fail on Firefox (DataCloneError). The wallet path
+      // for custom frontends comes from linkStructure below.
+      paths: {
         compose: '/submit',
-        wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
       },
       active: true,
       isCustom: true,

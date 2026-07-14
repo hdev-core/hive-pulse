@@ -13,6 +13,7 @@ import {
 } from './utils/ecencyHelpers';
 import { ActionMode, AppSettings, FrontendId, Channel, HivePrices, HiveNotificationType } from './types';
 import { FRONTENDS } from './constants';
+import { readSettings, patchSettings } from './utils/settingsStore';
 
 import { HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from './constants';
 
@@ -23,41 +24,8 @@ const IS_FIREFOX = typeof navigator !== 'undefined' && /firefox/i.test(navigator
 
 const ALARM_NAME = 'checkStatus';
 
-const DEFAULT_SETTINGS: AppSettings = {
-  autoRedirect: false,
-  preferredFrontendId: FrontendId.PEAKD,
-  openInNewTab: false,
-  notificationsEnabled: true,
-  notificationInterval: 1,
-  badgeMetric: 'VP',
-  overlayMetric: 'RC',
-  ecencyUsername: '',
-  ecencyAccessToken: '',
-  ecencyChatToken: '',
-  ecencyRefreshToken: '',
-  overrideBadgeWithUnreadMessages: true,
-  hiveNotificationBadgeEnabled: true,
-  hiveNotificationFilterTypes: [
-    HiveNotificationType.REPLY,
-    HiveNotificationType.MENTION,
-    HiveNotificationType.FOLLOW,
-    HiveNotificationType.TRANSFER,
-    HiveNotificationType.DELEGATIONS,
-    HiveNotificationType.REBLOG,
-  ],
-  activeFrontendIds: FRONTENDS.map(f => f.id),
-  customFrontends: [],
-  hiveRpcNode: HIVE_RPC_NODES[0],
-  heRpcNode: HIVE_ENGINE_RPC_NODES[0],
-  customHiveRpcNodes: [],
-  customHeRpcNodes: [],
-  autoSwitchHiveNode: false,
-  autoSwitchHeNode: false,
-};
-
 const setupAlarm = async () => {
-  const stored = await chrome.storage.local.get(['settings']);
-  const settings: AppSettings = stored.settings || DEFAULT_SETTINGS;
+  const settings = await readSettings();
 
   await chrome.alarms.clear(ALARM_NAME);
 
@@ -78,10 +46,33 @@ chrome.runtime.onStartup.addListener(() => {
   checkStatus();
 });
 
+// checkStatus writes unreadCounts/channelReadState, which the storage listener below also
+// watches — without a guard the two feed each other into a permanent loop of overlapping
+// runs, and every overlapping run is another chance to persist a stale settings snapshot.
+let checkInFlight = false;
+let checkQueued = false;
+
 const checkStatus = async () => {
+  if (checkInFlight) {
+    checkQueued = true;
+    return;
+  }
+  checkInFlight = true;
   try {
-    const stored = await chrome.storage.local.get(['settings', 'channelState', 'channelReadState', 'lastSeenHiveNotifId', 'lastShownHiveNotifId']);
-    let settings: AppSettings = stored.settings || DEFAULT_SETTINGS;
+    await runCheckStatus();
+  } finally {
+    checkInFlight = false;
+    if (checkQueued) {
+      checkQueued = false;
+      checkStatus();
+    }
+  }
+};
+
+const runCheckStatus = async () => {
+  try {
+    const stored = await chrome.storage.local.get(['channelState', 'channelReadState', 'lastSeenHiveNotifId', 'lastShownHiveNotifId']);
+    let settings: AppSettings = await readSettings();
     const lastChannelState: Record<string, number> = stored.channelState || {};
     const channelReadState: Record<string, number> = stored.channelReadState || {};
 
@@ -128,13 +119,14 @@ const checkStatus = async () => {
           }
 
           if (newTokens) {
-             const updatedSettings: AppSettings = {
-                ...settings,
+             // Persist only the token keys. `settings` was read before several seconds of
+             // network calls above; writing that whole snapshot back would revert anything
+             // the popup changed in the meantime (e.g. a just-added custom frontend).
+             const updatedSettings = await patchSettings({
                 ecencyChatToken: newTokens.token === 'cookie-session' ? '' : newTokens.token,
                 ecencyRefreshToken: newTokens.refreshToken || settings.ecencyRefreshToken,
                 ecencyUserId: newTokens.userId || settings.ecencyUserId
-             };
-             await chrome.storage.local.set({ settings: updatedSettings });
+             });
              settings = updatedSettings;
 
              tokenToUse = updatedSettings.ecencyChatToken;
@@ -375,15 +367,38 @@ chrome.alarms.onAlarm.addListener((alarm: any) => {
   }
 });
 
+// Settings keys checkStatus actually depends on. Anything else — a custom frontend, a
+// redirect preference — must not kick off a network poll.
+const CHECK_RELEVANT_SETTINGS: (keyof AppSettings)[] = [
+  'notificationsEnabled', 'notificationInterval', 'ecencyUsername', 'ecencyAccessToken',
+  'ecencyChatToken', 'ecencyRefreshToken', 'ecencyUserId', 'overrideBadgeWithUnreadMessages',
+  'hiveNotificationBadgeEnabled', 'hiveNotificationFilterTypes', 'badgeMetric', 'rcUser',
+  'hiveRpcNode',
+];
+
+const changed = (change: any): boolean =>
+  !!change && JSON.stringify(change.oldValue) !== JSON.stringify(change.newValue);
+
 chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
-  if (areaName === 'local') {
-    if (changes.settings) {
-        setupAlarm();
-        checkStatus();
+  if (areaName !== 'local') return;
+
+  if (changed(changes.settings)) {
+    const before = changes.settings.oldValue || {};
+    const after = changes.settings.newValue || {};
+    const relevant = CHECK_RELEVANT_SETTINGS.some(
+      k => JSON.stringify(before[k]) !== JSON.stringify(after[k])
+    );
+    if (relevant) {
+      setupAlarm();
+      checkStatus();
     }
-    if (changes.channelReadState || changes.unreadCounts || changes.lastSeenHiveNotifId) {
-        checkStatus();
-    }
+  }
+
+  // unreadCounts is deliberately not watched: checkStatus writes it itself, so reacting to
+  // it re-triggers checkStatus forever. The read-state keys are only written by the popup
+  // (mark-as-read), and the equality check stops a no-op write from re-arming the poll.
+  if (changed(changes.channelReadState) || changed(changes.lastSeenHiveNotifId)) {
+    checkStatus();
   }
 });
 
@@ -399,8 +414,7 @@ chrome.notifications.onClicked.addListener((notificationId: string) => {
 
 chrome.tabs.onUpdated.addListener(async (tabId: number, changeInfo: any, tab: any) => {
   if (changeInfo.status === 'loading' && tab.url) {
-    const stored = await chrome.storage.local.get(['settings']);
-    const settings: AppSettings = stored.settings || DEFAULT_SETTINGS;
+    const settings: AppSettings = await readSettings();
 
     if (!settings.autoRedirect || !settings.preferredFrontendId) return;
 

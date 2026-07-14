@@ -91,6 +91,20 @@ const resolveLinkTemplate = (template: string, args: LinkTemplateArgs): string =
   return resolved;
 };
 
+// paths.wallet is a function, so it does not survive a round-trip through storage.local.
+// A config rehydrated from storage (any custom frontend, and older Chrome-persisted
+// entries) will have lost it — fall back to the standard Hive wallet path rather than
+// calling undefined.
+const walletPath = (config: FrontendConfig, username: string | null): string => {
+  if (typeof config.paths?.wallet === 'function') {
+    return config.paths.wallet(username || undefined);
+  }
+  if (config.linkStructure?.wallet) {
+    return resolveLinkTemplate(config.linkStructure.wallet, { username });
+  }
+  return username ? `/@${username}/wallet` : '/wallet';
+};
+
 /**
  * Generates a new URL for the target frontend based on mode.
  */
@@ -116,7 +130,7 @@ export const getTargetUrl = (
     if (mode === ActionMode.COMPOSE) {
       finalPath = targetConfig.paths.compose;
     } else if (mode === ActionMode.WALLET) {
-      finalPath = targetConfig.paths.wallet(username || undefined);
+      finalPath = walletPath(targetConfig, username);
     } else { // SAME_PAGE
       if (author && permlink) {
         finalPath = `/watch?v=${author}/${permlink}`;
@@ -156,7 +170,7 @@ export const getTargetUrl = (
     if (mode === ActionMode.COMPOSE) {
       finalPath = targetConfig.paths.compose;
     } else if (mode === ActionMode.WALLET) {
-      finalPath = targetConfig.paths.wallet(username || undefined);
+      finalPath = walletPath(targetConfig, username);
     } else { // SAME_PAGE
       // If we have author and permlink, reconstruct the traditional path
       // This handles cases where we are coming FROM a non-standard URL (like 3speak)

@@ -64,7 +64,11 @@ export interface TrendingCommunity {
 
 export interface PathConfig {
   compose: string;
-  wallet: (username?: string) => string;
+  // Built-in frontends only. Custom frontends resolve their wallet path from
+  // linkStructure instead — they must stay free of functions, because settings are
+  // persisted via storage.local, whose structured clone rejects function values
+  // (Firefox throws DataCloneError; Chrome's JSON path silently drops them).
+  wallet?: (username?: string) => string;
 }
 
 export interface LinkStructureConfig {

@@ -831,6 +831,100 @@ export const fetchTrendingCommunities = async (
 
 // HP <-> VESTS conversion factor from global dynamic properties.
 // withdraw_vesting (power down) takes VESTS, but users think in HP — convert with this.
+/**
+ * Hive accounts starting with `prefix`, for recipient autocomplete.
+ * condenser_api.lookup_accounts is a straight prefix scan over the account index.
+ */
+export const lookupHiveAccounts = async (
+  prefix: string,
+  limit = 8,
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<string[]> => {
+  const q = prefix.replace('@', '').trim().toLowerCase();
+  if (!q) return [];
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const data = await rpcFetchWithFallback(
+      { jsonrpc: '2.0', method: 'condenser_api.lookup_accounts', params: [q, Math.min(limit, 20)], id: 1 },
+      primary, fallback, autoSwitch
+    );
+    const names: string[] = data.result || [];
+    // lookup_accounts returns names >= the query, not only those matching it.
+    return names.filter(n => n.startsWith(q));
+  } catch {
+    return [];
+  }
+};
+
+export interface AccountCard {
+  username: string;
+  reputation: number;   // the familiar 25–80ish display score
+  hp: number;
+  postCount: number;
+  createdIso: string;   // account creation date
+  ageDays: number;
+}
+
+/**
+ * Compact profile for the on-page username hover card.
+ *
+ * Reputation and account age are deliberately front and centre: together they are the
+ * cheapest, most reliable scam heuristic on Hive — a days-old account with default
+ * reputation asking for funds is the shape of virtually every impersonation attempt.
+ */
+export const fetchAccountCard = async (
+  username: string,
+  settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
+): Promise<AccountCard | null> => {
+  try {
+    const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    const [acctData, globalData] = await Promise.all([
+      rpcFetchWithFallback(
+        { jsonrpc: '2.0', method: 'condenser_api.get_accounts', params: [[username]], id: 1 },
+        primary, fallback, autoSwitch
+      ),
+      rpcFetchWithFallback(
+        { jsonrpc: '2.0', method: 'condenser_api.get_dynamic_global_properties', params: [], id: 2 },
+        primary, fallback, autoSwitch
+      ),
+    ]);
+
+    const a = acctData.result?.[0];
+    const g = globalData.result;
+    if (!a || !g) return null;
+
+    const num = (s: string) => { const m = String(s).match(/[\d.]+/); return m ? parseFloat(m[0]) : 0; };
+    const hp = (num(a.vesting_shares) / num(g.total_vesting_shares)) * num(g.total_vesting_fund_hive);
+
+    // Raw reputation -> the 25-80 score users recognise.
+    const raw = Number(a.reputation) || 0;
+    let reputation = 25;
+    if (raw !== 0) {
+      const neg = raw < 0;
+      const log = Math.log10(Math.abs(raw));
+      let out = Math.max(log - 9, 0);
+      if (neg) out = -out;
+      reputation = out * 9 + 25;
+    }
+
+    const createdIso = a.created || '';
+    const ageDays = createdIso
+      ? Math.max(0, Math.floor((Date.now() - new Date(createdIso + 'Z').getTime()) / 86400000))
+      : 0;
+
+    return {
+      username,
+      reputation: Math.round(reputation * 10) / 10,
+      hp,
+      postCount: Number(a.post_count) || 0,
+      createdIso,
+      ageDays,
+    };
+  } catch {
+    return null;
+  }
+};
+
 export const fetchHpVestConversion = async (
   settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean }
 ): Promise<{ vestsPerHive: number; hivePerVests: number } | null> => {

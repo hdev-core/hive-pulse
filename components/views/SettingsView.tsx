@@ -711,6 +711,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   />
                 </label>
 
+                <label className="flex items-start justify-between cursor-pointer mb-3 gap-3">
+                  <span className="text-sm text-slate-600">
+                    Username hover cards
+                    <span className="block text-[11px] text-slate-400">
+                      Show reputation, account age and scam warnings when hovering an @username on Hive sites.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={settings.usernameHoverCards !== false}
+                    onChange={(e) => updateSettings({ usernameHoverCards: e.target.checked })}
+                    className="accent-emerald-500 w-4 h-4 mt-0.5 shrink-0"
+                  />
+                </label>
+
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm text-slate-600">Extension Badge Metric</span>
                   <div className="flex bg-slate-200 rounded p-0.5">

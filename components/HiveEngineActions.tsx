@@ -7,6 +7,8 @@ import {
   heTransferOp, heStakeOp, heUnstakeOp,
 } from '../utils/hiveEngineHelpers';
 import { broadcastKeychainOp } from '../utils/keychainHelpers';
+import { assessRecipient, RiskAssessment } from '../utils/scamShield';
+import { ScamWarning } from './ScamWarning';
 
 type Tab = 'send' | 'stake' | 'unstake';
 
@@ -52,10 +54,19 @@ export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, 
   // Re-pull holdings after a signed action elsewhere in the wallet.
   useEffect(() => { if (refreshKey) loadHoldings(); }, [refreshKey]);
 
+  const [risk, setRisk] = useState<RiskAssessment | null>(null);
+  const [riskAcknowledged, setRiskAcknowledged] = useState(false);
+
   // Debounced recipient validation (send tab only)
   useEffect(() => {
     setRecipientValid(null);
+    setRisk(null);
+    setRiskAcknowledged(false);
     if (tab !== 'send' || !recipient.trim() || recipient.trim().length < 3) return;
+
+    // Local + synchronous: flag the risk immediately rather than after the network check.
+    setRisk(assessRecipient(recipient, [username]));
+
     const t = setTimeout(async () => {
       setValidating(true);
       const valid = await validateHiveAccount(recipient.replace('@', '').trim().toLowerCase(), settings);
@@ -63,7 +74,7 @@ export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, 
       setValidating(false);
     }, 600);
     return () => clearTimeout(t);
-  }, [recipient, tab]);
+  }, [recipient, tab, username]);
 
   const selected = holdings.find(h => h.symbol === symbol);
   const parsed = parseFloat(amount);
@@ -109,6 +120,19 @@ export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, 
       const to = recipient.replace('@', '').trim().toLowerCase();
       if (!to) return setResult({ ok: false, msg: 'Enter a recipient account.' });
       if (recipientValid === false) return setResult({ ok: false, msg: 'Recipient account not found.' });
+
+      // Scam Shield: HE tokens are just as drainable as HIVE.
+      const currentRisk = assessRecipient(to, [username]);
+      if (currentRisk.level !== 'ok' && !riskAcknowledged) {
+        setRisk(currentRisk);
+        return setResult({
+          ok: false,
+          msg: currentRisk.level === 'blocked'
+            ? `Blocked: @${to} is a known scam account. Tick the box above if you are certain.`
+            : `Hold on — @${to} may be impersonating @${currentRisk.similarTo}. Tick the box above to proceed.`,
+        });
+      }
+
       op = heTransferOp(username, selected.symbol, to, quantity, memo);
       successMsg = `Sent ${quantity} ${selected.symbol} to @${to}.`;
     } else if (tab === 'stake') {
@@ -121,7 +145,7 @@ export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, 
 
     setBusy(true);
     setResult(null);
-    const r = await broadcastKeychainOp(username, [op], 'Active');
+    const r = await broadcastKeychainOp(username, [op], 'Active', { acknowledgedRisk: riskAcknowledged });
     setBusy(false);
     if (r.success) {
       setResult({ ok: true, msg: successMsg });
@@ -207,6 +231,11 @@ export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, 
               </span>
             </div>
             {recipientValid === false && <p className="text-[11px] text-red-400 mt-1">Account not found on Hive</p>}
+            {risk && (
+              <div className="mt-2">
+                <ScamWarning risk={risk} acknowledged={riskAcknowledged} onAcknowledge={setRiskAcknowledged} />
+              </div>
+            )}
           </div>
         )}
 

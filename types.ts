@@ -147,6 +147,8 @@ export interface AppSettings {
   ecencyUserId?: string;      // Internal Mattermost User ID (for reliable 'isMe' check)
   ecencyRefreshToken?: string;
   overrideBadgeWithUnreadMessages: boolean;
+  /** Show the @username hover card on Hive frontends. Opt-out; some people find it noisy. */
+  usernameHoverCards?: boolean;
   activeFrontendIds: (FrontendId | string)[]; // Added for ordered and active frontend IDs
   customFrontends: FrontendConfig[]; // New property to store custom frontends
 }

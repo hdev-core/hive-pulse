@@ -3,6 +3,8 @@ import { ArrowUpCircle, ArrowDownCircle, PiggyBank, Download, Loader, AlertTrian
 import { AppSettings } from '../types';
 import { fetchHpVestConversion, validateHiveAccount } from '../utils/hiveHelpers';
 import { broadcastKeychainOp } from '../utils/keychainHelpers';
+import { assessRecipient, RiskAssessment } from '../utils/scamShield';
+import { ScamWarning } from './ScamWarning';
 
 type Tab = 'powerup' | 'powerdown' | 'savings' | 'withdraw' | 'delegate';
 
@@ -48,10 +50,18 @@ export const StakeForm: React.FC<StakeFormProps> = ({ username, balances, settin
     fetchHpVestConversion(settings).then(c => { if (c) setVestsPerHive(c.vestsPerHive); });
   }, []);
 
+  const [risk, setRisk] = useState<RiskAssessment | null>(null);
+  const [riskAcknowledged, setRiskAcknowledged] = useState(false);
+
   // Debounced recipient validation (delegate tab only)
   useEffect(() => {
     setRecipientValid(null);
+    setRisk(null);
+    setRiskAcknowledged(false);
     if (tab !== 'delegate' || !recipient.trim() || recipient.trim().length < 3) return;
+
+    setRisk(assessRecipient(recipient, [username]));
+
     const t = setTimeout(async () => {
       setValidating(true);
       const clean = recipient.replace('@', '').trim().toLowerCase();
@@ -60,9 +70,12 @@ export const StakeForm: React.FC<StakeFormProps> = ({ username, balances, settin
       setValidating(false);
     }, 600);
     return () => clearTimeout(t);
-  }, [recipient, tab]);
+  }, [recipient, tab, username]);
 
-  const reset = () => { setAmount(''); setMemo(''); setPdAck(false); setRecipient(''); setRecipientValid(null); };
+  const reset = () => {
+    setAmount(''); setMemo(''); setPdAck(false); setRecipient(''); setRecipientValid(null);
+    setRisk(null); setRiskAcknowledged(false);
+  };
   const switchTab = (t: Tab) => { setTab(t); setResult(null); reset(); };
 
   // Jump to a specific tab when an asset-row pill is tapped (Power Up / Power Down / Delegate).
@@ -83,7 +96,7 @@ export const StakeForm: React.FC<StakeFormProps> = ({ username, balances, settin
   const broadcast = async (op: any[], successMsg: string) => {
     setBusy(true);
     setResult(null);
-    const r = await broadcastKeychainOp(username, [op], 'Active');
+    const r = await broadcastKeychainOp(username, [op], 'Active', { acknowledgedRisk: riskAcknowledged });
     finish(r.success, r.success ? successMsg : (r.error || 'Transaction failed.'));
   };
 
@@ -138,6 +151,16 @@ export const StakeForm: React.FC<StakeFormProps> = ({ username, balances, settin
     const clean = recipient.replace('@', '').trim().toLowerCase();
     if (!clean) return finish(false, 'Enter a recipient account.');
     if (recipientValid === false) return finish(false, 'Recipient account not found.');
+
+    // Scam Shield: a delegation to a scam account hands over your stake just as surely.
+    const currentRisk = assessRecipient(clean, [username]);
+    if (currentRisk.level !== 'ok' && !riskAcknowledged) {
+      setRisk(currentRisk);
+      return finish(false, currentRisk.level === 'blocked'
+        ? `Blocked: @${clean} is a known scam account. Tick the box above if you are certain.`
+        : `Hold on — @${clean} may be impersonating @${currentRisk.similarTo}. Tick the box above to proceed.`);
+    }
+
     if (isNaN(parsed) || parsed < 0) return finish(false, 'Enter an amount (0 to remove a delegation).');
     if (parsed > balances.hivepower) return finish(false, 'Amount exceeds your Hive Power.');
     if (!vestsPerHive) return finish(false, 'Conversion rate not loaded yet — try again in a moment.');
@@ -291,6 +314,11 @@ export const StakeForm: React.FC<StakeFormProps> = ({ username, balances, settin
               </span>
             </div>
             {recipientValid === false && <p className="text-[11px] text-red-400 mt-1">Account not found on Hive</p>}
+            {risk && (
+              <div className="mt-2">
+                <ScamWarning risk={risk} acknowledged={riskAcknowledged} onAcknowledge={setRiskAcknowledged} />
+              </div>
+            )}
           </div>
           {amountField(balances.hivepower, 'HP')}
           {parsed > 0 && vestsPerHive && (

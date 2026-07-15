@@ -1,6 +1,7 @@
 
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
-import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice, fetchNotifications, fetchRcOperationCosts } from './utils/hiveHelpers';
+import { fetchAccountStats, fetchAccountCard, fetchNotifications, fetchRcOperationCosts } from './utils/hiveHelpers';
+import { assessRecipient } from './utils/scamShield';
 import {
   fetchChannels,
   bootstrapEcencyChat,
@@ -410,6 +411,39 @@ chrome.notifications.onClicked.addListener((notificationId: string) => {
         chrome.action.openPopup?.();
         chrome.notifications.clear(notificationId);
     }
+});
+
+// ── Username hover cards ─────────────────────────────────────────────────────
+// content.ts is a classic script and cannot import shared modules, so it asks us for the
+// card instead of pulling in the RPC helpers and the 900-entry bad-actor list on every
+// page. Doing it here also means one cache rather than one per tab.
+const CARD_TTL_MS = 5 * 60 * 1000;
+const cardCache = new Map<string, { at: number; card: any }>();
+
+const getAccountCard = async (username: string) => {
+  const key = username.toLowerCase();
+  const hit = cardCache.get(key);
+  const now = Date.now();
+  if (hit && now - hit.at < CARD_TTL_MS) return hit.card;
+
+  const settings = await readSettings();
+  const profile = await fetchAccountCard(key, settings);
+  if (!profile) return null;
+
+  const risk = assessRecipient(key);
+  const card = { ...profile, risk: risk.level, riskReason: risk.reason };
+  cardCache.set(key, { at: now, card });
+  return card;
+};
+
+chrome.runtime.onMessage.addListener((msg: any, _sender: any, sendResponse: (r: any) => void) => {
+  if (msg?.type === 'HP_ACCOUNT_CARD' && typeof msg.username === 'string') {
+    getAccountCard(msg.username)
+      .then(card => sendResponse({ ok: true, card }))
+      .catch(() => sendResponse({ ok: false, card: null }));
+    return true; // keep the message channel open for the async reply
+  }
+  return false;
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId: number, changeInfo: any, tab: any) => {

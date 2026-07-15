@@ -1,9 +1,37 @@
+import { assessOperations, assessRecipient } from './scamShield';
+
 declare const chrome: any;
 
 export interface KeychainResult {
   success: boolean;
   error?: string;
 }
+
+/** Raised when the Scam Shield refuses to sign. Callers surface `error` verbatim. */
+export const SCAM_SHIELD_BLOCKED = 'SCAM_SHIELD_BLOCKED';
+
+// Every signed operation in the extension funnels through broadcastKeychainOp or
+// requestKeychainTransfer, so this is the one place a send to a known drainer can be
+// stopped for good — including from op types added later, which is why the guard lives
+// here and not in the individual forms. Only hard BLOCKS are enforced at this layer;
+// softer impersonation warnings are a UI decision the user gets to overrule.
+//
+// The block is overridable, deliberately. It is the user's money, the list is a
+// third-party feed (Hive condenser's BadActorList), and a false positive with no way
+// through would just read as "the extension is broken". `acknowledgedRisk` is the caller
+// promising it showed the warning and the user chose to proceed anyway — so the default
+// stays safe for any call site that has not thought about it.
+export interface SignOptions {
+  acknowledgedRisk?: boolean;
+}
+
+const blockedRecipient = (assessments: { level: string; recipient: string; reason: string }[]) =>
+  assessments.find(a => a.level === 'blocked');
+
+const refuse = (recipient: string, reason: string): KeychainResult => ({
+  success: false,
+  error: `${SCAM_SHIELD_BLOCKED}: @${recipient} — ${reason}`,
+});
 
 function isRestrictedUrl(url: string): boolean {
   return (
@@ -133,8 +161,14 @@ function webKeychainTransfer(
 export async function broadcastKeychainOp(
   username: string,
   operations: any[],
-  keyType: 'Posting' | 'Active' = 'Active'
+  keyType: 'Posting' | 'Active' = 'Active',
+  opts: SignOptions = {}
 ): Promise<KeychainResult> {
+  if (!opts.acknowledgedRisk) {
+    const blocked = blockedRecipient(assessOperations(username, operations));
+    if (blocked) return refuse(blocked.recipient, blocked.reason);
+  }
+
   if (typeof chrome !== 'undefined' && chrome.scripting) {
     return runWithKeychainTab(
       (u: string, ops: any[], kt: string): Promise<KeychainResult> => new Promise(resolve => {
@@ -153,8 +187,14 @@ export async function requestKeychainTransfer(
   to: string,
   amount: string,
   memo: string,
-  currency: 'HIVE' | 'HBD'
+  currency: 'HIVE' | 'HBD',
+  opts: SignOptions = {}
 ): Promise<KeychainResult> {
+  if (!opts.acknowledgedRisk) {
+    const risk = assessRecipient(to);
+    if (risk.level === 'blocked') return refuse(risk.recipient, risk.reason);
+  }
+
   if (typeof chrome !== 'undefined' && chrome.scripting) {
     return runWithKeychainTab(
       (f: string, t: string, a: string, m: string, c: string): Promise<KeychainResult> => new Promise(resolve => {

@@ -1,10 +1,38 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Send, QrCode, History, ArrowRight, ArrowLeft, Loader, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { AppSettings, TransferRecord } from '../types';
-import { validateHiveAccount, fetchTransferHistory } from '../utils/hiveHelpers';
+import { validateHiveAccount, fetchTransferHistory, lookupHiveAccounts } from '../utils/hiveHelpers';
 import { requestKeychainTransfer } from '../utils/keychainHelpers';
+import { assessRecipient, RiskAssessment, isKnownBadActor } from '../utils/scamShield';
+import { ScamWarning } from './ScamWarning';
 
 type Tab = 'send' | 'receive' | 'history';
+
+/**
+ * One row of the recipient autocomplete. Scam accounts are flagged here rather than only
+ * after selection — the cheapest moment to stop a bad send is before it is even typed in
+ * full, and a search result list is exactly where a lookalike gets picked by mistake.
+ */
+const SuggestionRow: React.FC<{ name: string; onPick: (n: string) => void }> = ({ name, onPick }) => {
+  const scam = isKnownBadActor(name);
+  return (
+    <button
+      type="button"
+      // onMouseDown: fires before the input's blur, so the click lands.
+      onMouseDown={() => onPick(name)}
+      className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm ${
+        scam ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-50'
+      }`}
+    >
+      <span className={scam ? 'font-semibold' : ''}>@{name}</span>
+      {scam && (
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 shrink-0">
+          SCAM
+        </span>
+      )}
+    </button>
+  );
+};
 
 interface SendFormProps {
   username: string;
@@ -34,10 +62,64 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
 
+  // Scam Shield state
+  const [risk, setRisk] = useState<RiskAssessment | null>(null);
+  const [riskAcknowledged, setRiskAcknowledged] = useState(false);
+
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Everyone this account has actually paid, most recent first. Doubles as the autocomplete
+  // source and as the "trusted" set for the impersonation check — a near-miss of someone
+  // you have already paid is exactly the attack the shield exists to catch.
+  const pastRecipients = React.useMemo(() => {
+    const me = username.toLowerCase();
+    const seen: string[] = [];
+    for (const r of history) {
+      const to = (r.to || '').replace('@', '').toLowerCase();
+      if (to && to !== me && !seen.includes(to)) seen.push(to);
+    }
+    return seen;
+  }, [username, history]);
+
+  const trustedAccounts = React.useMemo(
+    () => [username.toLowerCase(), ...pastRecipients],
+    [username, pastRecipients]
+  );
+
+  const query = recipient.replace('@', '').trim().toLowerCase();
+
+  // List 1: accounts this user has paid before.
+  const knownSuggestions = React.useMemo(
+    () => pastRecipients.filter(a => !query || a.startsWith(query)).slice(0, 5),
+    [query, pastRecipients]
+  );
+
+  // List 2: live prefix search across all Hive accounts.
+  const [lookupResults, setLookupResults] = useState<string[]>([]);
+  useEffect(() => {
+    if (query.length < 2) { setLookupResults([]); return; }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const names = await lookupHiveAccounts(query, 8, settings);
+      if (!cancelled) setLookupResults(names.filter(n => !knownSuggestions.includes(n)));
+    }, 250);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [query, knownSuggestions]);
+
+  // Pull transfer history up-front (not just when the History tab opens) so the shield has
+  // a trusted set to compare against on the very first send.
+  useEffect(() => { loadHistory(); }, [username]);
+
   // Validate recipient with debounce
   useEffect(() => {
     setRecipientValid(null);
+    setRisk(null);
+    setRiskAcknowledged(false);
     if (!recipient.trim() || recipient.trim().length < 3) return;
+
+    // Risk is local and synchronous — surface it immediately, don't wait on the network.
+    setRisk(assessRecipient(recipient, trustedAccounts));
+
     const t = setTimeout(async () => {
       setValidating(true);
       const clean = recipient.replace('@', '').trim().toLowerCase();
@@ -46,7 +128,7 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
       setValidating(false);
     }, 600);
     return () => clearTimeout(t);
-  }, [recipient]);
+  }, [recipient, trustedAccounts]);
 
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true);
@@ -101,9 +183,25 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
       setSendResult({ ok: false, msg: 'Amount exceeds available balance.' });
       return;
     }
+    // Scam Shield: never sign a flagged transfer the user has not explicitly accepted.
+    const currentRisk = assessRecipient(clean, trustedAccounts);
+    if (currentRisk.level !== 'ok' && !riskAcknowledged) {
+      setRisk(currentRisk);
+      setSendResult({
+        ok: false,
+        msg: currentRisk.level === 'blocked'
+          ? `Blocked: @${clean} is a known scam account. Tick the box above if you are certain.`
+          : `Hold on — @${clean} may be impersonating @${currentRisk.similarTo}. Tick the box above to proceed.`,
+      });
+      return;
+    }
+
     setSending(true);
     const formattedAmount = parsed.toFixed(3);
-    const result = await requestKeychainTransfer(username, clean, formattedAmount, memo, currency);
+    const result = await requestKeychainTransfer(
+      username, clean, formattedAmount, memo, currency,
+      { acknowledgedRisk: riskAcknowledged }
+    );
     setSendResult({ ok: result.success, msg: result.success ? `Sent ${formattedAmount} ${currency} to @${clean}` : (result.error || 'Transfer failed.') });
     if (result.success) {
       setRecipient('');
@@ -156,7 +254,10 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
               <input
                 type="text"
                 value={recipient}
-                onChange={e => setRecipient(e.target.value)}
+                onChange={e => { setRecipient(e.target.value); setShowSuggestions(true); }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}
+                autoComplete="off"
                 placeholder="hive-username"
                 className="w-full pl-7 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
@@ -165,9 +266,43 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
                 {!validating && recipientValid === true  && <CheckCircle size={14} className="text-green-500" />}
                 {!validating && recipientValid === false && <XCircle size={14} className="text-red-400" />}
               </span>
+
+              {showSuggestions && (knownSuggestions.length > 0 || lookupResults.length > 0) && (
+                <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden max-h-60 overflow-y-auto">
+                  {knownSuggestions.length > 0 && (
+                    <>
+                      <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Sent to before
+                      </p>
+                      {knownSuggestions.map(s => (
+                        <SuggestionRow key={`k-${s}`} name={s} onPick={n => { setRecipient(n); setShowSuggestions(false); }} />
+                      ))}
+                    </>
+                  )}
+
+                  {lookupResults.length > 0 && (
+                    <>
+                      <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400 border-t border-slate-100">
+                        Hive accounts
+                      </p>
+                      {lookupResults.map(s => (
+                        <SuggestionRow key={`l-${s}`} name={s} onPick={n => { setRecipient(n); setShowSuggestions(false); }} />
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             {recipientValid === false && <p className="text-[11px] text-red-400 mt-1">Account not found on Hive</p>}
           </div>
+
+          {risk && (
+            <ScamWarning
+              risk={risk}
+              acknowledged={riskAcknowledged}
+              onAcknowledge={setRiskAcknowledged}
+            />
+          )}
 
           {/* Amount + Token */}
           <div>

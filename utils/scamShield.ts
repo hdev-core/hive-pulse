@@ -1,23 +1,28 @@
-import { BAD_ACTORS } from './badActorList';
+import { SCAM_ACCOUNTS, WATCHLIST_ACCOUNTS } from './scamLists';
 
 // Hive Scam Shield.
 //
 // The extension is the only thing sitting between the user and the signature, so this is
-// the last place a transfer to a known drainer can be stopped. Two checks:
+// the last place a transfer to a known drainer can be stopped. Three checks, two severities:
 //
-//   1. Known bad actor  -> BLOCKED. Curated list in badActorList.ts.
-//   2. Impersonation    -> WARN. The recipient is a near-miss of an account the user
-//      actually trusts (their own accounts, or someone they have paid before). This is
-//      how Hive users get drained: `actifit` vs `actlfit`, `blocktrades` vs `b1ocktrades`.
+//   1. Known scam account  -> BLOCKED. On the phishing/fund-theft tier (condenser + denser +
+//      ecency + mahdiyari, via watchmen). Sending here loses funds.
+//   2. Watchlisted account  -> WARN. On the HiveWatchers abuse/farming/arbitrage tier. NOT
+//      necessarily a scam that steals a transfer, but flagged — worth a heads-up, not a block.
+//   3. Impersonation        -> WARN. A near-miss of an account the user actually trusts
+//      (their own, or someone they have paid). How Hive users get drained: `actifit` vs
+//      `actlfit`. Only ever compared against the user's OWN trusted set (see the note below).
 //
 // Pure and dependency-free on purpose: the popup imports it directly, and the background
 // re-exports its verdict to the content script over sendMessage (content.ts is a classic
 // script and cannot import shared modules).
 
 export type RiskLevel = 'ok' | 'warn' | 'blocked';
+export type RiskKind = 'none' | 'scam' | 'watchlist' | 'impersonation';
 
 export interface RiskAssessment {
   level: RiskLevel;
+  kind: RiskKind;
   recipient: string;
   reason: string;
   /** For impersonation warnings: the trusted account this one is masquerading as. */
@@ -27,10 +32,16 @@ export interface RiskAssessment {
 export const normalizeAccount = (u: string): string =>
   (u || '').replace(/^@/, '').trim().toLowerCase();
 
-const BAD_ACTOR_SET: Set<string> = new Set(BAD_ACTORS.map(normalizeAccount));
+const SCAM_SET: Set<string> = new Set(SCAM_ACCOUNTS.map(normalizeAccount));
+const WATCHLIST_SET: Set<string> = new Set(WATCHLIST_ACCOUNTS.map(normalizeAccount));
 
+/** Phishing / fund-theft tier — the hard-block list. */
 export const isKnownBadActor = (username: string): boolean =>
-  BAD_ACTOR_SET.has(normalizeAccount(username));
+  SCAM_SET.has(normalizeAccount(username));
+
+/** HiveWatchers abuse/farming tier — soft-warn only. */
+export const isWatchlisted = (username: string): boolean =>
+  WATCHLIST_SET.has(normalizeAccount(username));
 
 // Characters routinely swapped to build a lookalike name. Collapsing them (and the
 // separators Hive account names allow) turns `b1ocktrades` and `block-trades` into the
@@ -86,32 +97,34 @@ const editDistance = (a: string, b: string, max = 2): number => {
 
 export const assessRecipient = (recipient: string, trusted: string[] = []): RiskAssessment => {
   const to = normalizeAccount(recipient);
-  if (!to) return { level: 'ok', recipient: to, reason: '' };
+  if (!to) return { level: 'ok', kind: 'none', recipient: to, reason: '' };
 
-  // Checked against every account on the list, always — never gated on whether the user has
-  // dealt with them before.
+  // Tier 1 — phishing / fund-theft. Checked against every scam account, always, never gated
+  // on prior interaction. Hard block.
   if (isKnownBadActor(to)) {
     return {
       level: 'blocked',
+      kind: 'scam',
       recipient: to,
       reason: 'This account is on the known Hive scam/phishing list. Funds sent here are not recoverable.',
     };
   }
 
-  // A near-miss of an account this user actually trusts. Safe in this direction: an exact
-  // match against a trusted account short-circuits to `ok` above the lookalike test, so a
-  // legitimate counterparty can never be flagged as a lookalike of itself.
+  // A near-miss of an account this user actually trusts. Checked before the watchlist so an
+  // impersonation of someone you pay is called out specifically. Safe in this direction: an
+  // exact match against a trusted account short-circuits to `ok`, so a legitimate counterparty
+  // can never be flagged as a lookalike of itself.
   const trustedNames = trusted.map(normalizeAccount).filter(Boolean);
   if (trustedNames.includes(to)) {
-    return { level: 'ok', recipient: to, reason: '' };
+    return { level: 'ok', kind: 'none', recipient: to, reason: '' };
   }
-
   const toSkeleton = skeleton(to);
   for (const known of trustedNames) {
     const isLookalike = skeleton(known) === toSkeleton || editDistance(to, known, 1) === 1;
     if (isLookalike) {
       return {
         level: 'warn',
+        kind: 'impersonation',
         recipient: to,
         similarTo: known,
         reason: `"${to}" looks almost identical to "${known}", an account you trust. Impersonation is the most common way Hive funds are stolen — check every character.`,
@@ -119,7 +132,33 @@ export const assessRecipient = (recipient: string, trusted: string[] = []): Risk
     }
   }
 
-  return { level: 'ok', recipient: to, reason: '' };
+  // Tier 2 — HiveWatchers abuse / farming / arbitrage flag. Not necessarily a scam that steals
+  // a transfer, so a soft warning rather than a block: the user may well have a legitimate
+  // reason to send here.
+  if (isWatchlisted(to)) {
+    return {
+      level: 'warn',
+      kind: 'watchlist',
+      recipient: to,
+      reason: `This account is flagged on a Hive community watchlist (HiveWatchers) for abuse or scam-related activity. It is not confirmed to steal transfers, but verify who you are sending to before continuing.`,
+    };
+  }
+
+  return { level: 'ok', kind: 'none', recipient: to, reason: '' };
+};
+
+/** Short toast line shown when a flagged send is attempted without acknowledgement. */
+export const riskToastMessage = (risk: RiskAssessment): string => {
+  switch (risk.kind) {
+    case 'scam':
+      return `Blocked: @${risk.recipient} is a known scam account. Tick the box above if you are certain.`;
+    case 'impersonation':
+      return `Hold on — @${risk.recipient} may be impersonating @${risk.similarTo}. Tick the box above to proceed.`;
+    case 'watchlist':
+      return `@${risk.recipient} is flagged on a Hive watchlist. Tick the box above to proceed.`;
+    default:
+      return '';
+  }
 };
 
 /**

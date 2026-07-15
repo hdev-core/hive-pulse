@@ -3,7 +3,7 @@ import { ArrowUpCircle, ArrowDownCircle, PiggyBank, Download, Loader, AlertTrian
 import { AppSettings } from '../types';
 import { fetchHpVestConversion, validateHiveAccount } from '../utils/hiveHelpers';
 import { broadcastKeychainOp } from '../utils/keychainHelpers';
-import { assessRecipient, RiskAssessment } from '../utils/scamShield';
+import { assessRecipient, RiskAssessment, riskToastMessage } from '../utils/scamShield';
 import { ScamWarning } from './ScamWarning';
 
 type Tab = 'powerup' | 'powerdown' | 'savings' | 'withdraw' | 'delegate';
@@ -156,9 +156,7 @@ export const StakeForm: React.FC<StakeFormProps> = ({ username, balances, settin
     const currentRisk = assessRecipient(clean, [username]);
     if (currentRisk.level !== 'ok' && !riskAcknowledged) {
       setRisk(currentRisk);
-      return finish(false, currentRisk.level === 'blocked'
-        ? `Blocked: @${clean} is a known scam account. Tick the box above if you are certain.`
-        : `Hold on — @${clean} may be impersonating @${currentRisk.similarTo}. Tick the box above to proceed.`);
+      return finish(false, riskToastMessage(currentRisk));
     }
 
     if (isNaN(parsed) || parsed < 0) return finish(false, 'Enter an amount (0 to remove a delegation).');

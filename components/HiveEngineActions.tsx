@@ -7,7 +7,7 @@ import {
   heTransferOp, heStakeOp, heUnstakeOp,
 } from '../utils/hiveEngineHelpers';
 import { broadcastKeychainOp } from '../utils/keychainHelpers';
-import { assessRecipient, RiskAssessment } from '../utils/scamShield';
+import { assessRecipient, RiskAssessment, riskToastMessage } from '../utils/scamShield';
 import { ScamWarning } from './ScamWarning';
 
 type Tab = 'send' | 'stake' | 'unstake';
@@ -125,12 +125,7 @@ export const HiveEngineActions: React.FC<HiveEngineActionsProps> = ({ username, 
       const currentRisk = assessRecipient(to, [username]);
       if (currentRisk.level !== 'ok' && !riskAcknowledged) {
         setRisk(currentRisk);
-        return setResult({
-          ok: false,
-          msg: currentRisk.level === 'blocked'
-            ? `Blocked: @${to} is a known scam account. Tick the box above if you are certain.`
-            : `Hold on — @${to} may be impersonating @${currentRisk.similarTo}. Tick the box above to proceed.`,
-        });
+        return setResult({ ok: false, msg: riskToastMessage(currentRisk) });
       }
 
       op = heTransferOp(username, selected.symbol, to, quantity, memo);

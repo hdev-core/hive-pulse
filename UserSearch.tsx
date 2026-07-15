@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { BAD_ACTORS } from './utils/badActorList';
+import { BAD_ACTORS } from './utils/scamLists';
 
 interface UserSearchProps {
   onUserSelect: (username: string | null) => void;

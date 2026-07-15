@@ -3,7 +3,7 @@ import { Send, QrCode, History, ArrowRight, ArrowLeft, Loader, CheckCircle, XCir
 import { AppSettings, TransferRecord } from '../types';
 import { validateHiveAccount, fetchTransferHistory, lookupHiveAccounts } from '../utils/hiveHelpers';
 import { requestKeychainTransfer } from '../utils/keychainHelpers';
-import { assessRecipient, RiskAssessment, isKnownBadActor } from '../utils/scamShield';
+import { assessRecipient, RiskAssessment, isKnownBadActor, isWatchlisted, riskToastMessage } from '../utils/scamShield';
 import { ScamWarning } from './ScamWarning';
 
 type Tab = 'send' | 'receive' | 'history';
@@ -15,20 +15,24 @@ type Tab = 'send' | 'receive' | 'history';
  */
 const SuggestionRow: React.FC<{ name: string; onPick: (n: string) => void }> = ({ name, onPick }) => {
   const scam = isKnownBadActor(name);
+  const watch = !scam && isWatchlisted(name);
   return (
     <button
       type="button"
       // onMouseDown: fires before the input's blur, so the click lands.
       onMouseDown={() => onPick(name)}
       className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm ${
-        scam ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-50'
+        scam ? 'text-red-600 hover:bg-red-50'
+        : watch ? 'text-amber-700 hover:bg-amber-50'
+        : 'text-slate-700 hover:bg-slate-50'
       }`}
     >
-      <span className={scam ? 'font-semibold' : ''}>@{name}</span>
+      <span className={scam || watch ? 'font-semibold' : ''}>@{name}</span>
       {scam && (
-        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 shrink-0">
-          SCAM
-        </span>
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 shrink-0">SCAM</span>
+      )}
+      {watch && (
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 shrink-0">WATCH</span>
       )}
     </button>
   );
@@ -187,12 +191,7 @@ export const SendForm: React.FC<SendFormProps> = ({ username, balances, settings
     const currentRisk = assessRecipient(clean, trustedAccounts);
     if (currentRisk.level !== 'ok' && !riskAcknowledged) {
       setRisk(currentRisk);
-      setSendResult({
-        ok: false,
-        msg: currentRisk.level === 'blocked'
-          ? `Blocked: @${clean} is a known scam account. Tick the box above if you are certain.`
-          : `Hold on — @${clean} may be impersonating @${currentRisk.similarTo}. Tick the box above to proceed.`,
-      });
+      setSendResult({ ok: false, msg: riskToastMessage(currentRisk) });
       return;
     }
 

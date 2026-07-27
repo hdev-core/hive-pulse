@@ -163,16 +163,64 @@ const isVisible = (el: Element): boolean => {
   return r.width >= 2 && r.height >= 2;
 };
 
+// Combined searchable attributes of a field, for classifying what it is.
+const fieldAttrs = (el: Element): string =>
+  `${el.getAttribute('placeholder') || ''} ${el.getAttribute('name') || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('data-placeholder') || ''} ${el.className || ''}`.toLowerCase();
+// Fields that are neither the title nor the body: subtitle/preview/excerpt (the meta
+// description), tag inputs, search boxes. "subtitle" contains "title", so this must be
+// checked BEFORE the title match or the preview field gets mistaken for the title.
+const DECOY_RE = /subtitle|preview|descript|excerpt|summary|\btag\b|search|add\s*more/;
+const TITLE_MARK_RE = /title|what is/;
+
+// Convert a WYSIWYG editor's DOM to markdown. Reading .innerText loses the structure the
+// analyzer scores on — headings, links and images — so a TipTap/ProseMirror editor
+// (Ecency, InLeo) would otherwise report 0 links, no headings, and miss image alt text.
+// Walking the DOM back to markdown restores every signal for those editors.
+const domToMarkdown = (root: HTMLElement): string => {
+  const walk = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const el = node as HTMLElement;
+    const kids = () => Array.from(el.childNodes).map(walk).join('');
+    switch (el.tagName.toLowerCase()) {
+      case 'h1': return `\n# ${kids()}\n\n`;
+      case 'h2': return `\n## ${kids()}\n\n`;
+      case 'h3': return `\n### ${kids()}\n\n`;
+      case 'h4': return `\n#### ${kids()}\n\n`;
+      case 'h5': case 'h6': return `\n##### ${kids()}\n\n`;
+      case 'p': case 'div': return `${kids()}\n\n`;
+      case 'br': return '\n';
+      case 'strong': case 'b': return `**${kids()}**`;
+      case 'em': case 'i': return `*${kids()}*`;
+      case 'code': return `\`${kids()}\``;
+      case 'a': return `[${kids()}](${el.getAttribute('href') || ''})`;
+      case 'img': return `![${el.getAttribute('alt') || ''}](${el.getAttribute('src') || ''})`;
+      case 'li': return `${el.parentElement?.tagName.toLowerCase() === 'ol' ? '1. ' : '- '}${kids()}\n`;
+      case 'ul': case 'ol': return `\n${kids()}\n`;
+      case 'blockquote': return `\n> ${kids()}\n\n`;
+      case 'pre': return `\n\`\`\`\n${kids()}\n\`\`\`\n\n`;
+      case 'hr': return '\n---\n\n';
+      default: return kids();
+    }
+  };
+  return walk(root).replace(/\n{3,}/g, '\n\n').trim();
+};
+
 const getEditorContent = (): string => {
   let best = '';
   const consider = (txt: string) => { if (txt.length > best.length) best = txt; };
-  // Visible markdown textareas (PeakD, hive.blog)
+  // Visible markdown textareas (PeakD, hive.blog) — already markdown. Skip the title and
+  // the meta/subtitle/tag decoys, or on Ecency's step 2 the excerpt textarea would be
+  // mistaken for the body.
   for (const t of document.querySelectorAll<HTMLTextAreaElement>('textarea')) {
-    if (isVisible(t)) consider(t.value);
+    if (!isVisible(t)) continue;
+    const a = fieldAttrs(t);
+    if (DECOY_RE.test(a) || TITLE_MARK_RE.test(a)) continue;
+    consider(t.value);
   }
-  // Visible rich-text editors (Ecency/InLEO TipTap, etc.)
+  // Visible rich-text editors (Ecency/InLeo TipTap, etc.) — reconstruct markdown from the DOM.
   for (const ce of document.querySelectorAll<HTMLElement>('[contenteditable="true"]')) {
-    if (isVisible(ce)) consider(ce.innerText || '');
+    if (isVisible(ce)) consider(domToMarkdown(ce));
   }
   // CodeMirror editors (Actifit/EasyMDE = CM5 .CodeMirror-code, CM6 = .cm-content)
   for (const cm of document.querySelectorAll<HTMLElement>('.CodeMirror-code, .cm-content')) {
@@ -182,29 +230,28 @@ const getEditorContent = (): string => {
 };
 
 const getTitle = (): string => {
-  const inputSels = [
-    'input[placeholder*="title" i]', 'input[name="title" i]',
-    'input[id*="title" i]',          'input[class*="title" i]',
-    'input[placeholder*="what is" i]',
-  ];
-  for (const sel of inputSels) {
-    for (const el of document.querySelectorAll<HTMLInputElement>(sel)) {
-      if (!isVisible(el)) continue;
-      const v = el.value.trim();
-      if (v) return v;
-    }
+  // Ecency's vision-next editor makes the title a <textarea> (step 1) or a bare <input>
+  // (step 2), so scan both, match on a title marker, and skip decoys FIRST — the
+  // "Preview subtitle" excerpt field contains "title" and would otherwise win.
+  for (const el of document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')) {
+    if (!isVisible(el)) continue;
+    const a = fieldAttrs(el);
+    if (DECOY_RE.test(a)) continue;
+    if (TITLE_MARK_RE.test(a) && el.value.trim()) return el.value.trim();
   }
-  const ceSels = [
-    '[contenteditable][placeholder*="title" i]',
-    '[contenteditable][data-placeholder*="title" i]',
-    '[contenteditable][aria-label*="title" i]',
-    '[contenteditable][class*="title" i]',
-  ];
-  for (const sel of ceSels) {
-    for (const el of document.querySelectorAll<HTMLElement>(sel)) {
-      if (!isVisible(el)) continue;
-      const t = el.innerText?.trim();
-      if (t) return t;
+  for (const el of document.querySelectorAll<HTMLElement>(
+    '[contenteditable][placeholder*="title" i],[contenteditable][data-placeholder*="title" i],[contenteditable][aria-label*="title" i],[contenteditable][class*="title" i]'
+  )) {
+    if (!isVisible(el) || DECOY_RE.test(fieldAttrs(el))) continue;
+    const t = el.innerText?.trim();
+    if (t) return t;
+  }
+  // Ecency step-1 structural fallback: first visible non-decoy <textarea> in .publish-page,
+  // above the ProseMirror body. Locale-proof (placeholders are translated).
+  const pub = document.querySelector('.publish-page');
+  if (pub) {
+    for (const ta of pub.querySelectorAll<HTMLTextAreaElement>('textarea')) {
+      if (isVisible(ta) && !DECOY_RE.test(fieldAttrs(ta)) && ta.value.trim()) return ta.value.trim();
     }
   }
   return '';
@@ -226,7 +273,16 @@ const getTags = (): string[] => {
     const t = s.trim().toLowerCase();
     if (t.length >= 2 && t.length <= 32 && TAG_RE.test(t)) seen.add(t);
   };
+  // Ecency vision-next: explicit tag chips. Read the leaves directly so the wrapping
+  // .tag-list / .tag-selector containers don't get concatenated into one bogus tag.
+  const items = document.querySelectorAll('.tag-item');
+  if (items.length) {
+    items.forEach(it => add((it.textContent || '').replace(/[×✕✗✖]/g, '').trim()));
+    if (seen.size) return [...seen].slice(0, 10);
+  }
   for (const el of document.querySelectorAll('[class*="tag" i], [class*="chip" i], [class*="pill" i]')) {
+    // Skip container elements that wrap other tag chips (they'd yield "tag1tag2").
+    if (el.querySelector('[class*="tag" i], [class*="chip" i], [class*="pill" i]')) continue;
     const raw = el.textContent || '';
     const hasClose = /[×✕✗✖]/.test(raw) || !!el.querySelector('button, [class*="close" i], [class*="remove" i], [class*="delete" i]');
     if (!hasClose) continue;
@@ -1048,11 +1104,24 @@ if (composePattern) {
   const contentSig = () =>
     `${getTitle().length}:${getEditorContent().length}:${getTags().join(',')}:${getMetaDescription().length}`;
 
+  // Ecency splits authoring across two steps: step 1 has title + body, step 2 has tags +
+  // meta (and unmounts the body editor). Reading fresh each tick would zero whichever half
+  // isn't on screen. Remember the last non-empty read of each field and score the union.
+  const merged = { title: '', content: '', tags: [] as string[], metaDesc: '' };
+  const readMerged = () => {
+    const t = getTitle(), c = getEditorContent(), tg = getTags(), m = getMetaDescription();
+    if (t) merged.title = t;
+    if (c && c.trim().length > 5) merged.content = c;
+    if (tg.length) merged.tags = tg;
+    if (m) merged.metaDesc = m;
+    return merged;
+  };
+
   const runAnalysis = () => {
     const panel = document.getElementById(PANEL_ID);
     if (!panel) return;
     if (document.activeElement && panel.contains(document.activeElement)) { schedule(); return; }
-    const content = getEditorContent(), title = getTitle(), tags = getTags(), metaDesc = getMetaDescription();
+    const { title, content, tags, metaDesc } = readMerged();
     lastSig = `${title.length}:${content.length}:${tags.join(',')}:${metaDesc.length}`;
     if (title.length < 3 && content.trim().length < 5) { showIdle(); return; }
     if (kwSource !== 'user' && (title.length > 3 || content.length > 80)) {

@@ -165,7 +165,7 @@ const isVisible = (el: Element): boolean => {
 
 // Combined searchable attributes of a field, for classifying what it is.
 const fieldAttrs = (el: Element): string =>
-  `${el.getAttribute('placeholder') || ''} ${el.getAttribute('name') || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('data-placeholder') || ''} ${el.className || ''}`.toLowerCase();
+  `${el.getAttribute('placeholder') || ''} ${el.getAttribute('name') || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('data-placeholder') || ''} ${el.id || ''} ${el.className || ''}`.toLowerCase();
 // Fields that are neither the title nor the body: subtitle/preview/excerpt (the meta
 // description), tag inputs, search boxes. "subtitle" contains "title", so this must be
 // checked BEFORE the title match or the preview field gets mistaken for the title.
@@ -281,8 +281,6 @@ const getTags = (): string[] => {
     if (seen.size) return [...seen].slice(0, 10);
   }
   for (const el of document.querySelectorAll('[class*="tag" i], [class*="chip" i], [class*="pill" i]')) {
-    // Skip container elements that wrap other tag chips (they'd yield "tag1tag2").
-    if (el.querySelector('[class*="tag" i], [class*="chip" i], [class*="pill" i]')) continue;
     const raw = el.textContent || '';
     const hasClose = /[×✕✗✖]/.test(raw) || !!el.querySelector('button, [class*="close" i], [class*="remove" i], [class*="delete" i]');
     if (!hasClose) continue;
@@ -1106,14 +1104,30 @@ if (composePattern) {
 
   // Ecency splits authoring across two steps: step 1 has title + body, step 2 has tags +
   // meta (and unmounts the body editor). Reading fresh each tick would zero whichever half
-  // isn't on screen. Remember the last non-empty read of each field and score the union.
+  // isn't on screen. So: whenever a live body editor is present — which is EVERY other
+  // frontend, always, and Ecency's step 1 — reflect all fields live (including cleared
+  // ones, so single-step editors behave exactly as before). Only when the editor has
+  // unmounted (Ecency step 2) do we fall back to the values captured while writing.
   const merged = { title: '', content: '', tags: [] as string[], metaDesc: '' };
+  const hasBodyEditor = (): boolean => {
+    for (const t of document.querySelectorAll<HTMLTextAreaElement>('textarea'))
+      if (isVisible(t) && !DECOY_RE.test(fieldAttrs(t)) && !TITLE_MARK_RE.test(fieldAttrs(t))) return true;
+    for (const ce of document.querySelectorAll<HTMLElement>('[contenteditable="true"]'))
+      if (isVisible(ce)) return true;
+    for (const cm of document.querySelectorAll<HTMLElement>('.CodeMirror-code, .cm-content'))
+      if (isVisible(cm)) return true;
+    return false;
+  };
   const readMerged = () => {
     const t = getTitle(), c = getEditorContent(), tg = getTags(), m = getMetaDescription();
-    if (t) merged.title = t;
-    if (c && c.trim().length > 5) merged.content = c;
-    if (tg.length) merged.tags = tg;
-    if (m) merged.metaDesc = m;
+    if (hasBodyEditor()) {
+      merged.title = t; merged.content = c; merged.tags = tg; merged.metaDesc = m;
+    } else {
+      if (t) merged.title = t;
+      if (c && c.trim().length > 5) merged.content = c;
+      if (tg.length) merged.tags = tg;
+      if (m) merged.metaDesc = m;
+    }
     return merged;
   };
 

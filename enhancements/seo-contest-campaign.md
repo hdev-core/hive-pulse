@@ -1,6 +1,8 @@
 # HivePulse SEO Contest — Campaign Pack
 
-Real details wired in. Runs **15 July → 4 August 2026**. Remaining placeholders: `[[community name/link]]`, `[[contest post link]]` (fill after you publish).
+Real details wired in. Runs **15 July → 4 August 2026**. Only remaining placeholder: `[[contest post link]]` (fill into the X + Discord CTAs after you publish).
+
+- **Community:** Hdev Contests — `hive-177727` — https://peakd.com/c/hive-177727/created (post the announcement *into* this community)
 
 - **Posting account:** @hdev
 - **Prize pool:** 300 HIVE — 🥇 150 · 🥈 100 · 🥉 50
@@ -8,7 +10,7 @@ Real details wired in. Runs **15 July → 4 August 2026**. Remaining placeholder
 - **X:** https://x.com/HdevCore
 - **Chrome:** https://chromewebstore.google.com/detail/hivepulse/hakcpohpejoejmlhiphpkjobpjeckdlg
 - **Firefox:** https://addons.mozilla.org/en-US/firefox/addon/hivepulse/
-- **Tag:** #hivepulse (+ post into the contest community once created)
+- **Tag:** #hivepulse (posting into the Hdev Contests community adds `hive-177727` automatically)
 
 ---
 
@@ -48,7 +50,7 @@ Real details wired in. Runs **15 July → 4 August 2026**. Remaining placeholder
 
 ## The Hive blog post
 
-> Post into your new contest community. Cover image: a screenshot of the analyzer showing a strong score. Tags: `hivepulse` `seo` `hive` `contest` `[[community tag]]`.
+> Post into the **Hdev Contests** community (`hive-177727`). Cover image: a screenshot of the analyzer showing a strong score. Tags: `hivepulse` `seo` `hive` `contest` (the community adds `hive-177727` for you).
 
 ---
 
@@ -102,6 +104,7 @@ Let's show the world what's already here. 💪
 
 ## Join us
 
+- ⭐ **Subscribe to [Hdev Contests](https://peakd.com/c/hive-177727/created)** — this is the launch of our contest series. New challenges land here regularly, so subscribe and never miss one (or a prize).
 - 💬 **Discord:** https://discord.gg/wnpR8Rafcf — get help, share scores, meet the team.
 - 🐦 **X:** https://x.com/HdevCore — updates and winner announcements.
 - 🧩 **Get HivePulse:** [Chrome](https://chromewebstore.google.com/detail/hivepulse/hakcpohpejoejmlhiphpkjobpjeckdlg) · [Firefox](https://addons.mozilla.org/en-US/firefox/addon/hivepulse/)

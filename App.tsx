@@ -814,14 +814,14 @@ const App: React.FC = () => {
 
   if (initializing) {
     return (
-      <div className="w-[380px] h-[600px] flex items-center justify-center bg-slate-50">
+      <div className="w-full h-full flex items-center justify-center bg-slate-50">
         <Activity className="animate-spin text-blue-500" size={32} />
       </div>
     );
   }
 
   return (
-    <div className="w-[380px] h-[600px] flex flex-col bg-slate-50 overflow-hidden font-sans border border-slate-200">
+    <div className="w-full h-full flex flex-col bg-slate-50 overflow-hidden font-sans">
       <Header
         username={settings.ecencyAccessToken ? settings.ecencyUsername : null}
         onLoginClick={() => setCurrentView(AppView.SETTINGS)}

@@ -5,11 +5,23 @@
 
 @layer base {
   html, body {
-    /* Fixed: Increased height to match App.tsx (600px is Chrome max) and width to 380px */
+    /* Desktop popup: a fixed 380x600 gives the popup window an intrinsic size to size to
+       (600px is Chrome's max popup height). */
     @apply h-[600px] w-[380px] overflow-hidden bg-slate-50 font-sans;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
-  
+
+  /* Firefox for Android opens the popup full-screen. Touch devices (coarse pointer, no
+     hover) fill the viewport instead of the fixed desktop box. dvh tracks the mobile
+     address bar. Desktop, with a fine pointer, keeps 380x600. */
+  @media (pointer: coarse) and (hover: none) {
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+    }
+  }
+
   #root {
     @apply h-full w-full flex flex-col overflow-hidden;
   }

@@ -169,7 +169,10 @@ const fieldAttrs = (el: Element): string =>
 // Fields that are neither the title nor the body: subtitle/preview/excerpt (the meta
 // description), tag inputs, search boxes. "subtitle" contains "title", so this must be
 // checked BEFORE the title match or the preview field gets mistaken for the title.
-const DECOY_RE = /subtitle|preview|descript|excerpt|summary|\btag\b|search|add\s*more/;
+// Includes localized stems so non-English UIs are classified too: "descri" covers
+// en/es/pt/it/fr (description/descripción/descrição/descrizione), "subtít" Spanish
+// subtítulo, "resum" es/pt/fr summary (resumen/resumo/résumé).
+const DECOY_RE = /subtitle|subtít|preview|descri|excerpt|summary|resum|\btag\b|search|add\s*more/;
 const TITLE_MARK_RE = /title|what is/;
 
 // Convert a WYSIWYG editor's DOM to markdown. Reading .innerText loses the structure the
@@ -258,10 +261,26 @@ const getTitle = (): string => {
 };
 
 const getMetaDescription = (): string => {
-  const sels = ['textarea[placeholder*="preview" i]','textarea[placeholder*="description" i]','textarea[placeholder*="excerpt" i]','input[placeholder*="description" i]','input[name="description" i]'];
+  // English + localized stems, so a Spanish "Descripción breve" / "Subtítulo…" placeholder
+  // is matched, not just the English "Preview subtitle".
+  const sels = [
+    'textarea[placeholder*="preview" i]', 'textarea[placeholder*="descri" i]',
+    'textarea[placeholder*="excerpt" i]', 'textarea[placeholder*="subtitle" i]',
+    'textarea[placeholder*="subtít" i]',  'textarea[placeholder*="summary" i]',
+    'textarea[placeholder*="resum" i]',   'input[placeholder*="descri" i]', 'input[name="description" i]',
+  ];
   for (const sel of sels) {
-    const el = document.querySelector<HTMLTextAreaElement | HTMLInputElement>(sel);
-    if (el?.value.trim()) return el.value.trim();
+    for (const el of document.querySelectorAll<HTMLTextAreaElement | HTMLInputElement>(sel)) {
+      if (isVisible(el) && el.value.trim()) return el.value.trim();
+    }
+  }
+  // Ecency locale-proof fallback: its preview-description textarea carries a maxlength that
+  // neither the title textarea nor the contenteditable body have, so it's identifiable
+  // whatever the UI language.
+  if (/ecency\.com/.test(location.hostname)) {
+    for (const ta of document.querySelectorAll<HTMLTextAreaElement>('textarea[maxlength]')) {
+      if (isVisible(ta) && !TITLE_MARK_RE.test(fieldAttrs(ta)) && ta.value.trim()) return ta.value.trim();
+    }
   }
   return '';
 };

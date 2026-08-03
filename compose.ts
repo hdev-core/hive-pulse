@@ -171,8 +171,10 @@ const fieldAttrs = (el: Element): string =>
 // checked BEFORE the title match or the preview field gets mistaken for the title.
 // Includes localized stems so non-English UIs are classified too: "descri" covers
 // en/es/pt/it/fr (description/descripción/descrição/descrizione), "subtít" Spanish
-// subtítulo, "resum" es/pt/fr summary (resumen/resumo/résumé).
-const DECOY_RE = /subtitle|subtít|preview|descri|excerpt|summary|resum|\btag\b|search|add\s*more/;
+// subtítulo, "beschr" de/nl (Beschreibung/beschrijving), "resum" es/pt/fr summary
+// (resumen/resumo/résumé). Non-Latin scripts fall back to the structural check in
+// getMetaDescription (Ecency's description textarea has a maxlength).
+const DECOY_RE = /subtitle|subtít|preview|descri|beschr|excerpt|summary|resum|\btag\b|search|add\s*more/;
 const TITLE_MARK_RE = /title|what is/;
 
 // Convert a WYSIWYG editor's DOM to markdown. Reading .innerText loses the structure the
@@ -264,7 +266,7 @@ const getMetaDescription = (): string => {
   // English + localized stems, so a Spanish "Descripción breve" / "Subtítulo…" placeholder
   // is matched, not just the English "Preview subtitle".
   const sels = [
-    'textarea[placeholder*="preview" i]', 'textarea[placeholder*="descri" i]',
+    'textarea[placeholder*="preview" i]', 'textarea[placeholder*="descri" i]', 'textarea[placeholder*="beschr" i]',
     'textarea[placeholder*="excerpt" i]', 'textarea[placeholder*="subtitle" i]',
     'textarea[placeholder*="subtít" i]',  'textarea[placeholder*="summary" i]',
     'textarea[placeholder*="resum" i]',   'input[placeholder*="descri" i]', 'input[name="description" i]',

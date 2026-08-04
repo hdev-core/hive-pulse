@@ -56,7 +56,7 @@ export const ShareView: React.FC<ShareViewProps> = ({ tabState, allFrontends }) 
            return (
             <div key={frontend.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200 shadow-sm">
               <div className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded">
-                 <FrontendIcon id={frontend.id} color={frontend.color} size={20} />
+                 <FrontendIcon id={frontend.id} color={frontend.color} logoUrl={frontend.logoUrl} size={20} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-slate-700 truncate">{frontend.name}</p>

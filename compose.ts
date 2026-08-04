@@ -13,6 +13,7 @@ const COMPOSE_HOSTS: Record<string, RegExp> = {
   'leofinance.io':  /\/submit/,
   '3speak.tv':      /\/upload/,
   'actifit.io':     /\/blog\/new|\/videos\/new/,
+  'slothbuzz.com':  /\/publish|\/submit/,
 };
 
 // ── Hive RPC (trending tag suggestions only) ─────────────────────────────────

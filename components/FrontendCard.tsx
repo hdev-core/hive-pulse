@@ -28,7 +28,7 @@ export const FrontendCard: React.FC<FrontendCardProps> = ({ config, isActive, on
              w-7 h-7 rounded flex items-center justify-center
              ${isActive ? 'grayscale opacity-70' : ''}
           `}>
-             <FrontendIcon id={config.id} color={config.color} size={24} />
+             <FrontendIcon id={config.id} color={config.color} logoUrl={config.logoUrl} size={24} />
           </div>
           
           <span className={`font-semibold text-sm ${isActive ? 'text-gray-500' : 'text-gray-800'}`}>

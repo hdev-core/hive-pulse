@@ -20,6 +20,8 @@ const HIVE_HOSTS = new Set([
   'liketu.com',
   'hivescan.info',
   '3speak.tv',
+  'ureka.social',
+  'slothbuzz.com',
 ]);
 
 const host = location.hostname.replace(/^www\./, '');

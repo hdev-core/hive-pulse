@@ -612,7 +612,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <button className="cursor-grab text-slate-400 hover:text-slate-600">
                   <GripVertical size={16} />
                 </button>
-                <FrontendIcon id={frontend.id} color={frontend.color} size={18} />
+                <FrontendIcon id={frontend.id} color={frontend.color} logoUrl={frontend.logoUrl} size={18} />
                 <span className="text-sm font-medium">{frontend.name}</span>
               </div>
 

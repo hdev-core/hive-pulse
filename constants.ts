@@ -127,6 +127,36 @@ export const FRONTENDS: FrontendConfig[] = [
       wallet: (user) => user ? `/user/${user}` : '/'
     },
     active: true
+  },
+  {
+    id: FrontendId.UREKA,
+    name: 'Ureka',
+    domain: 'ureka.social',
+    aliases: [],
+    color: '#2d1b69',
+    textColor: '#ffffff',
+    description: 'Decentralized social network on Hive.',
+    logoUrl: 'https://ureka.social/apple-touch-icon.png',
+    paths: {
+      compose: '/publish',
+      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
+    },
+    active: true
+  },
+  {
+    id: FrontendId.SLOTHBUZZ,
+    name: 'SlothBuzz',
+    domain: 'slothbuzz.com',
+    aliases: ['www.slothbuzz.com'],
+    color: '#0d0d12',
+    textColor: '#ffffff',
+    description: 'Your Hive home.',
+    logoUrl: 'https://www.slothbuzz.com/apple-icon.png',
+    paths: {
+      compose: '/publish',
+      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
+    },
+    active: true
   }
 ];
 

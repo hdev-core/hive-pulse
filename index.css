@@ -5,11 +5,39 @@
 
 @layer base {
   html, body {
-    @apply h-[500px] w-[350px] overflow-hidden bg-slate-50 font-sans;
+    /* Desktop popup: a fixed 380x600 gives the popup window an intrinsic size to size to
+       (600px is Chrome's max popup height). */
+    @apply h-[600px] w-[380px] overflow-hidden bg-slate-50 font-sans;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
-  
-  #root {
-    @apply h-full w-full flex flex-col;
+
+  /* Firefox for Android opens the popup full-screen. Touch devices (coarse pointer, no
+     hover) fill the viewport instead of the fixed desktop box. dvh tracks the mobile
+     address bar. Desktop, with a fine pointer, keeps 380x600. */
+  @media (pointer: coarse) and (hover: none) {
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+    }
   }
+
+  #root {
+    @apply h-full w-full flex flex-col overflow-hidden;
+  }
+}
+
+/* Custom scrollbar for better fit in small popup */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

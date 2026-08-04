@@ -1,49 +1,47 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice } from './utils/hiveHelpers';
 import { parseUrl, getTargetUrl } from './utils/urlHelpers';
-import { fetchAccountStats } from './utils/hiveHelpers';
-import { 
-  bootstrapEcencyChat, 
-  fetchChannels, 
-  getOrCreateDirectChannel, 
+import {
+  bootstrapEcencyChat,
+  fetchChannels,
+  getOrCreateDirectChannel,
   fetchChannelPosts,
   sendMessage,
   editMessage,
   deleteMessage,
-  fetchMe,
-  fetchUserByUsername,
   fetchUsersByIds,
-  toggleReaction
+  toggleReaction,
+  fetchUnreads,
+  setMmPatCookie,
+  exchangeHsCode,
+  UnauthorizedError
 } from './utils/ecencyHelpers';
 import { createEcencyLoginPayload, createEcencyToken } from './utils/ecencyLogin';
-import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message } from './types';
+import { isHostPermissionError } from './utils/keychainHelpers';
+import { CurrentTabState, FrontendId, ActionMode, AppSettings, AccountStats, AppView, Channel, Message, HivePrices, SavedAccount, HiveNotificationType } from './types';
+import { FRONTENDS, HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from './constants';
+import { DEFAULT_SETTINGS, patchSettings } from './utils/settingsStore';
 import { Activity } from 'lucide-react';
 
 // Components
 import { Header } from './components/Header';
+import { AddAccountModal } from './components/AddAccountModal';
 import { BottomNav } from './components/BottomNav';
 import { SwitcherView } from './components/views/SwitcherView';
 import { ShareView } from './components/views/ShareView';
 import { StatsView } from './components/views/StatsView';
 import { ChatView } from './components/views/ChatView';
-import { AppsView } from './components/views/AppsView';
+import { WalletView } from './components/views/WalletView';
+import { TrendingView } from './components/views/TrendingView';
 import { SettingsView } from './components/views/SettingsView';
 
 declare const chrome: any;
 
-const DEFAULT_SETTINGS: AppSettings = {
-  autoRedirect: false,
-  preferredFrontendId: FrontendId.PEAKD,
-  openInNewTab: false,
-  notificationsEnabled: true,
-  notificationInterval: 1,
-  rcUser: '',
-  badgeMetric: 'VP',
-  ecencyUsername: '',
-  ecencyAccessToken: '',
-  ecencyChatToken: '',
-  ecencyUserId: '',
-  ecencyRefreshToken: ''
-};
+declare global {
+  interface Window {
+    hive_keychain: any;
+  }
+}
 
 const App: React.FC = () => {
   // Navigation State
@@ -55,7 +53,9 @@ const App: React.FC = () => {
     isHiveUrl: false,
     detectedFrontendId: null,
     path: '/',
-    username: null
+    username: null,
+    author: null,
+    permlink: null
   });
   
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -63,6 +63,7 @@ const App: React.FC = () => {
 
   // Stats Data
   const [accountStats, setAccountStats] = useState<AccountStats | null>(null);
+  const [hivePrices, setHivePrices] = useState<HivePrices>({ exchange: null, internal: null });
 
   // Chat State
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -78,6 +79,7 @@ const App: React.FC = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   
+
   // User Cache
   const [userMap, setUserMap] = useState<Record<string, string>>({});
 
@@ -85,22 +87,230 @@ const App: React.FC = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  const refreshChat = async (forceBootstrap = false) => {
-    // This function can now be simplified or just trigger a background refresh
-    // For now, we'll keep a simplified version for immediate UI feedback
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.getBackgroundPage((bg: any) => {
-        bg.checkStatus();
-      });
+  // Multi-Account State
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+  const [activeUsername, setActiveUsername] = useState<string | null>(null);
+  const [addingAccount, setAddingAccount] = useState(false);
+
+  // Polling Reference
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const allFrontends = useMemo(() => [...FRONTENDS, ...settings.customFrontends], [settings.customFrontends]);
+
+  // --- PRICE FETCHING ---
+  const refreshPrices = useCallback(async () => {
+    try {
+      const [exchange, internal] = await Promise.all([
+        fetchHivePrice(),
+        fetchInternalMarketPrice()
+      ]);
+      setHivePrices({ exchange, internal });
+    } catch (e) {
+      console.error("Failed to refresh prices", e);
+    }
+  }, []);
+
+  // --- BADGE LOGIC ---
+  const updateBadge = useCallback((stats: AccountStats | null, unreads: Record<string, number>) => {
+    if (typeof chrome === 'undefined' || !chrome.action) return;
+
+    // Firefox clips wide emoji in the toolbar badge — drop them there and rely on
+    // the badge colour + number (Chrome renders emoji fine, so keep them).
+    const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+
+    const totalUnread = Object.values(unreads).reduce((sum, count) => sum + count, 0);
+
+    // If overrideBadgeWithUnreadMessages is true, prioritize unread messages
+    // Otherwise, skip message badge and go straight to stats badge logic
+    if (settings.overrideBadgeWithUnreadMessages && totalUnread > 0) {
+      const text = `${isFirefox ? '' : '💬'}${totalUnread > 9 ? '9+' : totalUnread}`;
+      chrome.action.setBadgeText({ text });
+      chrome.action.setBadgeBackgroundColor({ color: '#3b82f6' }); // Blue for chat
+    } else if (stats) {
+      const metric = settings.badgeMetric || 'VP';
+      const percent = metric === 'RC' ? stats.rc.percentage : stats.vp.percentage;
+      const rounded = Math.round(percent);
+      const isLow = rounded < 20;
+      const icon = isFirefox ? '' : (metric === 'RC' ? '⚡' : '👍');
+
+      /**
+       * Chrome badge width is fixed. Emojis occupy a lot of space.
+       * Icon + 3 digits is the maximum reliable length (e.g., 👍100).
+       * We remove the '%' symbol to ensure the number and icon are always fully visible.
+       */
+      const text = `${icon}${rounded}`;
+      
+      chrome.action.setBadgeText({ text });
+      
+      if (isLow) {
+        chrome.action.setBadgeBackgroundColor({ color: '#ef4444' }); 
+      } else {
+        const color = metric === 'RC' ? '#a855f7' : '#10b981'; 
+        chrome.action.setBadgeBackgroundColor({ color });
+      }
+    } else {
+      chrome.action.setBadgeText({ text: '' });
+    }
+  }, [settings.badgeMetric, settings.overrideBadgeWithUnreadMessages]);
+
+  // Reactive badge update effect
+  useEffect(() => {
+    updateBadge(accountStats, unreadCounts);
+  }, [accountStats, unreadCounts, updateBadge]);
+
+  // --- REFRESH CHAT ---
+  // tokenOverride lets callers pass a fresh token when settings closure is stale (e.g. account switch)
+  const refreshChat = async (tokenOverride?: string) => {
+    const chatToken = tokenOverride || settings.ecencyChatToken;
+    if (!chatToken) return;
+    setLoadingChat(true);
+
+    try {
+      const [newChannels, unreadResp] = await Promise.all([
+        fetchChannels(chatToken),
+        fetchUnreads(chatToken)
+      ]);
+
+      if (newChannels) {
+        setChannels(newChannels);
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.local.set({ channels: newChannels });
+        }
+        setChatSessionExpired(false);
+      }
+
+      if (unreadResp && unreadResp.channels) {
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.local.get(['channelReadState'], (result: any) => {
+            const channelReadState = result.channelReadState || {};
+            const counts: Record<string, number> = {};
+            const newReadState = { ...channelReadState };
+            const currentTotals: Record<string, number> = {};
+            let stateChanged = false;
+            
+            unreadResp.channels.forEach(u => {
+              if (u.channelId) {
+                const currentTotal = u.message_count || 0;
+                currentTotals[u.channelId] = currentTotal;
+
+                if (newReadState[u.channelId] === undefined) {
+                    newReadState[u.channelId] = currentTotal;
+                    counts[u.channelId] = 0;
+                    stateChanged = true;
+                } else {
+                    const diff = Math.max(0, currentTotal - newReadState[u.channelId]);
+                    counts[u.channelId] = diff;
+                }
+              }
+            });
+
+            setUnreadCounts(counts);
+            const storagePayload: any = { 
+                unreadCounts: counts, 
+                channelTotals: currentTotals
+            };
+            if (stateChanged) {
+                storagePayload.channelReadState = newReadState;
+            }
+            chrome.storage.local.set(storagePayload);
+          });
+        }
+      }
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        setChatSessionExpired(true);
+      }
+      console.error("Chat polling failed", e);
+    } finally {
+      setLoadingChat(false);
     }
   };
 
-  // --- INITIALIZATION & STORAGE SYNC ---
+  // --- FETCH ACTIVE MESSAGES ---
+  const loadActiveMessages = useCallback(async (channelId: string) => {
+    if (!settings.ecencyUsername) return;
+    
+    setLoadingMessages(true);
+    try {
+      const { messages, users } = await fetchChannelPosts(channelId, settings.ecencyChatToken, 40);
+      
+      if (Object.keys(users).length > 0) {
+        setUserMap(prev => ({ ...prev, ...users }));
+      }
+      
+      setActiveMessages(messages);
+      setChatSessionExpired(false);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        setChatSessionExpired(true);
+      }
+      console.error("Failed to load messages", e);
+    } finally {
+      setLoadingMessages(false);
+    }
+  }, [settings.ecencyChatToken, settings.ecencyUsername]);
+
+  // Clear channels whenever the chat session becomes invalid so stale data is never shown
+  useEffect(() => {
+    if (chatSessionExpired) {
+      setChannels([]);
+      setUnreadCounts({});
+    }
+  }, [chatSessionExpired]);
+
+  // --- HEARTBEAT EFFECT ---
+  useEffect(() => {
+    const shouldPoll = currentView === AppView.CHAT && settings.ecencyUsername && settings.ecencyChatToken && !chatSessionExpired;
+    
+    if (!shouldPoll) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    const heartbeat = async () => {
+      try {
+        if (activeChannel) {
+          const { messages, users } = await fetchChannelPosts(activeChannel.id, settings.ecencyChatToken, 40);
+          if (Object.keys(users).length > 0) {
+            setUserMap(prev => ({ ...prev, ...users }));
+          }
+          
+          setActiveMessages(prev => {
+            if (prev.length === messages.length && 
+                prev.length > 0 && 
+                prev[prev.length - 1].id === messages[messages.length - 1].id &&
+                prev[prev.length - 1].update_at === messages[messages.length - 1].update_at) {
+              return prev;
+            }
+            return messages;
+          });
+        }
+        await refreshChat();
+      } catch (e) {
+        if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+      }
+    };
+
+    heartbeat();
+    pollingIntervalRef.current = setInterval(heartbeat, activeChannel ? 4000 : 12000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [currentView, activeChannel?.id, settings.ecencyChatToken, settings.ecencyUsername, chatSessionExpired]);
+
+  // --- INITIALIZATION ---
   useEffect(() => {
     const hydrate = async () => {
       if (typeof chrome !== 'undefined' && chrome.storage) {
         try {
-           chrome.storage.local.get(['settings', 'channels', 'unreadCounts'], (result: any) => {
+           chrome.storage.local.get(['settings', 'channels', 'unreadCounts', 'savedAccounts'], (result: any) => {
               if (result.settings) {
                  const saved = { ...DEFAULT_SETTINGS, ...result.settings };
                  setSettings(saved);
@@ -108,387 +318,560 @@ const App: React.FC = () => {
                     setUserMap(prev => ({ ...prev, [saved.ecencyUserId!]: saved.ecencyUsername! }));
                  }
                  if (saved.rcUser) {
-                    fetchAccountStats(saved.rcUser).then(data => data && setAccountStats(data));
+                    fetchAccountStats(saved.rcUser, saved).then(data => data && setAccountStats(data));
                  }
               }
-              if (result.channels) {
-                setChannels(result.channels);
+              if (result.savedAccounts) {
+                 setSavedAccounts(result.savedAccounts.accounts || []);
+                 setActiveUsername(result.savedAccounts.activeUsername || null);
               }
-              if (result.unreadCounts) {
-                setUnreadCounts(result.unreadCounts);
-              }
+              if (result.unreadCounts) setUnreadCounts(result.unreadCounts);
               setInitializing(false);
+              const storedToken = result.settings?.ecencyChatToken;
+              const hasVerifiedToken = storedToken && storedToken !== 'cookie-session' && storedToken !== '';
+              if (hasVerifiedToken && result.settings?.ecencyUsername) {
+                refreshChat(storedToken);
+              } else if (result.settings?.ecencyUsername) {
+                setChatSessionExpired(true);
+              }
            });
         } catch (e) { setInitializing(false); }
       } else { setInitializing(false); }
-
-      if (typeof chrome !== 'undefined' && chrome.tabs) {
-         try {
-           chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
-              if (tabs && tabs.length > 0 && tabs[0].url) setTabState(parseUrl(tabs[0].url));
-           });
-         } catch (e) { }
-      }
     };
     hydrate();
+    refreshPrices(); // Initial price fetch
 
-    // Listen for storage changes from the background script
     const storageListener = (changes: any, areaName: string) => {
       if (areaName === 'local') {
-        if (changes.channels) {
-          setChannels(changes.channels.newValue || []);
-        }
-        if (changes.unreadCounts) {
-          setUnreadCounts(changes.unreadCounts.newValue || {});
-        }
-        if (changes.settings) {
-          setSettings(prev => ({ ...prev, ...changes.settings.newValue }));
+        if (changes.channels?.newValue) setChannels(changes.channels.newValue);
+        if (changes.unreadCounts) setUnreadCounts(changes.unreadCounts.newValue || {});
+        if (changes.settings) setSettings(prev => ({ ...prev, ...changes.settings.newValue }));
+        if (changes.savedAccounts) {
+          const store = changes.savedAccounts.newValue;
+          if (store) {
+            setSavedAccounts(store.accounts || []);
+            setActiveUsername(store.activeUsername || null);
+          }
         }
       }
     };
-    chrome.storage.onChanged.addListener(storageListener);
-    return () => chrome.storage.onChanged.removeListener(storageListener);
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+        chrome.storage.onChanged.addListener(storageListener);
+    }
   }, []);
+
+  // --- BACKGROUND STATS POLLING ---
+  useEffect(() => {
+    if (!settings.rcUser) return;
+
+    const poll = async () => {
+      const data = await fetchAccountStats(settings.rcUser!, settings);
+      if (data) setAccountStats(data);
+    };
+
+    const interval = setInterval(poll, 30000); // Every 30 seconds
+    return () => clearInterval(interval);
+  }, [settings.rcUser]);
+
+  // --- PRICE POLLING ---
+  useEffect(() => {
+    const interval = setInterval(refreshPrices, 60000); // Every 60 seconds
+    return () => clearInterval(interval);
+  }, [refreshPrices]);
+
+  // Effect to parse URL when allFrontends or tab changes
+  useEffect(() => {
+    if (typeof chrome !== 'undefined' && chrome.tabs && allFrontends.length > 0) {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
+        if (tabs && tabs.length > 0 && tabs[0].url) {
+          setTabState(parseUrl(tabs[0].url, allFrontends));
+        }
+      });
+    }
+  }, [allFrontends]); // Depend on allFrontends
 
   const totalUnreadMessages = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
 
   const updateSettings = (newSettings: Partial<AppSettings>) => {
     const updated = { ...settings, ...newSettings };
     setSettings(updated);
-    
     if (updated.ecencyUserId && updated.ecencyUsername) {
        setUserMap(prev => ({ ...prev, [updated.ecencyUserId!]: updated.ecencyUsername! }));
     }
-
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({ settings: updated });
-    }
+    // Persist only the changed keys. `settings` may still be DEFAULT_SETTINGS if the user
+    // acted before hydration resolved, and writing that whole snapshot would wipe
+    // customFrontends and anything else already in storage.
+    void patchSettings(newSettings);
   };
 
   const updateBadgeFromData = (data: AccountStats) => {
-    if (typeof chrome !== 'undefined' && chrome.action) {
-       if (totalUnreadMessages > 0) return;
+    setAccountStats(data);
+  };
 
-       const percent = settings.badgeMetric === 'RC' ? data.rc.percentage : data.vp.percentage;
-       const rounded = Math.round(percent);
-       chrome.action.setBadgeText({ text: `${rounded}%` });
-       
-       let color = '#22c55e';
-       if (rounded < 20) color = '#ef4444'; 
-       else if (rounded < 50) color = '#f97316';
-       chrome.action.setBadgeBackgroundColor({ color });
+  const persistSavedAccounts = (accounts: SavedAccount[], active: string | null) => {
+    setSavedAccounts(accounts);
+    setActiveUsername(active);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ savedAccounts: { accounts, activeUsername: active } });
     }
   };
 
-  const handleSwitch = (targetId: FrontendId, mode: ActionMode) => {
-    const newUrl = getTargetUrl(targetId, tabState.path, mode, tabState.username);
-    if (typeof chrome !== 'undefined' && chrome.tabs) {
-      if (settings.openInNewTab) {
-        chrome.tabs.create({ url: newUrl });
+  const handleSwitchAccount = async (username: string, accountsOverride?: SavedAccount[]) => {
+    const list = accountsOverride ?? savedAccounts;
+    const account = list.find(a => a.username === username);
+    if (!account) return;
+
+    // Kill the heartbeat immediately so the old token closure can't repopulate channels.
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    setChannels([]);
+    setUnreadCounts({});
+    setActiveChannel(null);
+    setActiveMessages([]);
+    setAccountStats(null);
+    setChatSessionExpired(false);
+
+    const accountHasBearer = account.ecencyChatToken && account.ecencyChatToken !== 'cookie-session';
+    if (account.mmPat) {
+      await setMmPatCookie(account.mmPat);
+    } else if (!accountHasBearer) {
+      setChatSessionExpired(true);
+    }
+
+    const settingsPatch: Partial<AppSettings> = {
+      ecencyUsername: account.username,
+      ecencyAccessToken: account.ecencyAccessToken,
+      ecencyChatToken: account.ecencyChatToken,
+      ecencyUserId: account.ecencyUserId,
+      ecencyRefreshToken: account.ecencyRefreshToken,
+      rcUser: account.username,
+    };
+    const updatedSettings: AppSettings = { ...settings, ...settingsPatch };
+
+    setSettings(updatedSettings);
+    if (account.ecencyUserId) {
+      setUserMap(prev => ({ ...prev, [account.ecencyUserId]: account.username }));
+    }
+    persistSavedAccounts(list, username);
+    fetchAccountStats(account.username, updatedSettings).then(data => data && setAccountStats(data));
+
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      await patchSettings(settingsPatch);
+      chrome.storage.local.remove(['unreadCounts', 'channelTotals', 'channelReadState', 'channels'], () => {
+        if (account.ecencyChatToken) refreshChat(account.ecencyChatToken);
+      });
+    } else if (account.ecencyChatToken) {
+      refreshChat(account.ecencyChatToken);
+    }
+  };
+
+  const handleRemoveAccount = (username: string) => {
+    const filtered = savedAccounts.filter(a => a.username !== username);
+    if (username === activeUsername) {
+      if (filtered.length === 0) {
+        handleLogout();
+        persistSavedAccounts([], null);
       } else {
-        chrome.tabs.update({ url: newUrl });
-        window.close();
+        handleSwitchAccount(filtered[0].username, filtered);
       }
     } else {
-      window.open(newUrl, '_blank');
+      persistSavedAccounts(filtered, activeUsername);
     }
   };
 
-  // --- CHAT LOGIC ---
 
-  const resolveUnknownUsers = useCallback(async (ids: string[], knownCache?: Record<string, string>) => {
-    if (!settings.ecencyChatToken) return;
-    
-    const missing = ids.filter(id => !(userMap[id] || (knownCache && knownCache[id])));
-    if (missing.length === 0) return;
-
-    const resolved = await fetchUsersByIds(missing, settings.ecencyChatToken);
-    if (Object.keys(resolved).length > 0) {
-       setUserMap(prev => ({ ...prev, ...resolved }));
-    }
-  }, [userMap, settings.ecencyChatToken]);
-
-  const loadChannelMessages = async (channel: Channel) => {
-    if (channel.type === 'D' && settings.ecencyUserId && channel.name.includes('__')) {
-       const otherId = channel.name.split('__').find(p => p !== settings.ecencyUserId);
-       if (otherId && channel.display_name) {
-          setUserMap(prev => ({ ...prev, [otherId]: channel.display_name }));
-       }
-    }
-    
-    const { messages, users } = await fetchChannelPosts(channel.id, settings.ecencyChatToken);
-    
-    if (Object.keys(users).length > 0) setUserMap(prev => ({ ...prev, ...users }));
-
-    setActiveMessages(messages);
-    setLoadingMessages(false);
-
-    const authorIds = [...new Set(messages.map(m => m.user_id))];
-    resolveUnknownUsers(authorIds, users);
-  };
-
-  const handleSelectChannel = async (channel: Channel | null) => {
-     setActiveChannel(channel);
-     if (channel) {
-        // Mark channel as read
-        chrome.storage.local.get(['channelTotals', 'channelReadState'], (result: any) => {
-          const totals = result.channelTotals || {};
-          const readState = result.channelReadState || {};
-          if (totals[channel.id]) {
-            const updatedReadState = { ...readState, [channel.id]: totals[channel.id] };
-            chrome.storage.local.set({ channelReadState: updatedReadState });
-          }
-        });
-        // Optimistically update UI
-        setUnreadCounts(prev => ({ ...prev, [channel.id]: 0 }));
-
-        setLoadingMessages(true);
-        setActiveMessages([]); 
-        await loadChannelMessages(channel);
-     }
-  };
-
-  const handleRefreshActiveChat = async () => {
-    if (!activeChannel) {
-      refreshChat();
-      return;
-    }
-    setLoadingMessages(true);
-    await loadChannelMessages(activeChannel);
-  };
-
-  const handleSendMessage = async (text: string) => {
-    if (!activeChannel) return;
-    setSendingMessage(true);
-    
-    const result = await sendMessage(activeChannel.id, text, settings.ecencyChatToken);
-    
-    if (result) {
-       setActiveMessages(prev => [...prev, { ...result, message: text, create_at: result.create_at || Date.now(), user_id: settings.ecencyUserId || result.user_id }]);
-       // Silent refetch for consistency
-       const { messages, users } = await fetchChannelPosts(activeChannel.id, settings.ecencyChatToken);
-       if (Object.keys(users).length > 0) setUserMap(prev => ({ ...prev, ...users }));
-       setActiveMessages(messages);
+  const handleSwitch = (id: FrontendId | string, mode: ActionMode, usernameOverride?: string) => {
+    const url = getTargetUrl(
+      id,
+      tabState.path,
+      mode,
+      usernameOverride || tabState.username,
+      usernameOverride ? null : tabState.author, // Clear author if overriding user to avoid invalid post URLs
+      usernameOverride ? null : tabState.permlink, // Clear permlink if overriding user
+      allFrontends // New parameter
+    );
+    if (settings.openInNewTab) {
+      window.open(url, '_blank');
+    } else if (typeof chrome !== 'undefined' && chrome.tabs) {
+      chrome.tabs.update({ url });
     } else {
-       alert("Failed to send message.");
-    }
-    setSendingMessage(false);
-  };
-
-  const handleEditMessage = async (messageId: string, newText: string) => {
-    if (!activeChannel) return;
-    const originalMessages = [...activeMessages];
-    setActiveMessages(prev => prev.map(m => m.id === messageId ? { ...m, message: newText } : m));
-    const result = await editMessage(activeChannel.id, messageId, newText, settings.ecencyChatToken);
-    if (!result) {
-        setActiveMessages(originalMessages);
-        alert("Failed to edit message");
+      window.location.href = url;
     }
   };
 
-  const handleDeleteMessage = async (messageId: string) => {
-    if (!activeChannel) return;
-    const originalMessages = [...activeMessages];
-    setActiveMessages(prev => prev.filter(m => m.id !== messageId));
-    const success = await deleteMessage(activeChannel.id, messageId, settings.ecencyChatToken);
-    if (!success) {
-         setActiveMessages(originalMessages);
-         alert("Failed to delete message");
-    }
-  };
-
-  const handleToggleReaction = async (messageId: string, emojiName: string) => {
-    let userId = settings.ecencyUserId;
-    if (!userId && settings.ecencyUsername) {
-      const foundId = Object.entries(userMap).find(([, name]) => name === settings.ecencyUsername)?.[0];
-      if (foundId) {
-        userId = foundId;
-        updateSettings({ ecencyUserId: foundId });
-      }
-    }
-    if (!activeChannel || !userId) return;
-    
-    const originalMessages = [...activeMessages];
-    setActiveMessages(prev => {
-        const msgIndex = prev.findIndex(m => m.id === messageId);
-        if (msgIndex === -1) return prev;
-        const message = prev[msgIndex];
-        const reactions = message.metadata?.reactions || [];
-        const myReaction = reactions.find(r => r.user_id === userId && r.emoji_name === emojiName);
-        const newReactions = myReaction ? reactions.filter(r => r !== myReaction) : [...reactions, { user_id: userId!, post_id: messageId, emoji_name: emojiName, create_at: Date.now() }];
-        const updatedMessage = { ...message, metadata: { ...message.metadata, reactions: newReactions } };
-        return [...prev.slice(0, msgIndex), updatedMessage, ...prev.slice(msgIndex + 1)];
-    });
-
-    try {
-        const message = originalMessages.find(m => m.id === messageId);
-        const hasReaction = message?.metadata?.reactions?.some(r => r.user_id === userId && r.emoji_name === emojiName);
-        await toggleReaction(activeChannel.id, messageId, emojiName, !hasReaction, settings.ecencyChatToken);
-    } catch (e) {
-        setActiveMessages(originalMessages);
-    }
-  };
-
-  const handleCreateDM = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dmTarget.trim()) return;
-    const targetUser = dmTarget.trim().toLowerCase().replace('@', '');
-    const existing = channels.find(c => {
-        if (c.type !== 'D') return false;
-        if (c.teammate?.username.toLowerCase() === targetUser) return true;
-        return c.display_name?.toLowerCase().replace('@','').includes(targetUser);
-    });
-    if (existing) {
-        setDmTarget('');
-        handleSelectChannel(existing);
-        return;
-    }
-    setCreatingDm(true);
-    try {
-      let token = settings.ecencyChatToken;
-      let result = await getOrCreateDirectChannel(targetUser, token);
-      if (!result.success && settings.ecencyUsername && settings.ecencyAccessToken && (!token || result.error?.toLowerCase().includes('session') || result.error?.toLowerCase().includes('expired'))) {
-         const bootstrapRes = await bootstrapEcencyChat(settings.ecencyUsername, settings.ecencyAccessToken);
-         if (bootstrapRes?.token) {
-           const { token: newToken, userId } = bootstrapRes;
-           updateSettings({ ecencyChatToken: newToken, ecencyUserId: userId || settings.ecencyUserId });
-           result = await getOrCreateDirectChannel(targetUser, newToken);
-         }
-      }
-      if (result.success && result.channel) {
-        setDmTarget('');
-        const newChannel = result.channel;
-        setChannels(prev => [newChannel, ...prev.filter(c => c.id !== newChannel.id)]);
-        handleSelectChannel(newChannel);
-        refreshChat();
-      } else {
-        alert(result.error || 'Could not create DM.');
-      }
-    } catch (e) {
-      alert('Error creating chat.');
-    } finally {
-      setCreatingDm(false);
-    }
-  };
-
-  const handleKeychainLogin = async () => {
-    const userToLogin = settings.ecencyUsername || settings.rcUser || tabState.username;
-    if (!userToLogin) {
-      setLoginError("Please enter a username in Settings first.");
-      if (currentView !== AppView.SETTINGS) setCurrentView(AppView.SETTINGS);
+  const handleLogin = async (usernameOverride?: string) => {
+    // usernameOverride must be a plain string; guard against React SyntheticEvent
+    // being passed when handleLogin is used directly as an onClick handler
+    const targetUsername = (typeof usernameOverride === 'string' ? usernameOverride : null) || settings.ecencyUsername;
+    if (!targetUsername) {
+      setLoginError("Please enter a username.");
       return;
     }
     setIsLoggingIn(true);
     setLoginError(null);
+
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab?.id || tab.url?.match(/^(chrome|edge|about|data|chrome-extension):/)) {
-        setLoginError("Please open a regular website to use Keychain.");
-        setIsLoggingIn(false);
-        return;
-      }
-      const payload = createEcencyLoginPayload(userToLogin);
-      const messageToSign = JSON.stringify(payload);
-      const [result] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        world: 'MAIN',
-        func: (username: string, message: string) => new Promise((resolve) => {
-          // @ts-ignore
-          if (!window.hive_keychain) return resolve({ success: false, error: 'Hive Keychain not found.' });
-          // @ts-ignore
-          window.hive_keychain.requestSignBuffer(username, message, 'Posting', (resp: any) => resolve(resp));
-        }),
-        args: [userToLogin, messageToSign]
-      });
-      if (!result?.result?.success) {
-        setLoginError(result?.result?.error || "Login canceled.");
-        setIsLoggingIn(false);
-        return;
-      }
-      const { result: signature } = result.result;
-      const hiveToken = createEcencyToken(payload, signature);
-      const bootstrapRes = await bootstrapEcencyChat(userToLogin, hiveToken);
-      if (bootstrapRes?.token) {
-         const { token: chatToken, userId, refreshToken } = bootstrapRes;
-         updateSettings({ 
-           ecencyUsername: userToLogin, 
-           ecencyAccessToken: hiveToken,
-           ecencyChatToken: chatToken === 'cookie-session' ? '' : chatToken,
-           ecencyUserId: userId || '',
-           ecencyRefreshToken: refreshToken || '',
-           rcUser: userToLogin
-         });
-         if (userId) setUserMap(prev => ({ ...prev, [userId]: userToLogin }));
-         fetchAccountStats(userToLogin).then(data => {
-            if (data) {
-                setAccountStats(data);
-                updateBadgeFromData(data);
-            }
-         });
-         setLoginError(null);
-         setChatSessionExpired(false);
-         if (currentView === AppView.CHAT) {
-           setTimeout(() => refreshChat(), 100);
+      const payload = createEcencyLoginPayload(targetUsername);
+      const messageStr = JSON.stringify(payload);
+
+      const performLogin = () => new Promise<any>((resolve, reject) => {
+         if (typeof chrome !== 'undefined' && chrome.scripting) {
+
+            const injectIntoTab = async (tabId: number, closeTabAfter?: number) => {
+               try {
+                  const results = await chrome.scripting.executeScript({
+                     target: { tabId },
+                     world: 'MAIN',
+                     func: (u: string, m: string) => {
+                        return new Promise((res) => {
+                           const win = window as any;
+                           if (typeof win.hive_keychain === 'undefined') {
+                              res({ success: false, error: 'KEYCHAIN_NOT_FOUND' });
+                              return;
+                           }
+                           try {
+                              win.hive_keychain.requestSignBuffer(u, m, 'Posting', (resp: any) => res({ success: true, result: resp }));
+                           } catch (err: any) {
+                              res({ success: false, error: err.message || 'KEYCHAIN_EXCEPTION' });
+                           }
+                        });
+                     },
+                     args: [targetUsername, messageStr]
+                  });
+                  if (closeTabAfter) chrome.tabs.remove(closeTabAfter);
+                  if (results && results[0] && results[0].result) {
+                     resolve(results[0].result);
+                  } else {
+                     reject("Script execution returned no result.");
+                  }
+               } catch (e: any) {
+                  const msg = e?.message || "Script injection failed.";
+                  if (closeTabAfter) {
+                     // Already in the fallback ecency tab — don't loop, give up.
+                     chrome.tabs.remove(closeTabAfter);
+                     reject(msg);
+                     return;
+                  }
+                  // Active-tab injection failed. On Firefox, restricted hosts like
+                  // addons.mozilla.org reject with a host-permission error even
+                  // though the URL doesn't look restricted. Fall back to a
+                  // background ecency.com tab (a host we always hold permission for).
+                  if (isHostPermissionError(msg)) {
+                     openBackgroundTabAndInject();
+                  } else {
+                     reject(msg);
+                  }
+               }
+            };
+
+            // Open ecency.com as a background tab (active: false keeps the popup open),
+            // wait for it to load, inject, then close it.
+            const openBackgroundTabAndInject = () => {
+               chrome.tabs.create({ url: 'https://ecency.com', active: false }, (tab: any) => {
+                  if (!tab?.id) { reject("Could not open background tab."); return; }
+                  const tabId = tab.id;
+                  const onUpdated = (updatedTabId: number, changeInfo: any) => {
+                     if (updatedTabId === tabId && changeInfo.status === 'complete') {
+                        chrome.tabs.onUpdated.removeListener(onUpdated);
+                        injectIntoTab(tabId, tabId);
+                     }
+                  };
+                  chrome.tabs.onUpdated.addListener(onUpdated);
+               });
+            };
+
+            const isRestricted = (url: string) =>
+               !url || url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('brave://') ||
+               url.startsWith('about:') || url.startsWith('moz-extension://') || url.startsWith('chrome-extension://');
+
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
+               const activeTab = tabs?.[0];
+               if (activeTab?.id && !isRestricted(activeTab.url || '')) {
+                  injectIntoTab(activeTab.id);
+               } else {
+                  // Active tab is restricted — open ecency.com silently in background
+                  openBackgroundTabAndInject();
+               }
+            });
+
+         } else if (typeof window.hive_keychain !== 'undefined') {
+            window.hive_keychain.requestSignBuffer(targetUsername, messageStr, 'Posting', (resp: any) => resolve({ success: true, result: resp }));
          } else {
-           setCurrentView(AppView.CHAT);
+            reject("Hive Keychain not found.");
          }
-      } else {
-         setLoginError("Failed to initialize chat session.");
+      });
+
+      const wrapperResp = await performLogin();
+
+      if (!wrapperResp.success) {
+         if (wrapperResp.error === 'KEYCHAIN_NOT_FOUND') {
+            setLoginError("Hive Keychain not detected. Is it installed and unlocked?");
+         } else {
+            setLoginError(wrapperResp.error || "Login communication failed.");
+         }
+         return;
       }
-    } catch (e) {
-      setLoginError("Unexpected error.");
+
+      const response = wrapperResp.result;
+
+      if (response.success) {
+        // The Keychain-signed payload is a HiveSigner "code". Chat bootstrap now
+        // requires a real HiveSigner access token, so exchange the code first.
+        const code = createEcencyToken(payload, response.result);
+        const hsTokens = await exchangeHsCode(code);
+        const accessToken = hsTokens?.access_token || code; // fall back to code if exchange is down
+        const hsRefreshToken = hsTokens?.refresh_token;
+
+        const bootstrap = await bootstrapEcencyChat(targetUsername, accessToken);
+        const chatToken = bootstrap?.token || '';
+
+        // Preserve any previously stored chat credentials — mm_pat tokens are valid for 30 days.
+        // Discarding them on every re-login means losing a working session whenever bootstrap is down.
+        const existingAccount = savedAccounts.find(a => a.username === targetUsername);
+        const prevToken = existingAccount?.ecencyChatToken;
+        const prevIsBearer = prevToken && prevToken !== 'cookie-session' && prevToken !== '';
+        const effectiveChatToken = chatToken || (prevIsBearer ? prevToken : '') || '';
+        const effectiveMmPat = bootstrap?.mmPat || existingAccount?.mmPat;
+        const effectiveRefreshToken = hsRefreshToken || bootstrap?.refreshToken || existingAccount?.ecencyRefreshToken || '';
+
+        const newAccount: SavedAccount = {
+          username: targetUsername,
+          ecencyAccessToken: accessToken,
+          ecencyChatToken: effectiveChatToken,
+          ecencyUserId: bootstrap?.userId || existingAccount?.ecencyUserId || '',
+          ecencyRefreshToken: effectiveRefreshToken,
+          mmPat: effectiveMmPat,
+        };
+        const updatedAccounts = [...savedAccounts.filter(a => a.username !== targetUsername), newAccount];
+        const settingsPatch: Partial<AppSettings> = {
+          ecencyUsername: targetUsername,
+          ecencyAccessToken: accessToken,
+          ecencyChatToken: effectiveChatToken,
+          ecencyUserId: bootstrap?.userId || existingAccount?.ecencyUserId,
+          ecencyRefreshToken: effectiveRefreshToken,
+          rcUser: targetUsername,
+        };
+        setSettings(prev => ({ ...prev, ...settingsPatch }));
+        const resolvedUserId = bootstrap?.userId || existingAccount?.ecencyUserId;
+        if (resolvedUserId) setUserMap(prev => ({ ...prev, [resolvedUserId]: targetUsername }));
+        persistSavedAccounts(updatedAccounts, targetUsername);
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          await patchSettings(settingsPatch);
+        }
+        setAddingAccount(false);
+
+        // Chat is usable if bootstrap succeeded OR we preserved a valid Bearer token
+        const hasUsableToken = !!bootstrap || (effectiveChatToken && effectiveChatToken !== 'cookie-session');
+        if (hasUsableToken) {
+          if (effectiveMmPat) await setMmPatCookie(effectiveMmPat);
+          setChatSessionExpired(false);
+          refreshChat(effectiveChatToken);
+        } else {
+          setChatSessionExpired(true);
+          setChannels([]);
+          setUnreadCounts({});
+          if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.local.remove(['channels', 'unreadCounts', 'channelTotals', 'channelReadState']);
+          }
+        }
+      } else {
+        setLoginError(response.message || "Login failed");
+      }
+    } catch (e: any) {
+      setLoginError(typeof e === 'string' ? e : (e?.message || "An unexpected error occurred."));
     } finally {
       setIsLoggingIn(false);
     }
   };
 
   const handleLogout = () => {
-    updateSettings({ ecencyUsername: '', ecencyAccessToken: '', ecencyChatToken: '', ecencyRefreshToken: '', ecencyUserId: '' });
+    updateSettings({
+      ecencyAccessToken: '',
+      ecencyChatToken: '',
+      ecencyUserId: '',
+      ecencyRefreshToken: '',
+      rcUser: '' // Clear rcUser as well
+    });
     setChannels([]);
+    setUnreadCounts({}); // Clear unread counts
     setActiveChannel(null);
-    setUserMap({});
-    setUnreadCounts({});
+    setActiveMessages([]);
+    setAccountStats(null); // Clear account stats
+    if (typeof chrome !== 'undefined' && chrome.action) {
+        chrome.action.setBadgeText({ text: '' });
+    }
+    // Clear persisted unread counts and channel states from storage
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.remove(['unreadCounts', 'channelTotals', 'channelReadState', 'channels']);
+    }
   };
 
-  useEffect(() => {
-    if (accountStats) {
-      updateBadgeFromData(accountStats);
+  const handleSendMessage = async (text: string) => {
+    if (!activeChannel) return;
+    setSendingMessage(true);
+    try {
+      const msg = await sendMessage(activeChannel.id, text, settings.ecencyChatToken);
+      if (msg) {
+        setActiveMessages(prev => [...prev, msg]);
+      }
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    } finally {
+      setSendingMessage(false);
     }
-  }, [settings.badgeMetric, accountStats, totalUnreadMessages]);
+  };
+
+  const handleResolveUsers = async (ids: string[]) => {
+    try {
+      const resolved = await fetchUsersByIds(ids, settings.ecencyChatToken);
+      if (Object.keys(resolved).length > 0) {
+        setUserMap(prev => ({ ...prev, ...resolved }));
+      }
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    }
+  };
+
+  const handleEditMessage = async (id: string, text: string) => {
+    if (!activeChannel) return;
+    try {
+      await editMessage(activeChannel.id, id, text, settings.ecencyChatToken);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    }
+  };
+
+  const handleDeleteMessage = async (id: string) => {
+    if (!activeChannel) return;
+    try {
+      const ok = await deleteMessage(activeChannel.id, id, settings.ecencyChatToken);
+      if (ok) {
+        setActiveMessages(prev => prev.filter(m => m.id !== id));
+      }
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    }
+  };
+
+  const handleToggleReaction = async (id: string, emoji: string) => {
+    if (!activeChannel) return;
+    try {
+      const msg = activeMessages.find(m => m.id === id);
+      const existing = msg?.metadata?.reactions?.find(r => r.emoji_name === emoji && r.user_id === settings.ecencyUserId);
+      await toggleReaction(activeChannel.id, id, emoji, !existing, settings.ecencyChatToken);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    }
+  };
+
+  const handleCreateDM = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dmTarget) return;
+    setCreatingDm(true);
+    try {
+      const result = await getOrCreateDirectChannel(dmTarget, settings.ecencyChatToken);
+      if (result.success && result.channel) {
+        handleSelectChannel(result.channel);
+        setDmTarget('');
+      } else {
+        alert(result.error || "Failed to create DM");
+      }
+    } catch (e) {
+      if (e instanceof UnauthorizedError) setChatSessionExpired(true);
+    } finally {
+      setCreatingDm(false);
+    }
+  };
+
+  const handleSelectChannel = (channel: Channel | null) => {
+    setActiveChannel(channel);
+    if (channel) {
+      setActiveMessages([]);
+      loadActiveMessages(channel.id);
+      
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        const newUnreads = { ...unreadCounts, [channel.id]: 0 };
+        setUnreadCounts(newUnreads);
+
+        chrome.storage.local.get(['channelTotals', 'channelReadState'], (result: any) => {
+          const totals = result.channelTotals || {};
+          const readState = result.channelReadState || {};
+          const currentTotal = totals[channel.id] || channel.total_msg_count || 0;
+          const updatedReadState = { ...readState, [channel.id]: currentTotal };
+          
+          chrome.storage.local.set({ 
+              channelReadState: updatedReadState,
+              unreadCounts: newUnreads
+          });
+        });
+      }
+    }
+  };
+
+  if (initializing) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-slate-50">
+        <Activity className="animate-spin text-blue-500" size={32} />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-50 text-slate-800 font-sans">
-      <Header />
-      <main className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="p-4 pb-20">
+    <div className="w-full h-full flex flex-col bg-slate-50 overflow-hidden font-sans">
+      <Header
+        username={settings.ecencyAccessToken ? settings.ecencyUsername : null}
+        onLoginClick={() => setCurrentView(AppView.SETTINGS)}
+        onLogoutClick={handleLogout}
+        stats={accountStats}
+        prices={hivePrices}
+        savedAccounts={savedAccounts}
+        activeUsername={activeUsername}
+        onSwitchAccount={handleSwitchAccount}
+        onRemoveAccount={handleRemoveAccount}
+        onAddAccount={() => setAddingAccount(true)}
+      />
+      {addingAccount && (
+        <AddAccountModal
+          isLoggingIn={isLoggingIn}
+          loginError={loginError}
+          onLogin={handleLogin}
+          onClose={() => { setAddingAccount(false); setLoginError(null); }}
+        />
+      )}
+      
+      <main className="flex-1 overflow-hidden relative flex flex-col isolate">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
             {currentView === AppView.SWITCHER && (
-              <SwitcherView tabState={tabState} onSwitch={handleSwitch} />
+            <SwitcherView 
+              tabState={tabState} 
+              onSwitch={handleSwitch} 
+              allFrontends={allFrontends} // Pass all frontends
+              updateSettings={updateSettings}
+              settings={settings} // Pass settings for filtering active frontends
+            />
             )}
             {currentView === AppView.SHARE && (
-              <ShareView tabState={tabState} />
+            <ShareView tabState={tabState} allFrontends={allFrontends} />
             )}
-            {currentView === AppView.STATS && (
-              <StatsView 
-                settings={settings} 
-                updateSettings={updateSettings} 
-                onDataFetched={(data) => {
-                  setAccountStats(data);
-                  updateBadgeFromData(data);
-                }}
-              />
+            {currentView === AppView.NOTIFICATIONS && (
+            <StatsView key={settings.rcUser || settings.ecencyUsername} settings={settings} allFrontends={allFrontends} />
             )}
             {currentView === AppView.CHAT && (
-              <ChatView 
+            <ChatView
+                key={settings.ecencyUsername}
                 settings={settings}
                 channels={channels}
-                unreadCounts={unreadCounts}
                 loadingChat={loadingChat}
                 chatSessionExpired={chatSessionExpired}
                 isLoggingIn={isLoggingIn}
                 refreshChat={refreshChat}
-                onRefresh={handleRefreshActiveChat}
+                onRefresh={() => activeChannel && loadActiveMessages(activeChannel.id)}
                 handleCreateDM={handleCreateDM}
-                handleKeychainLogin={handleKeychainLogin}
+                handleKeychainLogin={handleLogin}
                 dmTarget={dmTarget}
                 setDmTarget={setDmTarget}
                 creatingDm={creatingDm}
@@ -500,31 +883,37 @@ const App: React.FC = () => {
                 onSendMessage={handleSendMessage}
                 sendingMessage={sendingMessage}
                 userMap={userMap}
-                onResolveUsers={resolveUnknownUsers}
+                onResolveUsers={handleResolveUsers}
                 onEditMessage={handleEditMessage}
                 onDeleteMessage={handleDeleteMessage}
                 onToggleReaction={handleToggleReaction}
-              />
+                unreadCounts={unreadCounts}
+            />
             )}
-            {currentView === AppView.APPS && (
-              <AppsView />
+            {currentView === AppView.WALLET && (
+            <WalletView key={settings.rcUser || settings.ecencyUsername} settings={settings} updateSettings={updateSettings} onDataFetched={updateBadgeFromData} />
+            )}
+            {currentView === AppView.TRENDING && (
+            <TrendingView settings={settings} allFrontends={allFrontends} />
             )}
             {currentView === AppView.SETTINGS && (
-              <SettingsView 
-                settings={settings}
+            <SettingsView 
+                settings={settings} 
                 updateSettings={updateSettings}
-                onLogin={handleKeychainLogin}
+                onLogin={handleLogin}
                 onLogout={handleLogout}
                 isLoggingIn={isLoggingIn}
                 loginError={loginError}
-              />
+                allFrontends={[...FRONTENDS, ...settings.customFrontends]} // Combine predefined and custom frontends
+            />
             )}
-          </div>
+        </div>
       </main>
+
       <BottomNav 
         currentView={currentView} 
         setCurrentView={setCurrentView} 
-        unreadMessages={totalUnreadMessages} 
+        unreadMessages={totalUnreadMessages}
       />
     </div>
   );

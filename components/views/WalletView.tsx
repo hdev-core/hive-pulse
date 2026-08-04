@@ -1,0 +1,311 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { AppSettings, AccountStats } from '../../types';
+import { fetchAccountStats } from '../../utils/hiveHelpers';
+import { broadcastKeychainOp } from '../../utils/keychainHelpers';
+import { Search, Activity } from 'lucide-react';
+import { PortfolioCard, PortfolioActionRequest } from '../PortfolioCard';
+import { EarningExplainer } from '../EarningExplainer';
+import { OnboardingBanner } from '../OnboardingBanner';
+import { SendForm } from '../SendForm';
+import { StakeForm } from '../StakeForm';
+import { HiveEngineActions } from '../HiveEngineActions';
+import { PortfolioHistoryChart } from '../PortfolioHistoryChart';
+import { UnstakingStatus } from '../UnstakingStatus';
+import { RcBudget } from '../RcBudget';
+import { HiveProofCard } from '../HiveProofCard';
+
+interface WalletViewProps {
+  settings: AppSettings;
+  updateSettings: (s: Partial<AppSettings>) => void;
+  onDataFetched?: (data: AccountStats) => void;
+}
+
+export const WalletView: React.FC<WalletViewProps> = ({ settings, updateSettings, onDataFetched }) => {
+  const [prices, setPrices] = useState<{ hive: number; hbd: number } | null>(null);
+  const [username, setUsername] = useState(settings.rcUser || '');
+  const [stats, setStats] = useState<AccountStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Scroll targets + focus signal for the "act on this asset" pills in PortfolioCard.
+  const sendRef  = useRef<HTMLDivElement>(null);
+  const stakeRef = useRef<HTMLDivElement>(null);
+  const heRef    = useRef<HTMLDivElement>(null);
+  const [actionFocus, setActionFocus] = useState<(PortfolioActionRequest & { nonce: number }) | null>(null);
+
+  const handlePortfolioAction = (req: PortfolioActionRequest) => {
+    setActionFocus({ ...req, nonce: (actionFocus?.nonce ?? 0) + 1 });
+    const ref = req.target === 'send' ? sendRef : req.target === 'stake' ? stakeRef : heRef;
+    // Let the form apply its tab/currency change first, then scroll it into view.
+    setTimeout(() => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  };
+
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=hive,hive_dollar&vs_currencies=usd');
+        const data = await response.json();
+        if (data && data.hive && data.hive_dollar) {
+          setPrices({ hive: data.hive.usd, hbd: data.hive_dollar.usd });
+        }
+      } catch (e) {
+        console.error('Error fetching prices:', e);
+      }
+    };
+    fetchPrices();
+  }, []);
+
+  useEffect(() => {
+    if (settings.rcUser && !stats && !loading && !error) {
+      handleFetch(undefined, settings.rcUser);
+    }
+  }, [settings.rcUser]);
+
+  const handleFetch = async (e?: React.FormEvent, userToFetch?: string) => {
+    if (e) e.preventDefault();
+    const targetUser = userToFetch || username;
+    if (!targetUser) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const cleanUser = targetUser.replace('@', '').trim();
+      const data = await fetchAccountStats(cleanUser, settings);
+      if (data) {
+        setStats(data);
+        if (!userToFetch) updateSettings({ rcUser: data.username });
+        if (onDataFetched) onDataFetched(data);
+      } else {
+        setError('Account not found');
+      }
+    } catch {
+      setError('Failed to fetch data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Refresh stats after a successful claim/send
+  const refreshStats = useCallback(async () => {
+    if (!stats) return;
+    const data = await fetchAccountStats(stats.username, settings);
+    if (data) {
+      setStats(data);
+      if (onDataFetched) onDataFetched(data);
+    }
+  }, [stats, settings]);
+
+  // Bumped after any signed action so the HE token list, balance breakdown, and
+  // unstaking panel all refetch (HE/chain state lags a few seconds, so re-pull).
+  const [refreshKey, setRefreshKey] = useState(0);
+  const handleActionSuccess = useCallback(() => {
+    refreshStats();
+    setTimeout(() => setRefreshKey(k => k + 1), 3500);
+  }, [refreshStats]);
+
+  // Only show claim button when viewing your own account
+  const isOwnAccount = !!settings.ecencyUsername && stats?.username === settings.ecencyUsername;
+
+  const handleClaimRewards = async () => {
+    if (!stats?.balances || !stats.username) throw new Error('No account data.');
+    const { pendingHive, pendingHbd, pendingVests } = stats.balances;
+    if (pendingHive <= 0 && pendingHbd <= 0 && pendingVests <= 0) throw new Error('No rewards to claim.');
+
+    const result = await broadcastKeychainOp(
+      stats.username,
+      [['claim_reward_balance', {
+        account: stats.username,
+        reward_hive: `${pendingHive.toFixed(3)} HIVE`,
+        reward_hbd: `${pendingHbd.toFixed(3)} HBD`,
+        reward_vests: `${pendingVests.toFixed(6)} VESTS`,
+      }]],
+      'Posting'
+    );
+    if (!result.success) throw new Error(result.error || 'Claim failed.');
+
+    // The API node often lags a few seconds before it reflects the claim, so an
+    // immediate refetch would re-show stale pending rewards (button stays, balance
+    // unchanged). Instead: optimistically clear pending + credit liquid, then
+    // reconcile with the chain once it has actually applied the claim.
+    setTimeout(() => {
+      setStats(prev => (prev && prev.balances) ? {
+        ...prev,
+        balances: {
+          ...prev.balances,
+          hive: prev.balances.hive + pendingHive,
+          hbd: prev.balances.hbd + pendingHbd,
+          pendingHive: 0,
+          pendingHbd: 0,
+          pendingVests: 0,
+        },
+      } : prev);
+    }, 1800);
+
+    // Reconcile with authoritative chain data (HP from claimed VESTS, exact figures).
+    // Retry while the node still reports pending — never commit stale data that
+    // would bring the claim button back.
+    const reconcile = async (attempt = 0) => {
+      const data = await fetchAccountStats(stats.username, settings);
+      if (!data) return;
+      const b = data.balances;
+      const stillPending = !!b && (b.pendingHive > 0.0005 || b.pendingHbd > 0.0005 || b.pendingVests > 0.5);
+      if (stillPending && attempt < 3) {
+        setTimeout(() => reconcile(attempt + 1), 3000);
+        return;
+      }
+      setStats(data);
+      if (onDataFetched) onDataFetched(data);
+    };
+    setTimeout(() => { reconcile(); }, 5000);
+  };
+
+  // Trigger HBD savings interest credit via a minimal transfer_to_savings.
+  // Hive has no standalone claim-interest op; any savings transfer causes the chain
+  // to credit accrued interest first.
+  const handleClaimInterest = async () => {
+    if (!stats?.balances || !stats.username) throw new Error('No account data.');
+    const { savingsHbd, hbd } = stats.balances;
+    if (savingsHbd <= 0) throw new Error('No HBD in savings.');
+    if (hbd < 0.001) throw new Error('Need at least 0.001 liquid HBD to trigger interest credit.');
+
+    const result = await broadcastKeychainOp(
+      stats.username,
+      [['transfer_to_savings', {
+        from: stats.username,
+        to: stats.username,
+        amount: '0.001 HBD',
+        memo: '',
+      }]],
+      'Active'
+    );
+    if (!result.success) throw new Error(result.error || 'Claim failed.');
+    await refreshStats();
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <OnboardingBanner />
+      {prices ? (
+        <div className="flex items-center justify-center gap-8 py-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-xs font-bold text-red-600">HIVE</span>
+            <span className="text-lg font-bold text-slate-700">${prices.hive.toFixed(3)}</span>
+          </div>
+          <div className="w-px h-8 bg-slate-200" />
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-xs font-bold text-green-600">HBD</span>
+            <span className="text-lg font-bold text-slate-700">${prices.hbd.toFixed(3)}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center py-4 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-400 text-xs">Loading market data...</div>
+      )}
+
+      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col gap-4">
+        <form onSubmit={handleFetch} className="flex gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">@</span>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="username"
+              className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            />
+          </div>
+          <button type="submit" disabled={loading} className="bg-slate-800 text-white p-2 rounded-lg hover:bg-slate-700 disabled:opacity-50 transition-colors">
+            <Search size={18} />
+          </button>
+        </form>
+
+        {loading && <div className="py-8 flex justify-center"><Activity className="animate-spin text-slate-300" size={32} /></div>}
+        {error && <div className="py-4 text-center text-sm text-red-500 bg-red-50 rounded-lg border border-red-100">{error}</div>}
+
+        {!loading && stats && stats.balances && prices && (
+          <PortfolioCard
+            balances={stats.balances}
+            hivePrice={prices.hive}
+            hbdPrice={prices.hbd}
+            username={stats.username}
+            heRpcNode={settings.heRpcNode}
+            hiveRpcNode={settings.hiveRpcNode}
+            onClaimRewards={isOwnAccount ? handleClaimRewards : undefined}
+            onClaimInterest={isOwnAccount ? handleClaimInterest : undefined}
+            onAction={isOwnAccount ? handlePortfolioAction : undefined}
+            refreshKey={refreshKey}
+          />
+        )}
+
+        {!loading && !stats && !error && (
+          <div className="text-center py-6 text-slate-400 text-sm">{settings.rcUser ? 'Loading saved user...' : 'Enter a Hive username to view wallet.'}</div>
+        )}
+      </div>
+
+      {/* RC Budget — shown whenever stats are loaded */}
+      {!loading && stats && <RcBudget stats={stats} settings={settings} />}
+
+      {/* Balance history chart — read-only, any loaded account */}
+      {!loading && stats?.username && (
+        <PortfolioHistoryChart username={stats.username} settings={settings} />
+      )}
+
+      {/* Shareable proof card — shown when stats + prices are ready */}
+      {!loading && stats && prices && (
+        <HiveProofCard stats={stats} prices={prices} settings={settings} />
+      )}
+
+      {/* Anything currently powering down / unstaking — own account only (cancel needs signing) */}
+      {isOwnAccount && stats?.username && (
+        <UnstakingStatus username={stats.username} settings={settings} onSuccess={handleActionSuccess} refreshKey={refreshKey} />
+      )}
+
+      {/* Send / Receive / History — only shown for own account */}
+      {isOwnAccount && stats?.balances && (
+        <div ref={sendRef} className="scroll-mt-2">
+          <SendForm
+            username={stats.username}
+            balances={{ hive: stats.balances.hive, hbd: stats.balances.hbd }}
+            settings={settings}
+            onSuccess={handleActionSuccess}
+            focusSignal={actionFocus?.target === 'send' ? { currency: actionFocus.sendCurrency, nonce: actionFocus.nonce } : undefined}
+          />
+        </div>
+      )}
+
+      {/* Power Up / Power Down / Delegate / Savings — only shown for own account */}
+      {isOwnAccount && stats?.balances && (
+        <div ref={stakeRef} className="scroll-mt-2">
+          <StakeForm
+            username={stats.username}
+            balances={{
+              hive: stats.balances.hive,
+              hbd: stats.balances.hbd,
+              hivepower: stats.balances.hivepower,
+              savingsHive: stats.balances.savingsHive,
+              savingsHbd: stats.balances.savingsHbd,
+            }}
+            settings={settings}
+            onSuccess={handleActionSuccess}
+            focusSignal={actionFocus?.target === 'stake' ? { tab: actionFocus.stakeTab, nonce: actionFocus.nonce } : undefined}
+          />
+        </div>
+      )}
+
+      {/* Hive-Engine token actions (send / stake / unstake) — own account only */}
+      {isOwnAccount && stats?.username && (
+        <div ref={heRef} className="scroll-mt-2">
+          <HiveEngineActions
+            username={stats.username}
+            settings={settings}
+            onSuccess={handleActionSuccess}
+            refreshKey={refreshKey}
+            focusSignal={actionFocus?.target === 'he' ? { tab: actionFocus.heTab, symbol: actionFocus.heSymbol, nonce: actionFocus.nonce } : undefined}
+          />
+        </div>
+      )}
+
+      <EarningExplainer />
+    </div>
+  );
+};

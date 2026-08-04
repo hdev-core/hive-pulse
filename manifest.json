@@ -1,8 +1,7 @@
-
 {
   "manifest_version": 3,
   "name": "HivePulse",
-  "version": "1.2.2",
+  "version": "1.12.0",
   "description": "The heartbeat of your Hive experience. Chat, Stats, and seamless Frontend Switching.",
   "icons": {
     "16": "icon.png",
@@ -29,15 +28,40 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["assets/content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "assets/content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://peakd.com/*",
+        "https://ecency.com/*",
+        "https://hive.blog/*",
+        "https://inleo.io/*",
+        "https://leofinance.io/*",
+        "https://3speak.tv/*",
+        "https://actifit.io/*",
+        "https://slothbuzz.com/*",
+        "https://www.slothbuzz.com/*"
+      ],
+      "js": [
+        "assets/compose.js"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["icon.png"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "icon.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "permissions": [
@@ -45,14 +69,29 @@
     "tabs",
     "storage",
     "alarms",
-    "scripting",
     "sidePanel",
     "cookies",
-    "notifications"
+    "notifications",
+    "scripting"
   ],
   "host_permissions": [
     "https://ecency.com/*",
+    "https://peakd.com/*",
+    "https://hive.blog/*",
+    "https://inleo.io/*",
+    "https://leofinance.io/*",
+    "https://3speak.tv/*",
+    "https://actifit.io/*",
     "https://api.hive.blog/*",
-    "https://images.ecency.com/*"
+    "https://images.ecency.com/*",
+    "https://api.hive-engine.com/*",
+    "https://api2.hive-engine.com/*",
+    "https://api.coingecko.com/*",
+    "https://images.hive.blog/*",
+    "https://files.peakd.com/*",
+    "https://s3.amazonaws.com/*",
+    "https://ipfs.io/*",
+    "https://slothbuzz.com/*",
+    "https://www.slothbuzz.com/*"
   ]
 }

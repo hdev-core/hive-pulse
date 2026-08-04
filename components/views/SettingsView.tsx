@@ -1,11 +1,12 @@
 
-import React from 'react';
-import { AppSettings, FrontendId } from '../../types';
-import { FRONTENDS } from '../../constants';
+import React, { useState, useEffect, useRef } from 'react';
+import { AppSettings, FrontendId, FrontendConfig, LinkStructureConfig, HiveNotificationType } from '../../types';
 import { FrontendIcon } from '../FrontendIcon';
+import { NodeSelector } from '../NodeSelector';
+import { HIVE_RPC_NODES, HIVE_ENGINE_RPC_NODES } from '../../constants';
 import { 
-  ShieldCheck, User, Activity, KeyRound, LogOut, Check, Bell 
-} from 'lucide-react';
+  ShieldCheck, User, Activity, KeyRound, LogOut, Check, Bell, GripVertical, Grid, PlusCircle, Trash2, Server, ChevronDown
+} from 'lucide-react'; // Added GripVertical for drag handle
 
 interface SettingsViewProps {
   settings: AppSettings;
@@ -14,11 +15,188 @@ interface SettingsViewProps {
   onLogout: () => void;
   isLoggingIn: boolean;
   loginError: string | null;
+  allFrontends: FrontendConfig[]; // New prop
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ 
-  settings, updateSettings, onLogin, onLogout, isLoggingIn, loginError 
+export const SettingsView: React.FC<SettingsViewProps> = ({
+  settings, updateSettings, onLogin, onLogout, isLoggingIn, loginError, allFrontends
 }) => {
+  const [orderedFrontends, setOrderedFrontends] = useState<FrontendConfig[]>([]);
+  const dragItem = useRef<FrontendId | string | null>(null); // Updated type
+  const dragOverItem = useRef<FrontendId | string | null>(null); // Updated type
+
+  // State for new custom frontend form
+  const [newFrontendName, setNewFrontendName] = useState('');
+  const [newFrontendDomain, setNewFrontendDomain] = useState('');
+  const [newFrontendCustomDomain, setNewFrontendCustomDomain] = useState('');
+  const [newFrontendLogoUrl, setNewFrontendLogoUrl] = useState('');
+  const [newFrontendPostPath, setNewFrontendPostPath] = useState('/@{{author}}/{{permlink}}');
+  const [newFrontendProfilePath, setNewFrontendProfilePath] = useState('/@{{username}}');
+  const [newFrontendWalletPath, setNewFrontendWalletPath] = useState('/@{{username}}/wallet');
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [showAddFrontendForm, setShowAddFrontendForm] = useState(false); // New state to control form visibility
+  const [isCustomFrontendsSectionOpen, setIsCustomFrontendsSectionOpen] = useState(false); // New state for section visibility
+  // Collapsible sections (default collapsed to reduce clutter)
+  const [isFrontendOrderOpen, setIsFrontendOrderOpen] = useState(false);
+  const [isHiveNodeOpen, setIsHiveNodeOpen]           = useState(false);
+  const [isHeNodeOpen, setIsHeNodeOpen]               = useState(false);
+
+  // Generate a unique ID for custom frontends
+  const getNextCustomId = () => {
+    const customIds = settings.customFrontends.map(f => parseInt((f.id as string).split('_')[1])).filter(Boolean);
+    const maxId = customIds.length > 0 ? Math.max(...customIds) : 0;
+    return `CUSTOM_${maxId + 1}`;
+  };
+
+  // Initialize orderedFrontends based on activeFrontendIds and allFrontends
+  useEffect(() => {
+    const activeMap = new Map(allFrontends.map(f => [f.id, f]));
+    const newOrdered: FrontendConfig[] = [];
+
+    // Add active frontends in their saved order
+    settings.activeFrontendIds.forEach(id => {
+      const frontend = activeMap.get(id);
+      if (frontend) {
+        newOrdered.push({ ...frontend, active: true });
+        activeMap.delete(id); // Remove from map
+      }
+    });
+
+    // Add inactive frontends (those not in activeFrontendIds) at the end
+    // Preserve original order for inactive ones
+    allFrontends.forEach(f => {
+      if (activeMap.has(f.id)) {
+        newOrdered.push({ ...f, active: false });
+      }
+    });
+
+    setOrderedFrontends(newOrdered);
+    }, [allFrontends, settings.activeFrontendIds]);
+  
+    const isFrontendActive = (id: FrontendId | string) => settings.activeFrontendIds.includes(id);
+  
+    const handleToggleActive = (id: FrontendId | string) => {
+      let newActiveFrontendIds: (FrontendId | string)[];
+      if (isFrontendActive(id)) {
+        newActiveFrontendIds = settings.activeFrontendIds.filter(fId => fId !== id);
+      } else {
+        // Add to the end of the active list when activating
+        newActiveFrontendIds = [...settings.activeFrontendIds, id];
+      }
+      updateSettings({ activeFrontendIds: newActiveFrontendIds });
+    };
+  
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: FrontendId | string) => {
+      dragItem.current = id;
+      e.dataTransfer.effectAllowed = 'move';
+    };
+  
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>, id: FrontendId | string) => {
+      e.preventDefault();
+      dragOverItem.current = id;
+    };
+  
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropId: FrontendId | string) => {
+      e.preventDefault();
+      const draggedId = dragItem.current;
+  
+      if (draggedId === null || draggedId === dropId) return;
+  
+      const newOrderedIds = [...settings.activeFrontendIds];
+      const draggedIndex = newOrderedIds.indexOf(draggedId);
+      const droppedIndex = newOrderedIds.indexOf(dropId);
+    // Only reorder if both are currently active
+    if (draggedIndex !== -1 && droppedIndex !== -1) {
+      const [removed] = newOrderedIds.splice(draggedIndex, 1);
+      newOrderedIds.splice(droppedIndex, 0, removed);
+      updateSettings({ activeFrontendIds: newOrderedIds });
+    }
+    dragItem.current = null;
+    dragOverItem.current = null;
+  };
+
+  const handleDragEnd = () => {
+    dragItem.current = null;
+    dragOverItem.current = null;
+  };
+
+  const handleAddCustomFrontend = () => {
+    if (!newFrontendName.trim() || !newFrontendDomain.trim()) {
+      setInputError('Frontend name and domain are required.');
+      return;
+    }
+    try {
+      new URL(`https://${newFrontendDomain}`); // Basic domain validation
+    } catch {
+      setInputError('Invalid domain format.');
+      return;
+    }
+
+    const newId = getNextCustomId();
+    const newCustomFrontend: FrontendConfig = {
+      id: newId,
+      name: newFrontendName.trim(),
+      domain: newFrontendDomain.trim(),
+      aliases: [], // Custom frontends don't have aliases initially
+      color: '#64748b', // Default color for custom frontends
+      textColor: '#ffffff',
+      description: 'User-defined custom frontend.',
+      // Serializable only — this object gets persisted to storage.local. A function here
+      // makes the whole settings write fail on Firefox (DataCloneError). The wallet path
+      // for custom frontends comes from linkStructure below.
+      paths: {
+        compose: '/submit',
+      },
+      active: true,
+      isCustom: true,
+      logoUrl: newFrontendLogoUrl.trim() || undefined,
+      customDomain: newFrontendCustomDomain.trim() || undefined,
+      linkStructure: {
+        post: newFrontendPostPath,
+        profile: newFrontendProfilePath,
+        wallet: newFrontendWalletPath,
+      },
+    };
+
+    updateSettings({
+      customFrontends: [...settings.customFrontends, newCustomFrontend],
+      activeFrontendIds: [...settings.activeFrontendIds, newId],
+    });
+
+    // Clear form
+    setNewFrontendName('');
+    setNewFrontendDomain('');
+    setNewFrontendCustomDomain('');
+    setNewFrontendLogoUrl('');
+    setNewFrontendPostPath('/@{{author}}/{{permlink}}');
+    setNewFrontendProfilePath('/@{{username}}');
+    setNewFrontendWalletPath('/@{{username}}/wallet');
+    setInputError(null);
+    setShowAddFrontendForm(false); // Hide the form after adding
+  };
+
+  const handleCancelAddFrontend = () => {
+    // Clear form
+    setNewFrontendName('');
+    setNewFrontendDomain('');
+    setNewFrontendCustomDomain('');
+    setNewFrontendLogoUrl('');
+    setNewFrontendPostPath('/@{{author}}/{{permlink}}');
+    setNewFrontendProfilePath('/@{{username}}');
+    setNewFrontendWalletPath('/@{{username}}/wallet');
+    setInputError(null);
+    setShowAddFrontendForm(false); // Hide the form
+  };
+
+  const handleRemoveCustomFrontend = (id: string) => {
+    const updatedCustomFrontends = settings.customFrontends.filter(f => f.id !== id);
+    const updatedActiveFrontendIds = settings.activeFrontendIds.filter(fId => fId !== id);
+    updateSettings({
+      customFrontends: updatedCustomFrontends,
+      activeFrontendIds: updatedActiveFrontendIds,
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6">
       
@@ -85,12 +263,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
             <Bell size={18} className="text-slate-500" />
-            <span className="font-semibold text-sm text-slate-800">Background Chat Monitoring</span>
+            <span className="font-semibold text-sm text-slate-800">Background Monitoring</span>
         </div>
 
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-slate-600">Enable Notifications</span>
-          <button 
+          <span className="text-sm text-slate-600">Enable Background Polling</span>
+          <button
             onClick={() => updateSettings({ notificationsEnabled: !settings.notificationsEnabled })}
             className={`
               w-11 h-6 rounded-full transition-colors relative
@@ -105,93 +283,493 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {settings.notificationsEnabled && (
-          <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-             <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Chat Check Frequency</label>
-             <select 
-               value={settings.notificationInterval || 1}
-               onChange={(e) => updateSettings({ notificationInterval: Number(e.target.value) })}
-               className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-             >
+          <div className="animate-in fade-in slide-in-from-top-1 duration-200 flex flex-col gap-4">
+            <div>
+              <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Check Frequency</label>
+              <select
+                value={settings.notificationInterval || 1}
+                onChange={(e) => updateSettings({ notificationInterval: Number(e.target.value) })}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
                 <option value={1}>Every 1 minute</option>
                 <option value={3}>Every 3 minutes</option>
                 <option value={5}>Every 5 minutes</option>
                 <option value={10}>Every 10 minutes</option>
                 <option value={15}>Every 15 minutes</option>
-             </select>
-             <p className="text-[10px] text-slate-400 mt-1">
-               Controls how frequently the extension checks for new chat messages in the background.
-             </p>
+              </select>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Controls how frequently the extension checks for new chat messages and Hive notifications.
+              </p>
+            </div>
+
+            {/* Hive Notification Badge */}
+            <div className="border-t border-slate-100 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <span className="text-sm text-slate-700 font-medium">Hive Notification Badge</span>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Show a red badge for new blockchain events (replies, transfers, etc.)</p>
+                </div>
+                <button
+                  onClick={() => updateSettings({ hiveNotificationBadgeEnabled: !settings.hiveNotificationBadgeEnabled })}
+                  className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ml-3 ${settings.hiveNotificationBadgeEnabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm ${settings.hiveNotificationBadgeEnabled ? 'left-6' : 'left-1'}`} />
+                </button>
+              </div>
+
+              {settings.hiveNotificationBadgeEnabled && (() => {
+                const allTypes: { type: HiveNotificationType; label: string }[] = [
+                  { type: HiveNotificationType.REPLY,       label: 'Replies' },
+                  { type: HiveNotificationType.MENTION,     label: 'Mentions' },
+                  { type: HiveNotificationType.FOLLOW,      label: 'Follows' },
+                  { type: HiveNotificationType.TRANSFER,    label: 'Transfers' },
+                  { type: HiveNotificationType.DELEGATIONS, label: 'Delegations' },
+                  { type: HiveNotificationType.REBLOG,      label: 'Reblogs' },
+                  { type: HiveNotificationType.VOTE,        label: 'Upvotes' },
+                ];
+                const current: HiveNotificationType[] = settings.hiveNotificationFilterTypes ?? [];
+                const toggle = (type: HiveNotificationType) => {
+                  const next = current.includes(type)
+                    ? current.filter(t => t !== type)
+                    : [...current, type];
+                  updateSettings({ hiveNotificationFilterTypes: next });
+                };
+                return (
+                  <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                    <label className="text-[10px] font-medium text-slate-500 uppercase mb-1.5 block">Alert me for</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {allTypes.map(({ type, label }) => {
+                        const active = current.includes(type);
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => toggle(type)}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                              active
+                                ? 'bg-slate-800 text-white border-slate-800'
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1.5">Upvotes are noisy — disable to avoid frequent alerts.</p>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
       </section>
+      
+            {/* Auto Redirect Section */}
+            <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col">
+                  <span className="font-semibold text-sm text-slate-800">Auto-Redirect</span>
+                  <span className="text-xs text-slate-500">Always open Hive links in...</span>
+                </div>
+                <button
+                  onClick={() => updateSettings({ autoRedirect: !settings.autoRedirect })}
+                  className={`
+                    w-11 h-6 rounded-full transition-colors relative
+                    ${settings.autoRedirect ? 'bg-emerald-500' : 'bg-slate-200'}
+                  `}
+                >
+                  <div className={`
+                    w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm
+                    ${settings.autoRedirect ? 'left-6' : 'left-1'}
+                  `} />
+                </button>
+              </div>
+      
+              {settings.autoRedirect && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <label className="text-xs font-medium text-slate-500 uppercase">Preferred Frontend</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {allFrontends.map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => updateSettings({ preferredFrontendId: f.id })}
+                        className={`
+                          flex items-center gap-3 p-2 rounded-lg border text-left transition-all
+                          ${settings.preferredFrontendId === f.id
+                            ? 'bg-emerald-50 border-emerald-500 ring-1 ring-emerald-500'
+                            : 'bg-white border-slate-200 hover:bg-slate-50'}
+                        `}
+                      >
+                        <FrontendIcon id={f.id} color={f.color} logoUrl={f.logoUrl} size={18} />
+                        <span className="text-sm font-medium">{f.name}</span>
+                        {settings.preferredFrontendId === f.id && <Check size={16} className="ml-auto text-emerald-600" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+      
+            {/* Custom Frontends Section */}
+            <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <PlusCircle size={18} className="text-slate-500" />
+                <span className="font-semibold text-sm text-slate-800">Custom Frontends</span>
+              </div>
+              <p className="text-xs text-slate-500 mb-4">
+                Add and manage your own custom frontend configurations.
+              </p>
+      
+              {!isCustomFrontendsSectionOpen && (
+                <button
+                  onClick={() => setIsCustomFrontendsSectionOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium text-sm transition-all shadow-sm active:scale-95"
+                >
+                  <PlusCircle size={16} /> Manage Custom Frontends
+                </button>
+              )}
 
-      {/* Auto Redirect Section */}
-      <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex flex-col">
-            <span className="font-semibold text-sm text-slate-800">Auto-Redirect</span>
-            <span className="text-xs text-slate-500">Always open Hive links in...</span>
+              {isCustomFrontendsSectionOpen && (
+                <>
+                  {!showAddFrontendForm && (
+                    <button
+                      onClick={() => setShowAddFrontendForm(true)}
+                      className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium text-sm transition-all shadow-sm active:scale-95 mb-4"
+                    >
+                      <PlusCircle size={16} /> Add New Frontend
+                    </button>
+                  )}
+
+                  {showAddFrontendForm && (
+                    <div className="space-y-3 mb-6 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                      <h4 className="text-sm font-semibold text-slate-700 mb-2">Add New Custom Frontend</h4>
+                      {inputError && (
+                        <div className="p-2 bg-red-50 text-red-600 text-xs rounded border border-red-100">
+                          {inputError}
+                        </div>
+                      )}
+                      <div>
+                        <label htmlFor="frontendName" className="block text-xs font-medium text-slate-500 mb-1">Name</label>
+                        <input
+                          type="text"
+                          id="frontendName"
+                          value={newFrontendName}
+                          onChange={(e) => setNewFrontendName(e.target.value)}
+                          placeholder="My Custom Frontend"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="frontendDomain" className="block text-xs font-medium text-slate-500 mb-1">Base Domain (e.g., example.com)</label>
+                        <input
+                          type="text"
+                          id="frontendDomain"
+                          value={newFrontendDomain}
+                          onChange={(e) => setNewFrontendDomain(e.target.value)}
+                          placeholder="example.com"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="frontendCustomDomain" className="block text-xs font-medium text-slate-500 mb-1">Custom Domain (optional, e.g., custom.example.com)</label>
+                        <input
+                          type="text"
+                          id="frontendCustomDomain"
+                          value={newFrontendCustomDomain}
+                          onChange={(e) => setNewFrontendCustomDomain(e.target.value)}
+                          placeholder="custom.example.com"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="frontendLogoUrl" className="block text-xs font-medium text-slate-500 mb-1">Logo URL (optional, e.g., https://example.com/logo.png)</label>
+                        <input
+                          type="text"
+                          id="frontendLogoUrl"
+                          value={newFrontendLogoUrl}
+                          onChange={(e) => setNewFrontendLogoUrl(e.target.value)}
+                          placeholder="https://example.com/logo.png"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                      </div>
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <h5 className="text-xs font-semibold text-slate-600">Link Structure Templates</h5>
+                        <div>
+                          <label htmlFor="postPath" className="block text-xs font-medium text-slate-500 mb-1"><span>Post Path (e.g., /@{'{{'}author{'}}'}/{'{{'}permlink{'}}'})</span></label>
+                          <input
+                            type="text"
+                            id="postPath"
+                            value={newFrontendPostPath}
+                            onChange={(e) => setNewFrontendPostPath(e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          />
+                        </div>
+                                    <div>
+                                      <label htmlFor="profilePath" className="block text-xs font-medium text-slate-500 mb-1"><span>Profile Path (e.g., /@{'{{'}username{'}}'})</span></label>
+                                      <input
+                                        type="text"
+                                        id="profilePath"
+                                        value={newFrontendProfilePath}
+                                        onChange={(e) => setNewFrontendProfilePath(e.target.value)}
+                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                      />
+                                    </div>                  <div>
+                          <label htmlFor="walletPath" className="block text-xs font-medium text-slate-500 mb-1"><span>Wallet Path (e.g., /@{'{{'}username{'}}'}/wallet)</span></label>
+                          <input
+                            type="text"
+                            id="walletPath"
+                            value={newFrontendWalletPath}
+                            onChange={(e) => setNewFrontendWalletPath(e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <button
+                          onClick={handleAddCustomFrontend}
+                          className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium text-sm transition-all shadow-sm active:scale-95"
+                        >
+                          <PlusCircle size={16} /> Add Custom Frontend
+                        </button>
+                        <button
+                          onClick={handleCancelAddFrontend}
+                          className="flex-1 flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 py-2.5 rounded-lg font-medium text-sm transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+          
+                  {/* Display Existing Custom Frontends */}
+                  <div className="space-y-2 mt-4">
+                    {settings.customFrontends.length > 0 && <h4 className="text-sm font-semibold text-slate-700 mb-2">Existing Custom Frontends</h4>}
+                    {settings.customFrontends.map((frontend) => (
+                      <div
+                        key={frontend.id}
+                        className="flex items-center justify-between p-2 rounded-lg border border-slate-200 bg-slate-50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <FrontendIcon id={frontend.id} color={frontend.color} logoUrl={frontend.logoUrl} size={18} />
+                          <span className="text-sm font-medium">{frontend.name}</span>
+                          <span className="text-xs text-slate-500">({frontend.domain})</span>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveCustomFrontend(frontend.id as string)}
+                          className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-colors"
+                          title="Remove Custom Frontend"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6">
+                    <button
+                      onClick={() => setIsCustomFrontendsSectionOpen(false)}
+                      className="w-full flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 py-2.5 rounded-lg font-medium text-sm transition-colors"
+                    >
+                      Close Custom Frontends
+                    </button>
+                  </div>
+                </>
+              )}
+            </section>
+      
+            {/* Frontend Display Order Section */}      <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <button
+          onClick={() => setIsFrontendOrderOpen(o => !o)}
+          className="flex items-center justify-between w-full"
+        >
+          <div className="flex items-center gap-2">
+            <Grid size={18} className="text-slate-500" />
+            <span className="font-semibold text-sm text-slate-800">Frontend Display Order</span>
           </div>
-          <button 
-            onClick={() => updateSettings({ autoRedirect: !settings.autoRedirect })}
-            className={`
-              w-11 h-6 rounded-full transition-colors relative
-              ${settings.autoRedirect ? 'bg-emerald-500' : 'bg-slate-200'}
-            `}
-          >
-            <div className={`
-              w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm
-              ${settings.autoRedirect ? 'left-6' : 'left-1'}
-            `} />
-          </button>
+          <ChevronDown size={16} className={`text-slate-400 transition-transform ${isFrontendOrderOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {isFrontendOrderOpen && (<>
+        <p className="text-xs text-slate-500 mb-4 mt-3">
+          Drag and drop to reorder active frontends. Toggle to activate/deactivate.
+        </p>
+
+        <div className="flex flex-col gap-2">
+          {orderedFrontends.map((frontend, index) => (
+            <div
+              key={frontend.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, frontend.id)}
+              onDragOver={(e) => handleDragOver(e, frontend.id)}
+              onDrop={(e) => handleDrop(e, frontend.id)}
+              onDragEnd={handleDragEnd}
+              className={`
+                flex items-center justify-between p-2 rounded-lg border transition-all
+                ${isFrontendActive(frontend.id) ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-100 opacity-60'}
+              `}
+            >
+              <div className="flex items-center gap-3">
+                <button className="cursor-grab text-slate-400 hover:text-slate-600">
+                  <GripVertical size={16} />
+                </button>
+                <FrontendIcon id={frontend.id} color={frontend.color} logoUrl={frontend.logoUrl} size={18} />
+                <span className="text-sm font-medium">{frontend.name}</span>
+              </div>
+
+              <button
+                onClick={() => handleToggleActive(frontend.id)}
+                className={`
+                  w-11 h-6 rounded-full transition-colors relative
+                  ${isFrontendActive(frontend.id) ? 'bg-emerald-500' : 'bg-slate-200'}
+                `}
+              >
+                <div className={`
+                  w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm
+                  ${isFrontendActive(frontend.id) ? 'left-6' : 'left-1'}
+                `} />
+              </button>
+            </div>
+          ))}
+        </div>
+        </>)}
+      </section>
+
+      {/* Node Settings */}
+      <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Server size={18} className="text-slate-500" />
+          <span className="font-semibold text-sm text-slate-800">Node Settings</span>
         </div>
 
-        {settings.autoRedirect && (
-           <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-             <label className="text-xs font-medium text-slate-500 uppercase">Preferred Frontend</label>
-             <div className="grid grid-cols-1 gap-2">
-               {FRONTENDS.map(f => (
-                 <button
-                   key={f.id}
-                   onClick={() => updateSettings({ preferredFrontendId: f.id })}
-                   className={`
-                     flex items-center gap-3 p-2 rounded-lg border text-left transition-all
-                     ${settings.preferredFrontendId === f.id 
-                       ? 'bg-emerald-50 border-emerald-500 ring-1 ring-emerald-500' 
-                       : 'bg-white border-slate-200 hover:bg-slate-50'}
-                   `}
-                 >
-                    <FrontendIcon id={f.id} color={f.color} size={18} />
-                    <span className="text-sm font-medium">{f.name}</span>
-                    {settings.preferredFrontendId === f.id && <Check size={16} className="ml-auto text-emerald-600" />}
-                 </button>
-               ))}
-             </div>
-           </div>
-        )}
+        <div className="space-y-4">
+          <div>
+            <button
+              onClick={() => setIsHiveNodeOpen(o => !o)}
+              className="flex items-center justify-between w-full mb-2"
+            >
+              <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Hive RPC Node</h4>
+              <ChevronDown size={15} className={`text-slate-400 transition-transform ${isHiveNodeOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isHiveNodeOpen && (
+            <NodeSelector
+              label="Hive RPC"
+              selectedNode={settings.hiveRpcNode || HIVE_RPC_NODES[0]}
+              presetNodes={HIVE_RPC_NODES}
+              customNodes={settings.customHiveRpcNodes || []}
+              autoSwitch={settings.autoSwitchHiveNode || false}
+              onSelectedNodeChange={(node) => updateSettings({ hiveRpcNode: node })}
+              onCustomNodesChange={(nodes) => updateSettings({ customHiveRpcNodes: nodes })}
+              onAutoSwitchChange={(enabled) => updateSettings({ autoSwitchHiveNode: enabled })}
+            />
+            )}
+          </div>
+
+          <div className="border-t border-slate-100 pt-3">
+            <button
+              onClick={() => setIsHeNodeOpen(o => !o)}
+              className="flex items-center justify-between w-full mb-2"
+            >
+              <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Hive-Engine RPC Node</h4>
+              <ChevronDown size={15} className={`text-slate-400 transition-transform ${isHeNodeOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isHeNodeOpen && (
+            <NodeSelector
+              label="Hive-Engine RPC"
+              selectedNode={settings.heRpcNode || HIVE_ENGINE_RPC_NODES[0]}
+              presetNodes={HIVE_ENGINE_RPC_NODES}
+              customNodes={settings.customHeRpcNodes || []}
+              autoSwitch={settings.autoSwitchHeNode || false}
+              onSelectedNodeChange={(node) => updateSettings({ heRpcNode: node })}
+              onCustomNodesChange={(nodes) => updateSettings({ customHeRpcNodes: nodes })}
+              onAutoSwitchChange={(enabled) => updateSettings({ autoSwitchHeNode: enabled })}
+            />
+            )}
+          </div>
+        </div>
       </section>
 
       {/* General Behavior */}
       <section className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
         <span className="font-semibold text-sm text-slate-800 block mb-3">General Behavior</span>
-        <label className="flex items-center justify-between cursor-pointer mb-3">
-          <span className="text-sm text-slate-600">Open links in new tab</span>
-          <input 
-            type="checkbox" 
-            checked={settings.openInNewTab} 
-            onChange={(e) => updateSettings({ openInNewTab: e.target.checked })}
-            className="accent-emerald-500 w-4 h-4"
-          />
-        </label>
-        
-        {/* Show saved RC user in settings */}
-        <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-           <span className="text-sm text-slate-600">Monitored User (Stats)</span>
-           <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
-             {settings.rcUser || 'None'}
-           </span>
-        </div>
+                <label className="flex items-center justify-between cursor-pointer mb-3">
+                  <span className="text-sm text-slate-600">Open links in new tab</span>
+                  <input
+                    type="checkbox"
+                    checked={settings.openInNewTab}
+                    onChange={(e) => updateSettings({ openInNewTab: e.target.checked })}
+                    className="accent-emerald-500 w-4 h-4"
+                  />
+                </label>
+                
+                <label className="flex items-center justify-between cursor-pointer mb-3">
+                  <span className="text-sm text-slate-600">Prioritize unread message badge</span>
+                  <input
+                    type="checkbox"
+                    checked={settings.overrideBadgeWithUnreadMessages}
+                    onChange={(e) => updateSettings({ overrideBadgeWithUnreadMessages: e.target.checked })}
+                    className="accent-emerald-500 w-4 h-4"
+                  />
+                </label>
+
+                <label className="flex items-start justify-between cursor-pointer mb-3 gap-3">
+                  <span className="text-sm text-slate-600">
+                    Username hover cards
+                    <span className="block text-[11px] text-slate-400">
+                      Show reputation, account age and scam warnings when hovering an @username on Hive sites.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={settings.usernameHoverCards !== false}
+                    onChange={(e) => updateSettings({ usernameHoverCards: e.target.checked })}
+                    className="accent-emerald-500 w-4 h-4 mt-0.5 shrink-0"
+                  />
+                </label>
+
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-slate-600">Extension Badge Metric</span>
+                  <div className="flex bg-slate-200 rounded p-0.5">
+                    <button
+                      onClick={() => updateSettings({ badgeMetric: 'VP' })}
+                      className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${settings.badgeMetric === 'VP' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}
+                    >VP</button>
+                    <button
+                      onClick={() => updateSettings({ badgeMetric: 'RC' })}
+                      className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${settings.badgeMetric === 'RC' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}
+                    >RC</button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-slate-600">On-Page Overlay</span>
+                    <span className="text-[10px] text-slate-400">Floating badge shown on Hive sites</span>
+                  </div>
+                  <div className="flex bg-slate-200 rounded p-0.5">
+                    {(['RC', 'VP', 'both', 'off'] as const).map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => updateSettings({ overlayMetric: opt })}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded transition-all capitalize ${
+                          (settings.overlayMetric ?? 'RC') === opt ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'
+                        }`}
+                      >{opt === 'both' ? 'Both' : opt === 'off' ? 'Off' : opt}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Show saved RC user in settings */}
+                <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                   <span className="text-sm text-slate-600">Monitored User</span>
+                   <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                     {settings.rcUser || 'None'}
+                   </span>
+                </div>
       </section>
+
+      <p className="text-center text-[10px] text-slate-400 pb-2">
+        HivePulse v{typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '1.9.0'}
+      </p>
 
     </div>
   );

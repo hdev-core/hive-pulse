@@ -1,11 +1,16 @@
 {
   "name": "hive-pulse",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.12.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:firefox": "vite build --mode firefox",
+    "firefox": "npm run build:firefox && web-ext run --source-dir=dist-firefox",
+    "firefox:real": "npm run build:firefox && web-ext run --source-dir=dist-firefox --firefox-profile=default-release --keep-profile-changes",
+    "firefox:watch": "concurrently -k -n vite,firefox \"vite build --mode firefox --watch\" \"web-ext run --source-dir=dist-firefox\"",
+    "firefox:watch:real": "concurrently -k -n vite,firefox \"vite build --mode firefox --watch\" \"web-ext run --source-dir=dist-firefox --firefox-profile=default-release --keep-profile-changes\"",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -20,6 +25,8 @@
     "@types/react-dom": "^18.2.19",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
+    "concurrently": "^9.1.0",
+    "web-ext": "^8.3.0",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",

@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-firefox
 dist-ssr
 *.local
 
@@ -23,5 +24,6 @@ dist-ssr
 *.sln
 *.sw?
 dist.pem
-hivepulsev1.crx
-hivepulsev1.zip
+*.crx
+*.zip
+contest-results.csv

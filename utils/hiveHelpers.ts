@@ -878,13 +878,19 @@ export const fetchAccountCard = async (
 ): Promise<AccountCard | null> => {
   try {
     const { primary, fallback, autoSwitch } = getHiveNodes(settings);
-    const [acctData, globalData] = await Promise.all([
+    const [acctData, globalData, profileData] = await Promise.all([
       rpcFetchWithFallback(
         { jsonrpc: '2.0', method: 'condenser_api.get_accounts', params: [[username]], id: 1 },
         primary, fallback, autoSwitch
       ),
       rpcFetchWithFallback(
         { jsonrpc: '2.0', method: 'condenser_api.get_dynamic_global_properties', params: [], id: 2 },
+        primary, fallback, autoSwitch
+      ),
+      // Reputation lives in hivemind now — get_accounts.reputation is deprecated and
+      // returns 0, so read the display value (e.g. 84.37) straight from bridge.get_profile.
+      rpcFetchWithFallback(
+        { jsonrpc: '2.0', method: 'bridge.get_profile', params: { account: username }, id: 3 },
         primary, fallback, autoSwitch
       ),
     ]);
@@ -896,15 +902,15 @@ export const fetchAccountCard = async (
     const num = (s: string) => { const m = String(s).match(/[\d.]+/); return m ? parseFloat(m[0]) : 0; };
     const hp = (num(a.vesting_shares) / num(g.total_vesting_shares)) * num(g.total_vesting_fund_hive);
 
-    // Raw reputation -> the 25-80 score users recognise.
-    const raw = Number(a.reputation) || 0;
+    // Prefer hivemind's already-converted reputation; fall back to converting the raw
+    // legacy value only if the profile call is unavailable.
+    const profileRep = profileData?.result?.reputation;
     let reputation = 25;
-    if (raw !== 0) {
-      const neg = raw < 0;
-      const log = Math.log10(Math.abs(raw));
-      let out = Math.max(log - 9, 0);
-      if (neg) out = -out;
-      reputation = out * 9 + 25;
+    if (typeof profileRep === 'number') {
+      reputation = profileRep;
+    } else {
+      const raw = Number(a.reputation) || 0;
+      if (raw !== 0) reputation = Math.max(Math.log10(Math.abs(raw)) - 9, 0) * 9 + 25;
     }
 
     const createdIso = a.created || '';
@@ -914,7 +920,7 @@ export const fetchAccountCard = async (
 
     return {
       username,
-      reputation: Math.round(reputation * 10) / 10,
+      reputation: Math.round(reputation),
       hp,
       postCount: Number(a.post_count) || 0,
       createdIso,

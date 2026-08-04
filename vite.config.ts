@@ -40,6 +40,11 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir,
       emptyOutDir: true,
+      // Vite injects <link rel="modulepreload" crossorigin> into index.html, which browsers
+      // reject inside an extension page ("cross-world extension resource mismatch") and can
+      // leave the popup's shared chunk failing to load. Extension pages load from local
+      // disk, so preloading buys nothing here.
+      modulePreload: false,
       rollupOptions: {
         input: {
           popup: 'index.html',

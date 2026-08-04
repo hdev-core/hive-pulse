@@ -280,11 +280,16 @@ if (HIVE_HOSTS.has(host)) {
     hideCard();
     activeAnchor = anchor;
     hoverTimer = window.setTimeout(() => {
-      chrome.runtime.sendMessage({ type: 'HP_ACCOUNT_CARD', username }, (resp: any) => {
-        // The anchor may have been left before the reply landed.
-        if (chrome.runtime.lastError || activeAnchor !== anchor) return;
-        renderCard(anchor, username, resp?.card ?? null);
-      });
+      // After the extension reloads/updates, this orphaned script's chrome.runtime is
+      // invalidated; guard so it fails silently instead of throwing "Extension context
+      // invalidated" on every hover.
+      try {
+        if (!chrome.runtime?.id) return;
+        chrome.runtime.sendMessage({ type: 'HP_ACCOUNT_CARD', username }, (resp: any) => {
+          if (chrome.runtime.lastError || activeAnchor !== anchor) return;
+          renderCard(anchor, username, resp?.card ?? null);
+        });
+      } catch { /* extension context gone — ignore */ }
     }, HOVER_DELAY_MS);
   });
 

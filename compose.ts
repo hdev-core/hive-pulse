@@ -5,6 +5,12 @@ declare const chrome: any;
 
 const PANEL_ID = 'hivepulse-post-analyzer';
 
+// Shown next to the panel title so the running build is identifiable at a glance — useful
+// for support ("which version are you on?") and for confirming an update actually landed.
+const extVersion = (() => {
+  try { return chrome.runtime.getManifest().version; } catch { return '?'; }
+})();
+
 const COMPOSE_HOSTS: Record<string, RegExp> = {
   'peakd.com':      /\/publish|\/e\/@/,
   'ecency.com':     /\/submit|\/publish|\/@[\w.\-]+\/[\w.\-]+\/edit/,
@@ -302,6 +308,9 @@ const getTags = (): string[] => {
     items.forEach(it => add((it.textContent || '').replace(/[×✕✗✖]/g, '').trim()));
     if (seen.size) return [...seen].slice(0, 10);
   }
+  // Chips carrying a tag/chip/pill class — PeakD, hive.blog, Actifit and friends. Unchanged
+  // from the long-standing implementation: the class is the signal and any button inside is
+  // the remove control (PeakD's ✕ is an SVG, so it contributes no text to match on).
   for (const el of document.querySelectorAll('[class*="tag" i], [class*="chip" i], [class*="pill" i]')) {
     const raw = el.textContent || '';
     const hasClose = /[×✕✗✖]/.test(raw) || !!el.querySelector('button, [class*="close" i], [class*="remove" i], [class*="delete" i]');
@@ -310,6 +319,27 @@ const getTags = (): string[] => {
     if (!txt || txt.includes(' ') || txt.length > 32) continue;
     add(txt);
   }
+
+  // SlothBuzz renders chips as "# tag1 ×" with only Tailwind utility classes, so the scan
+  // above finds nothing there. Look around the tag input as a fallback — but ONLY accept a
+  // literal × or leading #. Matching on "contains a button" instead would pull in the editor
+  // toolbar toggles (Visual|Markdown, H1 H2 H3) as phantom tags.
+  const tagInput = document.querySelector<HTMLInputElement>('input[placeholder*="tag" i], input[class*="tag" i]');
+  if (!seen.size && tagInput) {
+    let node: Element | null = tagInput;
+    for (let up = 0; up < 2 && node && !seen.size; up++) {
+      node = node.parentElement;
+      if (!node) continue;
+      for (const el of node.querySelectorAll('*')) {
+        const raw = el.textContent || '';
+        if (!/[×✕✗✖]/.test(raw) && !/^\s*#\s*\S/.test(raw)) continue;
+        const txt = raw.replace(/[×✕✗✖]/g, '').replace(/^[#\s]+/, '').trim();
+        if (!txt || txt.includes(' ') || txt.length > 32) continue;
+        add(txt);
+      }
+    }
+  }
+
   for (const el of document.querySelectorAll<HTMLInputElement>('input[class*="tag" i], input[placeholder*="tag" i]')) {
     el.value.split(/[\s,]+/).forEach(add);
   }
@@ -786,6 +816,7 @@ const createPanel = (): HTMLElement => {
   });
   hdr.innerHTML =
     `<span style="color:#f97316;font-weight:700;font-size:13px">&#9889; Post Analyzer</span>` +
+    `<span style="color:#64748b;font-weight:600;font-size:10px;margin-left:6px">v${extVersion}</span>` +
     `<span id="${PANEL_ID}-tog" style="color:#94a3b8;font-size:10px">&#9660;</span>`;
   hdr.addEventListener('click', () => {
     const bodyWrap = document.getElementById(`${PANEL_ID}-scroll`);
@@ -1110,6 +1141,7 @@ const composePattern = COMPOSE_HOSTS[host];
 
 if (composePattern) {
   console.log('[HivePulse] Post Analyzer loaded on', location.hostname + location.pathname);
+
   let active = false;
   let focusKeyword = '';
   let kwSource: 'user' | 'auto' | 'none' = 'none';

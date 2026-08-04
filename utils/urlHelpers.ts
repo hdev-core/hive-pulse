@@ -50,6 +50,18 @@ export const parseUrl = (urlString: string, allFrontends: FrontendConfig[]): Cur
       const postMatch = url.pathname.match(AUTHOR_PERMLINK_REGEX);
       author = postMatch ? postMatch[1] : null;
       permlink = postMatch ? postMatch[2] : null;
+
+      // Actifit uniquely serves @-less URLs (actifit.io/username and
+      // actifit.io/author/permlink). Every other frontend needs the @, so recover the
+      // bare name here; getTargetUrl always re-adds the @ when it builds the target URL.
+      if (!username && !author && hostname === 'actifit.io') {
+        const RESERVED = /^(blog|videos|leaderboard|rewards|about|faq|contact|privacy|terms|settings|notifications|wallet|communities|community|trending|hot|new|created|payout|tags|search|login|signup|logout|api|home|feed|explore|activity|rankings|posts|c|new)$/;
+        const m = url.pathname.match(/^\/([a-z][a-z0-9.-]{2,15})(?:\/([a-z0-9][a-z0-9-]{2,})\/?)?$/);
+        if (m && !RESERVED.test(m[1])) {
+          if (m[2]) { author = m[1]; permlink = m[2]; }
+          else { username = m[1]; }
+        }
+      }
     }
     
     return {

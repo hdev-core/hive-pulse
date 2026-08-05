@@ -62,21 +62,25 @@ Entries went into Hive comments only. The score screenshot is exactly the "share
 
 **19:00 — friction killer #1**
 
-> Empty preview description = 10 points lost. Takes 15 seconds to fix.
+> Empty preview description = 10 lost points. 15 seconds to fix.
 >
-> PeakD → "Short preview description", right under the editor.
-> Ecency → the second box in the Story preview step. Unlabelled, which is why people miss it.
+> PeakD → "Short preview description", under the editor.
+> Ecency → Story preview step, the box under the greyed title. Pre-filled from your post, so it looks like your text — it isn't.
 >
-> HivePulse flags it the moment it's empty.
+> HivePulse flags it when empty.
 
-*266 characters. Attach `enhancements/images/social/wed-description.jpg`.*
+*275 characters. Attach `enhancements/images/social/wed-description.jpg`.*
 
-**Verified against live editors (screenshots, 5 Aug):**
-- **PeakD** — input labelled "Short preview description", directly below the editor body and above Topics, 0/120 counter. Placeholder text matches, so the analyzer finds it normally.
-- **Ecency** — present in the step-2 "Story preview" modal as the **second, larger box** beneath the title box. **No label, no placeholder** — the note underneath only says changes affect "how your story appears… in a search engine systems". This is the root cause of the week-1 confusion, and why `compose.ts` needs its `textarea[maxlength]` fallback: there is no placeholder text to match on.
-- **InLeo** — not verified, deliberately left out of the copy. No week-1 entry used InLeo (all eight came from Ecency or PeakD), so naming only those two costs nothing.
+**Verified — PeakD from a live screenshot, Ecency from its open source (`ecency/vision-web`):**
 
-*Worth raising with Ecency separately: an unlabelled field that two contest entrants independently failed to find is a UX bug, not a user error.*
+- **PeakD** — input labelled "Short preview description", directly below the editor body and above Topics, 0/120 counter.
+- **Ecency** — in the step-2 "Story preview" modal. `PublishValidatePostMeta` renders exactly two controls: the title as `disabled` (read-only), then a textarea bound to `metaDescription` with `maxLength`, placeholder `publish.preview-subtitle` = **"Preview subtitle.."**. The note beneath is `publish.description-hint` = *"Helps to search engine systems to find out this post"*.
+  **Why it confuses everyone:** Ecency pre-fills that box from the body summary (`postBodySummary(content, …)`), so it displays your post text and reads as a content field. Typing in it writes to `metaDescription` only — your post is untouched.
+- **InLeo** — unverified, deliberately omitted. All eight week-1 entries came from Ecency or PeakD.
+
+*This also explains `compose.ts`: it matches `textarea[placeholder*="subtitle" i]` because Ecency's English placeholder is "Preview subtitle..", and needs the `textarea[maxlength]` fallback because localised builds render it "Voorbeeld ondertitel.." / "Anteprima sottotitolo..".*
+
+⚠️ **Never assert a per-frontend UI path without checking the live editor or the frontend's source.** An earlier draft invented "PeakD → Post Options / Ecency → step 2 / InLeo → Preview Description"; all three were wrong and the post was pulled.
 
 ⚠️ **Do not add per-frontend menu paths to this post without opening each frontend and confirming.** An earlier draft asserted "PeakD → Post Options / Ecency → step 2 / InLeo → Preview Description"; all three were invented and the post was pulled. The analyzer itself never looks for a menu path — `getMetaDescription()` in `compose.ts` matches the field by placeholder text (`preview`, `descri`, `beschr`, `excerpt`, `subtitle`, `summary`, `resum`), plus an Ecency fallback that finds the `textarea[maxlength]`. Frontend-agnostic wording is safer and ages better.
 

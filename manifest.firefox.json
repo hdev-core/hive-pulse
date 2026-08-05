@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HivePulse",
   "version": "1.12.0",
-  "description": "The heartbeat of your Hive experience. Chat, Stats, and seamless Frontend Switching.",
+  "description": "Your Hive blockchain dashboard: wallet, scam protection, chat, notifications, post SEO analysis, and instant frontend switching.",
   "browser_specific_settings": {
     "gecko": {
       "id": "mcfarhat@gmail.com",

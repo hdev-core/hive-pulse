@@ -143,6 +143,19 @@ def render(card):
 
 
 CARDS = [
+    {  # Wed 19:00 — friction killer. Locations verified against live editors 5 Aug 2026;
+       # do not edit these without re-checking the actual frontend.
+        'name': 'wed-description', 'accent': AMBER,
+        'blocks': [
+            {'text': 'WORTH 10 POINTS · TAKES 15 SECONDS', 'size': 30, 'weight': 'semi', 'color': AMBER, 'gap': 28},
+            {'text': 'Where the preview description hides', 'size': 58, 'gap': 34},
+            {'text': 'PeakD — "Short preview description", right under the editor',
+             'size': 34, 'weight': 'reg', 'color': MUTED, 'gap': 18},
+            {'text': 'Ecency — the second box in the Story preview step. Unlabelled, which is why people miss it.',
+             'size': 34, 'weight': 'reg', 'color': MUTED, 'gap': 30},
+            {'text': 'HivePulse flags it the moment it is empty.', 'size': 30, 'weight': 'semi', 'color': EMERALD},
+        ],
+    },
     {  # Thu 14:00 — thread opener
         'name': 'thu-stats', 'accent': EMERALD,
         'blocks': [

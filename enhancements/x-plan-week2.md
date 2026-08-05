@@ -62,17 +62,23 @@ Entries went into Hive comments only. The score screenshot is exactly the "share
 
 **19:00 — friction killer #1**
 
-> The most common thing costing entries points last week: an empty meta description.
+> Empty preview description = 10 points lost. Takes 15 seconds to fix.
 >
-> It's worth 10 points and takes 15 seconds.
+> PeakD → "Short preview description", right under the editor.
+> Ecency → the second box in the Story preview step. Unlabelled, which is why people miss it.
 >
-> PeakD → "Post Options"
-> Ecency → step 2 of the editor
-> InLeo → "Preview Description"
->
-> Two people asked where it lives. Now you know.
+> HivePulse flags it the moment it's empty.
 
-*This directly answers @nabbas0786 and @mein-senf-dazu. Attach a screenshot with the field circled on each frontend — worth making.*
+*266 characters. Attach `enhancements/images/social/wed-description.jpg`.*
+
+**Verified against live editors (screenshots, 5 Aug):**
+- **PeakD** — input labelled "Short preview description", directly below the editor body and above Topics, 0/120 counter. Placeholder text matches, so the analyzer finds it normally.
+- **Ecency** — present in the step-2 "Story preview" modal as the **second, larger box** beneath the title box. **No label, no placeholder** — the note underneath only says changes affect "how your story appears… in a search engine systems". This is the root cause of the week-1 confusion, and why `compose.ts` needs its `textarea[maxlength]` fallback: there is no placeholder text to match on.
+- **InLeo** — not verified, deliberately left out of the copy. No week-1 entry used InLeo (all eight came from Ecency or PeakD), so naming only those two costs nothing.
+
+*Worth raising with Ecency separately: an unlabelled field that two contest entrants independently failed to find is a UX bug, not a user error.*
+
+⚠️ **Do not add per-frontend menu paths to this post without opening each frontend and confirming.** An earlier draft asserted "PeakD → Post Options / Ecency → step 2 / InLeo → Preview Description"; all three were invented and the post was pulled. The analyzer itself never looks for a menu path — `getMetaDescription()` in `compose.ts` matches the field by placeholder text (`preview`, `descri`, `beschr`, `excerpt`, `subtitle`, `summary`, `resum`), plus an Ecency fallback that finds the `textarea[maxlength]`. Frontend-agnostic wording is safer and ages better.
 
 ---
 
@@ -267,7 +273,7 @@ Keep these to hand — the same questions recur.
 > Try the Firefox build, or Opera/Brave/Edge with the Chrome link — all Chromium browsers work. If it still fails, tell us the error and we'll fix it, that's happened before and it was on us.
 
 **"Where's the description field?"**
-> PeakD → Post Options · Ecency → step 2 of the editor · InLeo → Preview Description. Worth 10 points and takes 15 seconds.
+> On PeakD it's "Short preview description", right under the editor. On Ecency it's the second box in the Story preview step — unlabelled, which is why it's easy to miss. Worth 10 points, takes 15 seconds.
 
 **"Does it work on mobile?"**
 > Yes, as of v1.12.0 — Firefox for Android. Someone asked for it in last week's contest and it shipped.

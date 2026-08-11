@@ -27,6 +27,7 @@ DIM = (148, 163, 184)
 AMBER = (251, 191, 36)
 EMERALD = (52, 211, 153)
 ORANGE = (249, 115, 22)
+RED    = (248, 113, 113)   # status: paired with a ✕ glyph, never colour alone
 
 FONTS = {
     'bold': ['C:/Windows/Fonts/segoeuib.ttf', 'C:/Windows/Fonts/arialbd.ttf'],
@@ -143,6 +144,23 @@ def render(card):
 
 
 CARDS = [
+    {  # The single most useful teaching artifact: what "self-contained" actually means.
+       # BEFORE/AFTER are word labels, not glyphs — Segoe UI Bold has no U+2713/U+2715
+       # (they render as tofu), and status colour needs a non-colour cue regardless.
+        'name': 'quotable-rewrite', 'accent': EMERALD,
+        'blocks': [
+            {'text': 'THE ONE REWRITE THAT MOVES YOUR SCORE', 'size': 30, 'weight': 'semi', 'color': EMERALD, 'gap': 32},
+            {'text': 'BEFORE', 'size': 24, 'weight': 'semi', 'color': RED, 'gap': 8},
+            {'text': '"This shows a 40% improvement."', 'size': 44, 'color': RED, 'gap': 10},
+            {'text': 'Quoted on its own it says nothing. What shows? Improvement in what?',
+             'size': 29, 'weight': 'reg', 'color': DIM, 'gap': 34},
+            {'text': 'AFTER', 'size': 24, 'weight': 'semi', 'color': EMERALD, 'gap': 8},
+            {'text': '"Weekly digests improved retention 40%."', 'size': 44, 'color': EMERALD, 'gap': 10},
+            {'text': 'Survives being lifted off the page. That is the whole test.',
+             'size': 29, 'weight': 'reg', 'color': DIM, 'gap': 32},
+            {'text': 'An answer engine quotes sentences, not articles.', 'size': 30, 'weight': 'semi', 'color': MUTED},
+        ],
+    },
     {  # Week-3 contest cover — deterministic fallback when image credits are unavailable.
        # Cover-weight typography; text is composed, never model-rendered.
         'name': 'week3-cover', 'accent': AMBER,

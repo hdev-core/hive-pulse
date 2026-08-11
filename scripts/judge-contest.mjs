@@ -24,17 +24,23 @@
  */
 
 // ── Contest config ────────────────────────────────────────────────────────────
-// Week 2: 5 → 11 August 2026. (Week 1 was 28 Jul → 4 Aug 2026 — results archived in
-// contest-results-week1.csv. Keep the window tight to the announced dates; a loose start
-// date lets pre-contest posts slip through as "in window".)
-const WINDOW_START = Date.parse('2026-08-05T00:00:00Z');
-const WINDOW_END   = Date.parse('2026-08-11T23:59:59Z');
+// Week 3: 11 → 18 August 2026. Results for earlier rounds are archived in
+// contest-results-week{1,2}.csv.
+//
+// The start date deliberately overlaps the day the week-3 announcement publishes. In week 2
+// @angeluxx published a properly tagged post ~3h AFTER the announcement went live but ~2.5h
+// before the nominal window opened, and fell into a gap between rounds — too late to be judged
+// with week 1, too early to count for week 2. Starting the window on announcement day closes
+// that gap: anyone who reads the post and publishes the same day is in. Cross-check against the
+// previous round's archived CSV so a post can't be awarded twice.
+const WINDOW_START = Date.parse('2026-08-11T00:00:00Z');
+const WINDOW_END   = Date.parse('2026-08-18T23:59:59Z');
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
-const HIVE_API = 'https://api.hive.blog';
 
 // Scoring engine lives in ./lib/seo-score.mjs — shared with scripts/score-post.mjs so the
 // two tools can never disagree. Keep that file in sync with compose.ts.
 import { analyze, autoDetectKeyword } from './lib/seo-score.mjs';
+import { getPost } from './lib/hive-rpc.mjs';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Hive fetch + entry parsing
@@ -48,27 +54,8 @@ const parseEntry = (line) => {
   return null;
 };
 
-const getContent = async (author, permlink) => {
-  const res = await fetch(HIVE_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', method: 'condenser_api.get_content', params: [author, permlink], id: 1 }),
-  });
-  const json = await res.json();
-  const r = json.result;
-  if (!r || !r.author) return null;
-  let meta = {};
-  try { meta = JSON.parse(r.json_metadata || '{}'); } catch { /* ignore */ }
-  return {
-    title: r.title || '',
-    body: r.body || '',
-    tags: Array.isArray(meta.tags) ? meta.tags.map(t => String(t).toLowerCase()) : [],
-    description: typeof meta.description === 'string' ? meta.description : '',
-    created: Date.parse((r.created || '') + 'Z'),
-    author: r.author,
-    permlink: r.permlink,
-  };
-};
+// Post fetching (with node fallback) lives in ./lib/hive-rpc.mjs.
+const getContent = (author, permlink) => getPost(author, permlink);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Main

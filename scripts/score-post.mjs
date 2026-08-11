@@ -28,8 +28,7 @@ import {
   headingHierarchy, missingAltImages, getImageCount, readability, transitionRatio,
   detectIntent, stripMd, titleCtr,
 } from './lib/seo-score.mjs';
-
-const HIVE_API = 'https://api.hive.blog';
+import { getPost } from './lib/hive-rpc.mjs';
 
 // Per-component maxima, matching analyze() in the engine.
 const MAX = { keyword: 35, title: 12, meta: 10, structure: 11, media: 9, links: 7, tags: 8, readability: 8 };
@@ -64,20 +63,8 @@ const parseFrontMatter = (raw) => {
 };
 
 const fetchOnChain = async (author, permlink) => {
-  const res = await fetch(HIVE_API, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', method: 'condenser_api.get_content', params: [author, permlink], id: 1 }),
-  });
-  const r = (await res.json()).result;
-  if (!r || !r.author) return null;
-  let meta = {};
-  try { meta = JSON.parse(r.json_metadata || '{}'); } catch { /* ignore */ }
-  return {
-    title: r.title || '', body: r.body || '',
-    tags: Array.isArray(meta.tags) ? meta.tags.map(t => String(t).toLowerCase()) : [],
-    description: typeof meta.description === 'string' ? meta.description : '',
-    source: `@${r.author}/${r.permlink}`,
-  };
+  const p = await getPost(author, permlink);
+  return p ? { ...p, source: `@${p.author}/${p.permlink}` } : null;
 };
 
 /** Concrete, prioritised fixes derived from the same signals the score uses. */

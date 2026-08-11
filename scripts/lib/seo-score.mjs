@@ -9,6 +9,12 @@
  * the single source used by both scripts/judge-contest.mjs and scripts/score-post.mjs.
  */
 
+// Paragraph detection splits on /\n{2,}/, which does NOT match a CRLF blank line.
+// A Windows draft would therefore read as one giant paragraph and score 0 for the GEO
+// opening hook (-40 points). On-chain Hive bodies use LF, but local drafts do not, so
+// normalise at the door. LF input is unaffected.
+const normalizeEol = (s) => String(s).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
 const stripMd = (s) => s
   .replace(/!\[.*?\]\(.*?\)/g, ' ')
   .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1 ')
@@ -146,7 +152,8 @@ const analyzeKeyword = (kw, content, title, metaDesc) => {
 const THIRD_PRON = /\b(it|this|that|these|those|they|them|their|theirs|he|she|him|her|hers|his|its)\b/gi;
 const START_PRON = /^(it|this|that|these|those|they|there|here)\b/i;
 
-const analyzeGeo = (content, intentType) => {
+const analyzeGeo = (rawContent, intentType) => {
+  const content = normalizeEol(rawContent);
   const informational = intentType !== 'General / Personal';
   const plain = stripMd(content);
   const words = plain.split(/\s+/).filter(Boolean);
@@ -191,7 +198,8 @@ const analyzeGeo = (content, intentType) => {
   return { informational, score, parts };
 };
 
-const analyze = (content, title, tags, metaDesc, keyword) => {
+const analyze = (rawContent, title, tags, metaDesc, keyword) => {
+  const content = normalizeEol(rawContent);
   const plain = stripMd(content);
   const wordCount = plain.split(/\s+/).filter(w => w.length > 0).length;
   const imageCount = getImageCount(content);
@@ -265,5 +273,5 @@ const analyze = (content, title, tags, metaDesc, keyword) => {
 export {
   stripMd, reSafe, toPermlink, autoDetectKeyword, getImageCount, missingAltImages,
   classifyLinks, headingHierarchy, titleCtr, detectIntent, readability, transitionRatio,
-  analyzeKeyword, analyzeGeo, analyze,
+  analyzeKeyword, analyzeGeo, analyze, normalizeEol,
 };

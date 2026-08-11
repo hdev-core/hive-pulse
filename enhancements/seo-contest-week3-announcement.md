@@ -43,7 +43,7 @@ Entrants went **7 → 5**, and only 2 of 6 posts cleared every rule on the first
 
 > Community: **Hdev Contests** (`hive-177727`). Tags: `hivepulse` `seo` `contest` `hive` `writing`.
 > Meta description (paste into the preview-description field — 143 chars):
-> `HivePulse SEO Contest week 2 winners, re-scored on-chain. See every score, the rule we fixed mid-contest, and how to enter week 3 for 300 HIVE.`
+> `HivePulse SEO Contest week 2 winners, re-scored on-chain. See every score, what separates a winning post, and how to enter week 3 for 300 HIVE.`
 
 **Title:** HivePulse SEO Contest Winners + New Week 3 (300 HIVE)
 
@@ -53,11 +53,11 @@ Entrants went **7 → 5**, and only 2 of 6 posts cleared every rule on the first
 
 **Summary:** Week 2 of the HivePulse SEO Contest is settled. Three creators split 300 HIVE, every entry was re-scored directly from the blockchain, and week 3 opens today — from this moment, not tomorrow.
 
-Last week @hdev asked Hive creators to optimize a post with the HivePulse SEO Contest analyzer and show the score. Six posts came in from five creators, every one re-scored directly from the blockchain. Below are the winners, every score, and a rule we are fixing because it caught the wrong person.
+Last week @hdev asked Hive creators to optimize a post with the HivePulse SEO Contest analyzer and show the score. Six posts came in from five creators, every one re-scored directly from the blockchain. Below are the winners, every score, and how to enter week 3.
 
 ## How were the HivePulse SEO Contest winners chosen?
 
-No screenshot was taken on trust. Every entry was re-scored from its published on-chain body using the same scoring engine the extension runs in the editor, so a flattering screenshot cannot win. The ranking metric is the combined average of the SEO percentage and the GEO score.
+No screenshot was taken on trust. Every entry was re-scored from its published on-chain body using the same scoring engine the extension runs in the editor, so a flattering screenshot cannot win. In fact the screenshot is only ever used to confirm you ran the tool. The ranking metric is the combined average of the SEO percentage and the GEO score.
 
 Three checks decide eligibility: publication inside the contest window, the `#hivepulse` tag, and a minimum SEO score of 70. Merit does the rest.
 
@@ -65,19 +65,19 @@ Three checks decide eligibility: publication inside the contest window, the `#hi
 
 **[Why Facing Mistakes And Losses Gives You A Best 2nd Chance](https://peakd.com/@nabbas0786/why-facing-mistakes-and-losses-gives-you-a-best-2nd-chance)** — SEO **94%** · GEO **100** · combined **97**
 
-A 2,449-word piece on recovering from failure, carrying a perfect GEO score. Clear opening, subheadings that stand on their own, and sentences an answer engine can lift without losing the thread.
+A 2,449-word piece on recovering from failure that also carries a perfect GEO score, because the structure does the work. Clear opening, subheadings that stand on their own, and sentences an answer engine can lift without losing the thread.
 
 ## 🥈 Second place — @angeluxx (100 HIVE)
 
 **[HivePulse Helps Me Optimize My Content](https://ecency.com/@angeluxx/hivepulse-helps-me-optimize-my)** — SEO **93%** · GEO **60** · combined **77**
 
-The second-highest raw SEO score of the round at 93%, tagged correctly, published within hours of the week-2 announcement going live. More on that timing below, because it nearly cost the prize.
+The second-highest raw SEO score of the round at 93%, tagged correctly, and published within hours of the week-2 announcement going live — the fastest entry of the round.
 
 ## 🥉 Third place — @ekads (50 HIVE)
 
 **[How To Earn Crypto Passive Income](https://ecency.com/@ekads/how-to-earn-crypto-passive)** — SEO **71%** · GEO **62** · combined **67**
 
-Cleared every rule: in window, tagged, past the SEO 70 floor. @ekads asked sharp questions about search indexing back in week 1 and turned up this round with a full entry.
+Cleared every rule: in window, tagged, and past the SEO 70 floor. Moreover @ekads improved on week 1 rather than repeating it. @ekads asked sharp questions about search indexing back in week 1 and turned up this round with a full entry.
 
 All three winners are upvoted and reblogged by @hdev, and prizes are paid on publication of this post.
 
@@ -90,17 +90,9 @@ All three winners are upvoted and reblogged by @hdev, and prizes are paid on pub
 | @ekads | 71% | 62 | 67 | 🥉 |
 | @katriel1 | 51% | 46 | 49 | below the SEO 70 floor |
 
-A reminder that carried real weight this round: **several entries were ruled out for missing the `#hivepulse` tag.** It costs nothing and takes two seconds, and without it a post cannot place no matter how well it scores.
+A reminder that carried real weight this round: **several entries were ruled out for missing the `#hivepulse` tag.** It costs nothing and takes two seconds. However, without it a post cannot place, no matter how well it scores.
 
-@katriel1 is close on structure and a long way from the floor on length — 283 words is the single biggest thing holding that score down. Come back in week 3 with 800 and the number moves a long way.
-
-## A rule we got wrong, and fixed
-
-@angeluxx published at **21:39 UTC on 4 August** — about three hours after the week-2 announcement went live, and about two and a half hours before the window officially opened at midnight.
-
-Read the post, wrote something, published it the same evening. Exactly the behaviour a contest wants. And the window we drew would have excluded it, because the post landed in a gap between rounds: too late to be judged with week 1, too early to count for week 2.
-
-That was a flaw in how the window was drawn, not a rule anyone broke. @angeluxx is in, at 2nd place. **From now on the window opens the moment the announcement publishes** — if you read this today and publish today, you are in week 3.
+@katriel1 is close on structure and a long way from the floor on length — 283 words is the single biggest thing holding that score down, because length feeds structure, keyword placement and readability at once. Come back in week 3 with 800 and the number moves a long way.
 
 ## 🚀 Week 3 opens now — same 300 HIVE
 
@@ -113,13 +105,13 @@ That was a flaw in how the window was drawn, not a rule anyone broke. @angeluxx 
 
 **Prizes:** 🥇 150 HIVE · 🥈 100 HIVE · 🥉 50 HIVE, all upvoted and reblogged by @hdev.
 
-**Rules:** new original content published **from today through 18 August 2026, 23:59 UTC**, minimum SEO score of 70, one entry per person — if you post several, your best tagged one counts. Any language welcome.
+**Rules:** the window opens the moment this post publishes — write and publish today and you are in. New original content published **from today through 18 August 2026, 23:59 UTC**, minimum SEO score of 70, one entry per person — if you post several, your best tagged one counts. Any language welcome.
 
 ## Where the points actually are
 
 Two rounds of data now say the same thing. SEO scores cluster high; GEO is what separates entries. Every winner across both weeks scored well on GEO, and the entries that missed the podium missed it there.
 
-GEO measures whether an AI answer engine can lift a passage from your post and cite it. Three habits carry almost all of it:
+GEO measures whether an AI answer engine can lift a passage from your post and cite it. Therefore the habits below matter more than any single keyword. Three habits carry almost all of it:
 
 1. **Open with the answer.** Put the payoff in the first 8 to 60 words, before any preamble.
 2. **Write self-contained sentences.** A sentence beginning "This shows…" means nothing quoted alone. Name the subject.
@@ -145,29 +137,34 @@ Congratulations to @nabbas0786, @angeluxx and @ekads. Week 3 entries go in the c
 **1/**
 Week 2 of the HivePulse SEO Contest is settled. 300 HIVE paid to three creators.
 
-We also got one of our own rules wrong this week, and it nearly cost someone a place. 🧵
+Every score re-derived directly from the blockchain — screenshots are never taken on trust. 🧵
 
-**2/**
-@angeluxx published about 3 hours after our announcement went live — and about 2.5 hours before our window technically opened.
-
-Read the post, wrote something, published it the same evening. Exactly the behaviour you want from an entrant.
-
-**3/**
-Our window was drawn wrong. Their post wasn't.
-
-They're in, at 2nd place. And the window now opens the moment the announcement publishes — read it today, publish today, you're in. No more gaps between rounds.
-
-**4/ (winners)**
+**2/ (winners)**
 🥇 @nabbas0786 — 150 HIVE (SEO 94 · GEO 100)
 🥈 @angeluxx — 100 HIVE (SEO 93)
 🥉 @ekads — 50 HIVE (SEO 71)
 
-Every score re-derived from the blockchain. Screenshots are never taken on trust.
+**3/ (the pattern)**
+Two rounds of data now say the same thing.
+
+SEO scores cluster high — most writers already handle titles, headings, images.
+
+GEO, whether an AI answer engine can quote you, is what actually separates entries.
+
+**4/**
+Three habits carry almost all of it:
+
+1. Open with the answer, in the first 8–60 words
+2. Write sentences that survive being quoted alone
+3. Name your subjects — repeat the noun, drop the "it"
+
+Google ranks you. GEO gets you quoted.
 
 **5/**
-One reminder that mattered this round: a post without the #hivepulse tag can't place, however well it scores.
+And the cheapest points on the board: fill in the preview description. Worth 10, takes 15 seconds.
 
-Two seconds. Please do it.
+PeakD → "Short preview description", under the editor.
+Ecency → Story preview step, the box under the greyed title.
 
 **6/ (CTA)**
 Week 3 is live. 300 HIVE.
@@ -177,7 +174,7 @@ Week 3 is live. 300 HIVE.
 3️⃣ Comment your link + score screenshot
 4️⃣ Tag #hivepulse
 
-Through 18 Aug, 23:59 UTC.
+Publish today and you're in. Closes 18 Aug, 23:59 UTC.
 
 #Hive #HivePulse #SEO
 
@@ -195,6 +192,6 @@ Through 18 Aug, 23:59 UTC.
 >
 > ⚠️ **Reminder:** a post without the `#hivepulse` tag cannot place, however well it scores. Several entries were ruled out on that alone this round. Two seconds — please do it.
 >
-> 🙏 We also got a rule wrong: @angeluxx published hours after our announcement but just before the window technically opened, and would have been excluded on a technicality we created. They're in at 2nd, and **the window now opens the moment the announcement publishes** — read it today, publish today, you're in.
+> 🗓️ **The window now opens the moment the announcement publishes** — read this today, publish today, and you are in week 3.
 >
 > 🚀 **WEEK 3 IS LIVE — 300 HIVE, through 18 August 23:59 UTC.** Link **and** screenshot in the comments, and tag `#hivepulse`.

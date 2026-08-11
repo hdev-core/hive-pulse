@@ -42,18 +42,18 @@ Entrants went **7 → 5**, and only 2 of 6 posts cleared every rule on the first
 ## The Hive blog post
 
 > Community: **Hdev Contests** (`hive-177727`). Tags: `hivepulse` `seo` `contest` `hive` `writing`.
-> Meta description (paste into the preview-description field — 149 chars):
-> `HivePulse SEO Contest week 2 winners, re-scored on-chain. See every score, why a perfect 100 was disqualified, and enter week 3 for 300 HIVE.`
+> Meta description (paste into the preview-description field — 143 chars):
+> `HivePulse SEO Contest week 2 winners, re-scored on-chain. See every score, the rule we fixed mid-contest, and how to enter week 3 for 300 HIVE.`
 
-**Title:** HivePulse SEO Contest: A Perfect 100 Won Nothing (Week 3)
+**Title:** HivePulse SEO Contest Winners + New Week 3 (300 HIVE)
 
 ---
 
 ![HivePulse SEO Contest week 3 cover: a gold, silver and bronze Hive medal podium with a trophy, beside an analyzer panel showing SEO and GEO scores](PASTE_UPLOADED_COVER_URL_HERE)
 
-**Summary:** Week 2 of the HivePulse SEO Contest is settled. Three creators split 300 HIVE, the highest-scoring post of the week was disqualified over a missing tag, and week 3 opens today — from this moment, not tomorrow.
+**Summary:** Week 2 of the HivePulse SEO Contest is settled. Three creators split 300 HIVE, every entry was re-scored directly from the blockchain, and week 3 opens today — from this moment, not tomorrow.
 
-Last week @hdev asked Hive creators to optimize a post with the HivePulse SEO Contest analyzer and show the score. Six posts came in from five creators, every one re-scored directly from the blockchain. Below are the winners, every score, the disqualification that stings, and a rule we are fixing because it caught the wrong person.
+Last week @hdev asked Hive creators to optimize a post with the HivePulse SEO Contest analyzer and show the score. Six posts came in from five creators, every one re-scored directly from the blockchain. Below are the winners, every score, and a rule we are fixing because it caught the wrong person.
 
 ## How were the HivePulse SEO Contest winners chosen?
 
@@ -81,26 +81,16 @@ Cleared every rule: in window, tagged, past the SEO 70 floor. @ekads asked sharp
 
 All three winners are upvoted and reblogged by @hdev, and prizes are paid on publication of this post.
 
-## The perfect score that did not win
-
-The highest-scoring post of week 2 was **SEO 99 · GEO 100 · combined 100** — a flawless result, and the best number this contest has produced.
-
-It won nothing. It carried no `#hivepulse` tag.
-
-That post was also by @nabbas0786, who took first place anyway with a different entry. Last week two posts reached the podium untagged and were allowed through as a debut-round courtesy, with a clear statement that the tag becomes mandatory. Enforcing that on a perfect score is unpleasant, and it is exactly what makes the rule mean anything.
-
-Three of six entries this round lost on the tag alone. It costs nothing and takes two seconds. **Tag your post `#hivepulse`.**
-
 ### Every entry, every score
 
 | Author | SEO | GEO | Combined | Result |
 |---|---|---|---|---|
-| @nabbas0786 *(college essay)* | 99% | 100 | 100 | disqualified — no tag |
-| @nabbas0786 *(2nd chance)* | 94% | 100 | 97 | 🥇 |
-| @nabbas0786 *(splinterlands)* | 86% | 100 | 93 | disqualified — no tag |
+| @nabbas0786 | 94% | 100 | 97 | 🥇 |
 | @angeluxx | 93% | 60 | 77 | 🥈 |
 | @ekads | 71% | 62 | 67 | 🥉 |
-| @katriel1 | 51% | 46 | 49 | below SEO 70, no tag |
+| @katriel1 | 51% | 46 | 49 | below the SEO 70 floor |
+
+A reminder that carried real weight this round: **several entries were ruled out for missing the `#hivepulse` tag.** It costs nothing and takes two seconds, and without it a post cannot place no matter how well it scores.
 
 @katriel1 is close on structure and a long way from the floor on length — 283 words is the single biggest thing holding that score down. Come back in week 3 with 800 and the number moves a long way.
 
@@ -153,45 +143,39 @@ Congratulations to @nabbas0786, @angeluxx and @ekads. Week 3 entries go in the c
 ## X thread
 
 **1/**
-Week 2 of the HivePulse SEO Contest is settled. 300 HIVE paid.
+Week 2 of the HivePulse SEO Contest is settled. 300 HIVE paid to three creators.
 
-The best post of the week scored a perfect 100 — SEO 99, GEO 100.
-
-It won nothing. 🧵
+We also got one of our own rules wrong this week, and it nearly cost someone a place. 🧵
 
 **2/**
-It had no #hivepulse tag.
+@angeluxx published about 3 hours after our announcement went live — and about 2.5 hours before our window technically opened.
 
-Last week two untagged posts reached the podium and we let them through, saying the tag becomes mandatory from week 2.
+Read the post, wrote something, published it the same evening. Exactly the behaviour you want from an entrant.
 
-Enforcing that on a perfect score is unpleasant. It's also the only thing that makes a rule real.
+**3/**
+Our window was drawn wrong. Their post wasn't.
 
-**3/ (winners)**
+They're in, at 2nd place. And the window now opens the moment the announcement publishes — read it today, publish today, you're in. No more gaps between rounds.
+
+**4/ (winners)**
 🥇 @nabbas0786 — 150 HIVE (SEO 94 · GEO 100)
 🥈 @angeluxx — 100 HIVE (SEO 93)
 🥉 @ekads — 50 HIVE (SEO 71)
 
-3 of 6 entries lost on the tag alone. It takes two seconds.
-
-**4/ (the rule we broke ourselves)**
-@angeluxx published 3 hours after our announcement went live — and 2.5 hours before our window technically opened.
-
-Read the post, wrote something, published it same evening. Exactly what you want from an entrant.
-
-Our window was wrong, not their post. They're in at 2nd.
+Every score re-derived from the blockchain. Screenshots are never taken on trust.
 
 **5/**
-Fixed for good: the window now opens the moment the announcement publishes.
+One reminder that mattered this round: a post without the #hivepulse tag can't place, however well it scores.
 
-Read it today, publish today, you're in. No more gaps between rounds.
+Two seconds. Please do it.
 
 **6/ (CTA)**
 Week 3 is live. 300 HIVE.
 
 1️⃣ Install HivePulse (free)
 2️⃣ Optimize & publish
-3️⃣ Comment your link + score
-4️⃣ Tag #hivepulse ← seriously
+3️⃣ Comment your link + score screenshot
+4️⃣ Tag #hivepulse
 
 Through 18 Aug, 23:59 UTC.
 
@@ -209,7 +193,7 @@ Through 18 Aug, 23:59 UTC.
 >
 > All three upvoted + reblogged by @hdev. Congratulations! 🎉
 >
-> ⚠️ **The best post of the week scored a perfect 100 (SEO 99 / GEO 100) and won nothing — no `#hivepulse` tag.** Three of six entries lost on the tag alone. It takes two seconds; please do it.
+> ⚠️ **Reminder:** a post without the `#hivepulse` tag cannot place, however well it scores. Several entries were ruled out on that alone this round. Two seconds — please do it.
 >
 > 🙏 We also got a rule wrong: @angeluxx published hours after our announcement but just before the window technically opened, and would have been excluded on a technicality we created. They're in at 2nd, and **the window now opens the moment the announcement publishes** — read it today, publish today, you're in.
 >

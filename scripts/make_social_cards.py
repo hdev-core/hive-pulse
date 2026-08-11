@@ -143,6 +143,18 @@ def render(card):
 
 
 CARDS = [
+    {  # Week-3 contest cover — deterministic fallback when image credits are unavailable.
+       # Cover-weight typography; text is composed, never model-rendered.
+        'name': 'week3-cover', 'accent': AMBER,
+        'blocks': [
+            {'text': 'HIVEPULSE SEO CONTEST', 'size': 34, 'weight': 'semi', 'color': AMBER, 'gap': 26},
+            {'text': 'Week 3 is open', 'size': 86, 'gap': 18},
+            {'text': '300 HIVE  ·  150 / 100 / 50', 'size': 52, 'color': EMERALD, 'gap': 28},
+            {'text': 'Optimize your next Hive post, comment your score, tag #hivepulse.',
+             'size': 32, 'weight': 'reg', 'color': MUTED, 'gap': 14},
+            {'text': 'Closes 18 August, 23:59 UTC.', 'size': 32, 'weight': 'reg', 'color': DIM},
+        ],
+    },
     {  # Wed 19:00 — friction killer. Locations verified against live editors 5 Aug 2026;
        # do not edit these without re-checking the actual frontend.
         'name': 'wed-description', 'accent': AMBER,

@@ -79,7 +79,7 @@ The second-highest raw SEO score of the round at 93%, tagged correctly, and publ
 
 **[How To Earn Crypto Passive Income](https://ecency.com/@ekads/how-to-earn-crypto-passive)** — SEO **71%** · GEO **62** · combined **67**
 
-Cleared every rule: in window, tagged, and past the SEO 70 floor. Moreover @ekads improved on week 1 rather than repeating it. @ekads asked sharp questions about search indexing back in week 1 and turned up this round with a full entry.
+Cleared every rule: in window, tagged, and past the SEO 70 floor. @ekads asked sharp questions about search indexing back in week 1, and then turned up this round with a full entry rather than just an opinion.
 
 All three winners are upvoted and reblogged by @hdev, and prizes are paid on publication of this post.
 

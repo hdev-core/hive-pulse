@@ -27,7 +27,9 @@ Publish date: **11 August 2026**. Posting account **@hdev**, into **Hdev Contest
 - [ ] Pay 150 / 100 / 50 HIVE to @nabbas0786 / @angeluxx / @ekads
 - [ ] Upvote + reblog all three winning posts from @hdev
 - [ ] Reply to @cositav explaining the missing link, so they can enter cleanly in week 3
-- [ ] Generate + upload the week-3 cover (badge-free master: `enhancements/images/contest-week2-cover-plain.jpg`) — **upload the file, never paste**
+- [x] Week-3 cover generated → `enhancements/images/social/week3-cover.jpg` (says "Week 3 is open"; week-2 art is NOT reused)
+- [ ] Upload it (**drag the file, never paste**) and replace `PASTE_UPLOADED_COVER_URL_HERE`
+- [ ] *Optional:* if Gemini credits are topped up, regenerate the podium-poster version for series consistency and update the alt text to match
 - [x] `judge-contest.mjs` window set to 11 → 18 Aug
 
 ## 🔎 Honest read on the numbers
@@ -49,7 +51,7 @@ Entrants went **7 → 5**, and only 2 of 6 posts cleared every rule on the first
 
 ---
 
-![HivePulse SEO Contest week 3 cover: a gold, silver and bronze Hive medal podium with a trophy, beside an analyzer panel showing SEO and GEO scores](PASTE_UPLOADED_COVER_URL_HERE)
+![HivePulse SEO Contest week 3 cover announcing that week 3 is open with a 300 HIVE prize pool split 150, 100 and 50](PASTE_UPLOADED_COVER_URL_HERE)
 
 **Summary:** Week 2 of the HivePulse SEO Contest is settled. Three creators split 300 HIVE, every entry was re-scored directly from the blockchain, and week 3 opens today — from this moment, not tomorrow.
 

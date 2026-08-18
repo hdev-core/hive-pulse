@@ -363,12 +363,30 @@ const getImageCount = (content: string): number => {
   return Math.max(md + html, dom);
 };
 
+// Alt text that doesn't describe the image: empty, a single generic placeholder word
+// ("image", "photo", "imagen", "grafik"…), or a bare upload filename (e.g. "1100993.png").
+// Editors set these defaults automatically, so they give Google and screen readers nothing —
+// a post whose published markdown saves them as ![](url) would otherwise over-report in the
+// editor DOM, where Ecency etc. hold alt="image" on the <img> element.
+const GENERIC_ALT_WORDS = new Set([
+  'image', 'img', 'photo', 'picture', 'pic', 'foto', 'imagen', 'imagem', 'grafik', 'bild',
+  'screenshot', 'capture', 'captura', 'thumbnail',
+]);
+const isGenericAlt = (alt: string): boolean => {
+  const lower = alt.trim().toLowerCase();
+  if (!lower) return true;
+  if (GENERIC_ALT_WORDS.has(lower)) return true;
+  // bare filename — name plus a common image extension, no descriptive words
+  if (/^[\w.-]+\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(lower)) return true;
+  return false;
+};
+
 const missingAltImages = (content: string): string[] => {
   const out: string[] = [];
   const re = /!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) {
-    if (!m[1].trim()) {
+    if (isGenericAlt(m[1])) {
       const file = m[2].split('/').pop()?.split('?')[0] || m[2];
       out.push(file.length > 24 ? file.slice(0, 21) + '…' : file);
     }

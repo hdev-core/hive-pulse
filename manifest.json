@@ -92,6 +92,18 @@
     "https://s3.amazonaws.com/*",
     "https://ipfs.io/*",
     "https://slothbuzz.com/*",
-    "https://www.slothbuzz.com/*"
+    "https://www.slothbuzz.com/*",
+    "https://api.deathwing.me/*",
+    "https://api.openhive.network/*",
+    "https://hiveapi.actifit.io/*",
+    "https://techcoderx.com/*",
+    "https://api.syncad.com/*",
+    "https://rpc.mahdiyari.info/*",
+    "https://api.c0ff33a.uk/*",
+    "https://hive.atexoras.com/*",
+    "https://v6-he.atexoras.com/*",
+    "https://herpc.actifit.io/*",
+    "https://he.c0ff33a.uk/*",
+    "https://herpc.dtools.dev/*"
   ]
 }

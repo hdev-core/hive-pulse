@@ -704,7 +704,10 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
   else if (hierarchy.skips) structHint += ' · don’t skip heading levels';
   const structScore = subScore + hierScore;
 
-  // Media — 9 (image present 4 + alt text 5)
+  // Media — 9. All-or-nothing: any post with at least one image whose alt text is
+  // descriptive scores full marks; a single image is enough. (The score does not
+  // split 4/5 between 'has an image' and 'has alt text' — an earlier comment claimed
+  // it did, but the code has never worked that way.)
   let mediaScore = 0, mediaHint = '';
   if (imageCount === 0)            { mediaHint = 'No image — posts with images get ~2× engagement'; }
   else if (noAltFiles.length === 0){ mediaScore = 9; mediaHint = `${imageCount} image${imageCount > 1 ? 's' : ''} · alt text OK`; }

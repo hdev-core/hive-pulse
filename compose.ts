@@ -708,7 +708,7 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
   let mediaScore = 0, mediaHint = '';
   if (imageCount === 0)            { mediaHint = 'No image — posts with images get ~2× engagement'; }
   else if (noAltFiles.length === 0){ mediaScore = 9; mediaHint = `${imageCount} image${imageCount > 1 ? 's' : ''} · alt text OK`; }
-  else                             { mediaScore = 4; mediaHint = `${noAltFiles.length} image(s) missing alt text`; }
+  else                             { mediaScore = 4; mediaHint = `${noAltFiles.length} image(s) need descriptive alt text`; }
 
   // Links — 7 (external/citation 3 + internal/on-chain 4)
   const linkScore = (links.external > 0 ? 3 : 0) + (links.internal > 0 ? 4 : 0);
@@ -766,7 +766,7 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
     { label: 'Links a past/own post',      pass: links.internal > 0 },
     { label: '3–5 content tags',           pass: nTags >= 3 && nTags <= 5 },
     { label: '1,000+ words',               pass: wordCount >= 1000 },
-    { label: 'Images have alt text',       pass: imageCount === 0 || noAltFiles.length === 0 },
+    { label: 'Images have descriptive alt text', pass: imageCount === 0 || noAltFiles.length === 0 },
     { label: 'At least 1 image',           pass: imageCount >= 1 },
   ];
 
@@ -908,7 +908,7 @@ const INFO: Record<string, { what: string; how: string }> = {
   'Title': { what: 'Google shows ~50–60 characters of a title. Numbers, power words and brackets also lift click-through rate.', how: 'Aim for 50–60 chars, keyword near the start, and add a number or word like "guide"/"best".' },
   'Meta desc': { what: 'The preview description becomes the grey snippet under your link in Google. 120–160 characters is ideal.', how: 'Summarise the post in 1–2 sentences, include the keyword, and give a reason to click.' },
   'Structure': { what: 'Subheadings (##) plus a correct heading hierarchy. The title is the page H1, so a "# " in the body creates a duplicate H1.', how: 'Use ## / ### only in the body, one section every 200–300 words, never skip a level.' },
-  'Media': { what: 'Whether the post has images and whether they carry alt text. Images lift engagement and dwell time; alt text is a direct image-search and accessibility signal Google reads.', how: 'Add at least one relevant image and describe each: ![a hiking trail at sunset](url) — not ![](url).' },
+  'Media': { what: 'Whether the post has images and whether they carry alt text. Images lift engagement and dwell time; alt text is a direct image-search and accessibility signal Google reads.', how: 'Add at least one relevant image and describe each: ![a hiking trail at sunset](url) — not ![](url), ![image](url) or ![IMG_1234.png](url). Editors often fill the filename in for you; replace it with a real description.' },
   'Links': { what: 'Internal links (to your own/other Hive posts) keep readers on-chain and build topical authority; external links cite sources and add trust.', how: 'Link at least one past post of yours and cite one external source.' },
   'Tags': { what: 'Hive tags drive discovery in frontends — topic feeds, trending, communities. 3–5 relevant tags is best.', how: 'Pick 3–5 specific tags. The first tag is permanent after publishing — choose carefully.' },
   'Readability': { what: 'Flesch reading ease (sentence/word length) plus transition-word usage. Easier text keeps readers longer.', how: 'Shorter sentences, everyday words, connectors like "however"/"for example".' },

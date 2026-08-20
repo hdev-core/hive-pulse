@@ -17,7 +17,8 @@ AI-quotability. Every number below is from `contest-results-week{1,2}.csv` and
 | Perfect GEO (100) | 12 of 25 |
 | SEO ↔ GEO correlation | **0.58** |
 | Word count ↔ GEO correlation | 0.57 |
-| Widest SEO/GEO gap in one post | **42 points** |
+| Widest gap, GEO above SEO | 42 points (SEO 58 / GEO 100) |
+| Widest gap, SEO above GEO | **33 points** (SEO 93 / GEO 60) |
 | GEO-100 posts, word range | 624 – 2,928 |
 
 Two findings worth leading with:
@@ -99,9 +100,9 @@ Publish today and you're in. Closes 25 Aug.
 ### Fri 21 Aug, 14:00 — pure utility, no ask
 *Image: `social/fri-gap.jpg` — **not yet created**.*
 
-> One post in our set scored 42 points higher on SEO than on AI-quotability.
+> One post in our set scored 93 on SEO and 60 on AI-quotability.
 >
-> Same post. Same words. Excellent for Google, close to invisible to ChatGPT.
+> Same post. Same words. Strong for Google, weak for ChatGPT — a 33-point gap.
 >
 > The difference is almost always three habits: it buries the answer, its sentences don't stand alone, and it says "it" where it should say the noun.
 
@@ -153,7 +154,7 @@ Files live in `enhancements/images/social/` (day-topic naming, as in week 3).
 |---|---|---|
 | `contest-week4-cover.jpg` | **exists** (in `enhancements/images/`) | Contest CTA card for Mon 24. |
 | `social/thu-correlation.jpg` | **must be created** | The dataset: 25 posts, SEO vs GEO, sorted by gap, with the 0.58 correlation legible at a glance. |
-| `social/fri-gap.jpg` | **must be created** | The 42-point outlier — one post's two scores side by side, with the three failing habits named. |
+| `social/fri-gap.jpg` | **must be created** | The 33-point gap — one post's two scores side by side, with the three failing habits named. Author not identified. |
 
 Do **not** reuse `social/geo-vs-seo.jpg` from week 3: it plots the 14-post set and
 shows the old 0.73 correlation, which now contradicts the numbers in these posts.

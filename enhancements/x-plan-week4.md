@@ -86,7 +86,7 @@ Publish today and you're in. Closes 25 Aug.
 ## Standalone posts
 
 ### Thu 20 Aug, 14:00 — the headline finding
-*Image: `seo-vs-geo-25.jpg`*
+*Image: `social/thu-correlation.jpg` — **not yet created**.*
 
 > We've now scored 25 blog posts twice: once the way Google reads them, once the way an AI answer engine does.
 >
@@ -97,7 +97,7 @@ Publish today and you're in. Closes 25 Aug.
 *Reply with: the contest link.*
 
 ### Fri 21 Aug, 14:00 — pure utility, no ask
-*Image: `the-42-point-gap.jpg`*
+*Image: `social/fri-gap.jpg` — **not yet created**.*
 
 > One post in our set scored 42 points higher on SEO than on AI-quotability.
 >
@@ -125,7 +125,7 @@ Publish today and you're in. Closes 25 Aug.
 > That is essentially the whole AI-quotability score. No tool required.
 
 ### Mon 24 Aug, 14:00 — the one hard CTA
-*Image: `contest-week4-cover.jpg`*
+*Image: `enhancements/images/contest-week4-cover.jpg` — exists.*
 
 > 24 hours left. 300 HIVE.
 >
@@ -147,15 +147,20 @@ Publish today and you're in. Closes 25 Aug.
 
 ## Images
 
-| File | Carries |
-|---|---|
-| `seo-vs-geo-25.jpg` | **The dataset.** 25 posts, SEO vs GEO, sorted by gap. The 0.58 correlation should be legible at a glance. |
-| `the-42-point-gap.jpg` | **The outlier.** One post's two scores side by side, with the three failing habits named. |
-| `contest-week4-cover.jpg` | Contest CTA card (already produced). |
+Files live in `enhancements/images/social/` (day-topic naming, as in week 3).
 
-Same bar as week 3: every image except a pure hero must state something the tweet does not.
+| File | Status | Carries |
+|---|---|---|
+| `contest-week4-cover.jpg` | **exists** (in `enhancements/images/`) | Contest CTA card for Mon 24. |
+| `social/thu-correlation.jpg` | **must be created** | The dataset: 25 posts, SEO vs GEO, sorted by gap, with the 0.58 correlation legible at a glance. |
+| `social/fri-gap.jpg` | **must be created** | The 42-point outlier — one post's two scores side by side, with the three failing habits named. |
 
----
+Do **not** reuse `social/geo-vs-seo.jpg` from week 3: it plots the 14-post set and
+shows the old 0.73 correlation, which now contradicts the numbers in these posts.
+
+If the two new charts don't get made, run Thu and Fri as text-only rather than
+attaching a stale or generic image — week 2's lesson was that an image restating the
+headline is worse than none.
 
 ## What to watch
 

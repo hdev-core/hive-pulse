@@ -1057,6 +1057,15 @@ const renderSeoTab = (body: HTMLElement, a: Analysis, keyword: string, isAuto: b
       e.stopPropagation();
       const kw = btn.getAttribute('data-kw') || '';
       kwSuggestions = null;
+      // Re-score and repaint straight away. onKeyword only schedules the debounced
+      // analysis pass, so on its own the shortlist would stay open and the score stale
+      // for a second or more, which reads as the click having done nothing.
+      if (lastInputs) {
+        renderPanel(analyze(lastInputs.content, lastInputs.title, lastInputs.tags, lastInputs.metaDesc, kw),
+                    kw, false, onKeyword);
+      } else {
+        rerender();
+      }
       onKeyword(kw);
     });
   });

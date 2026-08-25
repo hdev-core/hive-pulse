@@ -20,7 +20,7 @@ rows published in the week-4 announcement instead. Every row is a real published
 the week-3 rows are best-per-author rather than every post.
 """
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 import csv, os, argparse
 
 W, H = 1600, 900
@@ -53,6 +53,29 @@ def font(w, s):
     return _c[k]
 
 
+PLATES = 'enhancements/images/social/plates'
+
+
+def ground(plate):
+    """Chart background: a Gemini plate, cover-cropped and darkened hard.
+
+    The plate is texture, not subject. Data marks have to stay the brightest thing on
+    the canvas, so this darkens to roughly a fifth and lays a slate wash over the top --
+    enough to read as the same visual system as the text cards, not enough to compete
+    with a 6px dot. Falls back to flat slate if the plate is missing.
+    """
+    path = f'{PLATES}/{plate}.jpg'
+    if not os.path.exists(path):
+        return Image.new('RGB', (W, H), SURFACE)
+    im = Image.open(path).convert('RGB')
+    scale = max(W / im.width, H / im.height)
+    im = im.resize((round(im.width * scale), round(im.height * scale)), Image.LANCZOS)
+    left, top = (im.width - W) // 2, (im.height - H) // 2
+    im = im.crop((left, top, left + W, top + H))
+    im = ImageEnhance.Brightness(im).enhance(0.22)
+    return Image.blend(im, Image.new('RGB', (W, H), SURFACE), 0.55)
+
+
 # --------------------------------------------------------------- tier ladder
 
 TIERS = [
@@ -63,7 +86,7 @@ TIERS = [
 
 
 def tier_card(entries, out):
-    im = Image.new('RGB', (W, H), SURFACE)
+    im = ground('plate-ascend')
     d = ImageDraw.Draw(im)
 
     if entries < 10:
@@ -161,7 +184,7 @@ def correlation_chart(out):
     r = pearson([a for a, _ in rows], [b for _, b in rows])
     data = sorted(rows, key=lambda t: -(t[0] - t[1]))
 
-    im = Image.new('RGB', (W, H), SURFACE)
+    im = ground('plate-lines')
     d = ImageDraw.Draw(im)
 
     d.text((100, 66), 'The more posts we score, the less SEO predicts AI-quotability',

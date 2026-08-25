@@ -291,6 +291,26 @@ python scripts/make_week5_charts.py --entries N    # tier + correlation
 python scripts/make_week5_cards.py                 # the four text cards
 ```
 
+**Both are free to re-run.** The artwork underneath is Gemini-generated and already
+paid for — it lives in `social/plates/` and is reused, so re-rendering the tier card
+with a new entry count costs nothing. Only a new *plate* bills.
+
+| Plate | Generated | Used by |
+|---|---|---|
+| `plates/plate-ascend.jpg` | Nano Banana Pro, 2K, $0.134 | referral card, tier chart |
+| `plates/plate-lines.jpg` | Nano Banana Pro, 2K, $0.134 | audit card, correlation chart |
+| `plates/plate-shards.jpg` | Nano Banana Pro, 2K, $0.134 | keyword card, final-day card |
+| `plates/gemini-text-test.jpg` | Nano Banana Pro, 2K, $0.134 | not used — see below |
+
+**Why the text is composed rather than model-rendered.** `gemini-text-test.jpg` is a
+control: the same audit card asked of the model as a finished poster, text and all. It
+spelled every word correctly and the typography was good. It also invented a
+card-within-a-card frame nobody asked for, could not place the real HivePulse mark, and
+cost $0.134 for one attempt that would need a manual spell-check before every use. The
+tier card alone is re-rendered several times a week with a live number. Model-rendered
+plates plus composed type gets the visual quality without paying, or proof-reading,
+on every regeneration.
+
 | File | Used | Carries |
 |---|---|---|
 | `social/w5-tier.jpg` | **Wed, Mon** | The ladder, where the count sits on it, and both multipliers. Re-render for the live number before every use. |

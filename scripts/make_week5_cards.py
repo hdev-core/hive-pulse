@@ -17,16 +17,22 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from make_social_cards import render, AMBER, EMERALD, ORANGE, RED, WHITE, MUTED, DIM  # noqa: E402
+import make_social_cards as base  # noqa: E402
+from make_social_cards import render, AMBER, EMERALD, ORANGE, WHITE, MUTED, DIM  # noqa: E402
+
+# Each card names its own Gemini-generated plate. All three were art-directed to keep
+# the left two thirds near-empty, so none of them are mirrored -- flipping would throw
+# the busy side under the text.
+PLATES = 'enhancements/images/social/plates'
 
 CARDS = [
     {   # Fri -- the friction remover. Ship news, but framed as "the hard part is gone".
         # Keep the wording neutral about store availability: submitted and rolling out
         # is not the same as live, and review times are not ours to promise.
-        'name': 'w5-keyword', 'accent': AMBER,
+        'name': 'w5-keyword', 'max_w': 960, 'accent': AMBER, 'plate': 'plate-shards',
         'blocks': [
             {'text': 'HIVEPULSE v1.13.1', 'size': 30, 'weight': 'semi', 'color': AMBER, 'gap': 26},
-            {'text': 'It now picks the keyword for you', 'size': 62, 'gap': 30},
+            {'text': 'It picks the keyword for you', 'size': 62, 'gap': 30},
             {'text': 'The focus keyword is worth 35 of the 100 SEO points, and choosing it '
                      'was the one step people got wrong.',
              'size': 32, 'weight': 'reg', 'color': MUTED, 'gap': 20},
@@ -41,7 +47,7 @@ CARDS = [
     },
     {   # Sat -- the most saveable artifact of the week. No product mentioned on purpose:
         # this has to be worth keeping to someone who will never install anything.
-        'name': 'w5-audit', 'accent': EMERALD, 'mirror': True,
+        'name': 'w5-audit', 'max_w': 1000, 'accent': EMERALD, 'plate': 'plate-lines',
         'blocks': [
             {'text': 'NO TOOL REQUIRED', 'size': 30, 'weight': 'semi', 'color': EMERALD, 'gap': 28},
             {'text': 'The 30-second audit', 'size': 62, 'gap': 34},
@@ -59,7 +65,7 @@ CARDS = [
     },
     {   # Sun -- the referral mechanic, stated as arithmetic. The point is that bringing
         # someone is not altruism: it pays twice, and the second payment is the tier.
-        'name': 'w5-referral', 'accent': AMBER,
+        'name': 'w5-referral', 'max_w': 960, 'accent': AMBER, 'plate': 'plate-ascend',
         'blocks': [
             {'text': 'WHY BRINGING A FRIEND PAYS YOU TWICE', 'size': 30, 'weight': 'semi',
              'color': AMBER, 'gap': 30},
@@ -77,7 +83,7 @@ CARDS = [
     },
     {   # Tue -- close. Deliberately plain: at this point nobody needs persuading, they
         # need the four steps and the deadline.
-        'name': 'w5-final', 'accent': ORANGE, 'mirror': True,
+        'name': 'w5-final', 'max_w': 1000, 'accent': ORANGE, 'plate': 'plate-shards',
         'blocks': [
             {'text': 'FINAL DAY', 'size': 32, 'weight': 'semi', 'color': ORANGE, 'gap': 26},
             {'text': 'Closes tonight, 23:59 UTC', 'size': 64, 'gap': 32},
@@ -97,6 +103,7 @@ CARDS = [
 
 if __name__ == '__main__':
     for c in CARDS:
+        base.PLATE = f'{PLATES}/{c["plate"]}.jpg'
         p, kb = render(c)
-        print(f'  {p}  {kb:.0f} KB')
+        print(f'  {p}  {kb:.0f} KB   on {c["plate"]}')
     print(f'\n{len(CARDS)} cards written.')

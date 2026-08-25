@@ -91,7 +91,9 @@ def render(card):
     im = background(card.get('mirror', False))
     d = ImageDraw.Draw(im)
     x = 110
-    max_w = 1230
+    # Cards on a plate whose artwork reaches further left need a narrower column so
+    # body copy never runs under the busy side. Default matches the original layout.
+    max_w = card.get('max_w', 1230)
     accent = card.get('accent', AMBER)
 
     # measure total height so the block sits optically centred

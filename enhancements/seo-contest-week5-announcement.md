@@ -21,7 +21,7 @@ in rather than paying the same regulars more.
 ## ⚠️ Pre-publish checklist
 
 - Paste the meta description into the preview-description field.
-- Cover image: `enhancements/images/contest-week5-cover.jpg` — **not yet produced**.
+- Cover image: `enhancements/images/contest-week5-cover.jpg` — ready. Upload via the editor and paste the returned URL.
 - Post into **Hdev Contests** (`hive-177727`), tags: `hivepulse` `seo` `contest` `hive` `writing`.
 - Pay the three winners before publishing, so the post can say "already paid".
 - Post the X thread first, then paste its URL into the quote-RT section of the Hive post.
@@ -37,7 +37,7 @@ in rather than paying the same regulars more.
 
 ---
 
-![HivePulse SEO Contest week 5 cover](PASTE_UPLOADED_COVER_URL_HERE)
+![Gold trophy on a podium with Hive coins beside a HivePulse score panel, headlined Week 5 now open up to 500 HIVE, with a banner showing a 25 HIVE referral bonus and a 50 HIVE prize for the best quote-RT on X](PASTE_UPLOADED_COVER_URL_HERE)
 
 **Summary:** Week 4 is settled — seven entries, every one qualified, every one correctly
 tagged. And week 5 changes the deal: **the more people who enter, the bigger the prize pool

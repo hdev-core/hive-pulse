@@ -30,16 +30,24 @@ in rather than paying the same regulars more.
 
 ## The Hive blog post
 
+> **Focus keyword** (set this in the analyzer's focus-keyword field): `hivepulse seo contest`
+> — scores 99% SEO / 100 GEO with the title, opening line and week-4 heading below.
+>
+> Note the analyzer will happily score `week` at 92% and `prize pool` at 88%, because it
+> measures keyword *placement* — title, first 100 words, a subheading, the URL slug — not
+> whether anyone would ever search the term. Chase the number and you optimise for a word
+> with no search intent. Set the keyword you actually want to rank for.
+>
 > Meta description (paste into the preview-description field — 145 chars):
 > `HivePulse SEO Contest week 4 winners, re-scored on-chain. New for week 5: the prize pool grows with entrants, plus referral and quote-RT bonuses.`
 
-**Title:** HivePulse SEO Contest Winners + Week 5: The Prize Pool Now Grows With You
+**Title:** HivePulse SEO Contest: New Week 5 Prize Pool (500 HIVE)
 
 ---
+![Gold trophy on a podium with Hive coins beside a HivePulse score panel, headlined Week 5 now open up to 500 HIVE, with a banner showing a 25 HIVE referral bonus and a 50 HIVE prize for the best quote-RT on X](https://usermedia.actifit.io/MT8R0RW3M81OCLTCQEB1MAPYOCDIPM)
 
-![Gold trophy on a podium with Hive coins beside a HivePulse score panel, headlined Week 5 now open up to 500 HIVE, with a banner showing a 25 HIVE referral bonus and a 50 HIVE prize for the best quote-RT on X](PASTE_UPLOADED_COVER_URL_HERE)
 
-**Summary:** Week 4 is settled — seven entries, every one qualified, every one correctly
+**Summary:** The HivePulse SEO Contest week 4 is settled — seven entries, every one qualified, every one correctly
 tagged. And week 5 changes the deal: **the more people who enter, the bigger the prize pool
 gets**, plus two new ways to earn on top of it.
 
@@ -63,24 +71,20 @@ Bring someone who has never entered before. When they enter, they write **"refer
 @yourname"** in their comment. If their post qualifies (SEO 70+ and tagged `#hivepulse`),
 **you both get 25 HIVE** — on top of any prize either of you win.
 
-Up to **2 referrals per person** per round. The person you bring has to be genuinely new to
-the contest and their entry has to be real — we check both.
+Up to **2 referrals per person** per round. The person you bring has to be genuinely new to the contest and their entry has to be real — we check both.
 
 ### 3. Quote-RT contest on X — 50 HIVE
 
-Quote-retweet [our announcement tweet](PASTE_TWEET_URL_HERE) with **the one line you would
-change in your last post** — the sentence that buries your point, or the one an AI would
+Quote-retweet [our announcement tweet](PASTE_TWEET_URL_HERE) with **the one line you would change in your last post** — the sentence that buries your point, or the one an AI would
 never quote.
 
-Best answer takes **50 HIVE**. No tagging friends, no follow-for-follow — just the most
-useful answer. We will reply to as many as we can with what we would change.
+Best answer takes **50 HIVE**. No tagging friends, no follow-for-follow — just the most useful answer. We will reply to as many as we can with what we would change.
 
 ---
 
-## Week 4, and what the scores say
+## HivePulse SEO Contest week 4 results
 
-Seven entries, seven qualified, seven tagged. After three rounds where the tag decided
-podiums, that is the headline.
+Seven entries, seven qualified, seven tagged. After three rounds where the tag decided podiums, that is the headline.
 
 | Entry | SEO | GEO | Combined |
 |---|---|---|---|
@@ -92,24 +96,17 @@ podiums, that is the headline.
 | @cositav | 73 | 90 | 82 |
 | @ekads | 80 | 80 | 80 |
 
-Congratulations to **@nabbas0786**, **@katriel1** and **@militadigital01** — all three paid,
-upvoted and reblogged.
+Congratulations to **@nabbas0786**, **@katriel1** and **@militadigital01** — all three paid, upvoted and reblogged.
 
 ## A note on scores that do not match your screenshot
 
-A few of you noticed the extension showing a higher SEO score than our results table. You
-were right, and we have changed how judging works.
+A few of you noticed the extension showing a higher SEO score than our results table. You were right, and we have changed how judging works.
 
-The analyzer lets you set your own focus keyword, and that choice lives in your browser —
-it is never saved into the published post. So when we re-scored from the blockchain we
-detected a keyword ourselves, and it was not always the one you picked. That block is worth
-35 of the 100 SEO points, so the difference was real: one post this week scored anywhere
+The analyzer lets you set your own focus keyword, and that choice lives in your browser — it is never saved into the published post. So when we re-scored from the blockchain we
+detected a keyword ourselves, and it was not always the one you picked. That block is worth 35 of the 100 SEO points, so the difference was real: one post this week scored anywhere
 from 67 to 99 depending on which keyword was used.
 
-**From now on, judging scores every plausible keyword for your post and keeps the best
-one.** Your result can never be lower than what the tool showed you, and the same rule
-applies to every entry. We re-ran week 4 under the new method before paying — the podium is
-identical, and @nabbas0786's score now reads 99/100 exactly as his screenshot did.
+**From now on, judging scores every plausible keyword for your post and keeps the best one.** Your result can never be lower than what the tool showed you, and the same rule applies to every entry. We re-ran week 4 under the new method before paying — the podium is identical, and @nabbas0786's score now reads 99/100 exactly as his screenshot did.
 
 ## 🚀 Week 5 — how to enter
 
@@ -119,22 +116,17 @@ identical, and @nabbas0786's score now reads 99/100 exactly as his screenshot di
 4. **Tag the post `#hivepulse`.** Enforced, and it has decided podiums three rounds running.
 5. Referred by someone? Add **"referred by @username"** to your comment.
 
-**Runs 25 August → 1 September 2026, 23:59 UTC.** Minimum SEO score of 70. One entry per
-person — post several and your best tagged one counts. Any language welcome.
+**Runs 25 August → 1 September 2026, 23:59 UTC.** Minimum SEO score of 70. One entry per person — post several and your best tagged one counts. Any language welcome.
 
 ## Where the points actually are
 
-Four rounds in, the pattern is stable: SEO scores cluster high because Hive creators already
-write decent titles and headings. GEO — whether an AI answer engine can lift a passage and
-cite it — is where the gap is.
+Four rounds in, the pattern is stable: SEO scores cluster high because Hive creators already write decent titles and headings. GEO — whether an AI answer engine can lift a passage and cite it — is where the gap is.
 
 1. **Open with the answer.** First 8–60 words, before any preamble.
 2. **Write self-contained sentences.** "This shows…" means nothing quoted alone. Name the subject.
 3. **Keep pronoun density low.** Repeat the noun where a weaker draft reaches for "it".
 
-And the cheapest points on the board: **fill in the preview description** — 10 SEO points,
-15 seconds. PeakD calls it "Short preview description", under the editor. On Ecency it is in
-the Story preview step.
+And the cheapest points on the board: **fill in the preview description** — 10 SEO points, 15 seconds. PeakD calls it "Short preview description", under the editor. On Ecency it is in the Story preview step.
 
 ## Join in
 
@@ -146,6 +138,7 @@ the Story preview step.
 Bring someone with you this week — it pays both of you, and it decides how big the pool gets. 🚀
 
 *— The HivePulse Team (@hdev)*
+
 
 ---
 

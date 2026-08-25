@@ -20,8 +20,11 @@ rows published in the week-4 announcement instead. Every row is a real published
 the week-3 rows are best-per-author rather than every post.
 """
 
-from PIL import Image, ImageDraw, ImageFont, ImageEnhance
-import csv, os, argparse
+from PIL import Image, ImageDraw, ImageFont
+import csv, os, sys, argparse
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import brand_style as bs
 
 W, H = 1600, 900
 
@@ -53,28 +56,6 @@ def font(w, s):
     return _c[k]
 
 
-PLATES = 'enhancements/images/social/plates'
-
-
-def ground(plate):
-    """Chart background: a Gemini plate, cover-cropped and darkened hard.
-
-    The plate is texture, not subject. Data marks have to stay the brightest thing on
-    the canvas, so this darkens to roughly a fifth and lays a slate wash over the top --
-    enough to read as the same visual system as the text cards, not enough to compete
-    with a 6px dot. Falls back to flat slate if the plate is missing.
-    """
-    path = f'{PLATES}/{plate}.jpg'
-    if not os.path.exists(path):
-        return Image.new('RGB', (W, H), SURFACE)
-    im = Image.open(path).convert('RGB')
-    scale = max(W / im.width, H / im.height)
-    im = im.resize((round(im.width * scale), round(im.height * scale)), Image.LANCZOS)
-    left, top = (im.width - W) // 2, (im.height - H) // 2
-    im = im.crop((left, top, left + W, top + H))
-    im = ImageEnhance.Brightness(im).enhance(0.22)
-    return Image.blend(im, Image.new('RGB', (W, H), SURFACE), 0.55)
-
 
 # --------------------------------------------------------------- tier ladder
 
@@ -86,7 +67,7 @@ TIERS = [
 
 
 def tier_card(entries, out):
-    im = ground('plate-ascend')
+    im = bs.gold_ground(W, H, bloom=(0.90, 0.24), intensity=0.92)
     d = ImageDraw.Draw(im)
 
     if entries < 10:
@@ -96,11 +77,12 @@ def tier_card(entries, out):
     else:
         head = 'Top tier unlocked. 500 HIVE on the board.'
 
-    d.text((100, 74), head, font=font('bold', 50), fill=INK)
+    d.text((100, 74), head, font=font('bold', 50), fill=INK,
+           stroke_width=5, stroke_fill=(10, 16, 34))
     d.text((100, 142),
            'The HivePulse SEO Contest pool scales with how many people enter. '
            'Not a target we hope to hit, a rule.',
-           font=font('reg', 27), fill=INK_2)
+           font=font('reg', 27), fill=INK_2, stroke_width=4, stroke_fill=(10, 16, 34))
 
     x0, x1 = 150, W - 150
     y = 452
@@ -115,14 +97,19 @@ def tier_card(entries, out):
     for lo, hi, pool, split, label in TIERS:
         cx = (sx(lo) + sx(hi)) / 2
         live = lo <= entries < hi
-        d.text((cx, y - 178), pool, font=font('bold', 56),
-               fill=(INK if live else INK_3), anchor='ma')
+        if live:
+            bs.gold_text(im, (cx, y - 178), pool, font('bold', 58), anchor='ma', stroke=5)
+        else:
+            d.text((cx, y - 176), pool, font=font('bold', 56), fill=(150, 163, 184),
+                   anchor='ma', stroke_width=5, stroke_fill=(10, 16, 34))
         d.text((cx, y - 106), split, font=font('semi', 27),
-               fill=(AMBER if live else INK_3), anchor='ma')
-        d.text((cx, y + hgt + 28), label, font=font('reg', 25), fill=INK_3, anchor='ma')
+               fill=(AMBER if live else (150, 163, 184)), anchor='ma',
+               stroke_width=4, stroke_fill=(10, 16, 34))
+        d.text((cx, y + hgt + 28), label, font=font('reg', 25), fill=(160, 172, 192),
+               anchor='ma', stroke_width=4, stroke_fill=(10, 16, 34))
         if live:
             d.text((cx, y + hgt + 66), 'YOU ARE HERE', font=font('bold', 23),
-                   fill=AMBER, anchor='ma')
+                   fill=AMBER, anchor='ma', stroke_width=4, stroke_fill=(10, 16, 34))
         if lo:
             d.line([(sx(lo), y - 16), (sx(lo), y + hgt + 16)], fill=GRID, width=3)
 
@@ -132,7 +119,8 @@ def tier_card(entries, out):
 
     mx = sx(entries)
     d.polygon([(mx, y - 20), (mx - 15, y - 44), (mx + 15, y - 44)], fill=INK)
-    d.text((mx, y - 52), f'{entries} so far', font=font('bold', 30), fill=INK, anchor='mb')
+    d.text((mx, y - 52), f'{entries} so far', font=font('bold', 30), fill=INK,
+           anchor='mb', stroke_width=5, stroke_fill=(10, 16, 34))
 
     by = 690
     for i, (t, s) in enumerate([
@@ -140,14 +128,19 @@ def tier_card(entries, out):
         ('Every entrant helps you', 'A bigger field pays everyone more, you included'),
     ]):
         bx = 150 + i * 660
-        d.rounded_rectangle([bx, by, bx + 620, by + 98], radius=14, fill=(22, 32, 51))
+        panel = Image.new('RGBA', (620, 98), (12, 20, 38, 232))
+        ImageDraw.Draw(panel).rounded_rectangle([0, 0, 619, 97], radius=14,
+                                               fill=(12, 20, 38, 232),
+                                               outline=(58, 74, 104, 255), width=2)
+        im.paste(panel, (bx, by), panel)
         d.text((bx + 28, by + 22), t, font=font('bold', 29), fill=AMBER)
         d.text((bx + 28, by + 60), s, font=font('reg', 24), fill=INK_2)
 
-    d.text((100, H - 52), 'Week 5 closes 1 September, 23:59 UTC',
-           font=font('reg', 23), fill=INK_3, anchor='lm')
-    d.text((W - 100, H - 52), 'HivePulse  /  @HdevCore',
-           font=font('semi', 24), fill=INK_3, anchor='rm')
+    bs.badge(im, 100, H - 118, d=72)
+    bs.wordmark(im, 190, H - 110, size=32)
+    d.text((W - 100, H - 92), 'Closes 1 September, 23:59 UTC',
+           font=font('semi', 25), fill=bs.INK_2, anchor='rm',
+           stroke_width=4, stroke_fill=(10, 16, 34))
 
     im.save(out, 'JPEG', quality=90, optimize=True, progressive=True)
     return out
@@ -184,7 +177,7 @@ def correlation_chart(out):
     r = pearson([a for a, _ in rows], [b for _, b in rows])
     data = sorted(rows, key=lambda t: -(t[0] - t[1]))
 
-    im = ground('plate-lines')
+    im = bs.gold_ground(W, H, bloom=(1.02, 0.14), intensity=0.70, mosaic=0.0)
     d = ImageDraw.Draw(im)
 
     d.text((100, 66), 'The more posts we score, the less SEO predicts AI-quotability',
@@ -231,13 +224,13 @@ def correlation_chart(out):
         d.text((px, ty), f'{val:.2f}', font=font('bold', 46), fill=(AMBER if cur else INK_3))
         d.text((px + 124, ty + 18), f'at {n} posts', font=font('reg', 24), fill=INK_3)
 
-    lx, ly = 100, H - 58
+    lx, ly = 100, H - 52
     for label, col in (('SEO score', SEO_C), ('GEO / AI-quotability', GEO_C)):
         d.ellipse([lx, ly - 7, lx + 14, ly + 7], fill=col)
         d.text((lx + 24, ly), label, font=font('semi', 24), fill=INK_2, anchor='lm')
         lx += int(d.textlength(label, font=font('semi', 24))) + 78
-    d.text((W - 100, H - 58), 'HivePulse  /  @HdevCore',
-           font=font('semi', 24), fill=INK_3, anchor='rm')
+    bs.badge(im, W - 480, H - 82, d=56)
+    bs.wordmark(im, W - 408, H - 74, size=28)
 
     im.save(out, 'JPEG', quality=90, optimize=True, progressive=True)
     return out, len(data), r

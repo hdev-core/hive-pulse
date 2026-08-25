@@ -291,34 +291,21 @@ python scripts/make_week5_charts.py --entries N    # tier + correlation
 python scripts/make_week5_cards.py                 # the four text cards
 ```
 
-**Both are free to re-run.** The artwork underneath is Gemini-generated and already
-paid for — it lives in `social/plates/` and is reused, so re-rendering the tier card
-with a new entry count costs nothing. Only a new *plate* bills.
+**All six are drawn in code, not generated.** `scripts/brand_style.py` reproduces the
+contest-cover house style — the warm gold bloom, the tumbling mosaic, the dimensional
+gold display type and the real crimson HivePulse badge. Nothing is model-generated,
+which buys three things:
 
-| Plate | Generated | Used by |
-|---|---|---|
-| `plates/plate-ascend.jpg` | Nano Banana Pro, 2K, $0.134 | referral card, tier chart |
-| `plates/plate-lines.jpg` | Nano Banana Pro, 2K, $0.134 | audit card, correlation chart |
-| `plates/plate-shards.jpg` | Nano Banana Pro, 2K, $0.134 | keyword card, final-day card |
-| `plates/gemini-text-test.jpg` | Nano Banana Pro, 2K, $0.134 | not used — see below |
+- **No provenance watermark.** Every Gemini image carries an invisible SynthID mark in
+  its pixels. These carry nothing.
+- **Free to re-render.** The tier card is rebuilt with a live entry count several times
+  a week; a generated card would bill on every update.
+- **Exact, every time.** Our gold, our logo, our numbers — no proof-reading pass before
+  a card can be reused.
 
-**Why the text is composed rather than model-rendered.** `gemini-text-test.jpg` is a
-control: the same audit card asked of the model as a finished poster, text and all. It
-spelled every word correctly and the typography was good. It also invented a
-card-within-a-card frame nobody asked for, could not place the real HivePulse mark, and
-cost $0.134 for one attempt that would need a manual spell-check before every use. The
-tier card alone is re-rendered several times a week with a live number. Model-rendered
-plates plus composed type gets the visual quality without paying, or proof-reading,
-on every regeneration.
-
-| File | Used | Carries |
-|---|---|---|
-| `social/w5-tier.jpg` | **Wed, Mon** | The ladder, where the count sits on it, and both multipliers. Re-render for the live number before every use. |
-| `social/w5-correlation.jpg` | Thu | 28 posts on both axes, plus the correlation trend 0.73 → 0.58 → 0.47 as its own panel. |
-| `social/w5-keyword.jpg` | Fri | What the keyword button does and why 35 points ride on it. |
-| `social/w5-audit.jpg` | Sat | The three audit questions, verbatim and saveable. |
-| `social/w5-referral.jpg` | Sun | The referral arithmetic — both payouts, and the checks. |
-| `social/w5-final.jpg` | Tue | The four entry steps and the deadline. |
+Charts use the same ground with `mosaic=0.0`. A gold tile behind a 6px dot is
+indistinguishable from a data point, so legibility wins on anything a reader has to
+parse; the warmth stays as a bloom in the far corner.
 
 ### Alt text — paste into X's "Add description" field
 

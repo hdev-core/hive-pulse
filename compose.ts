@@ -20,6 +20,7 @@ const COMPOSE_HOSTS: Record<string, RegExp> = {
   '3speak.tv':      /\/upload/,
   'actifit.io':     /\/blog\/new|\/videos\/new/,
   'slothbuzz.com':  /\/publish|\/submit/,
+  'blog.suseona.com': /\/create/,
 };
 
 // ── Hive RPC (trending tag suggestions only) ─────────────────────────────────
@@ -778,6 +779,56 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
   return { wordCount, readMinutes, imageCount, title, titleChars, subheadings, permlink, tags, metaDesc, grade, ease, kw, hasKw, keyword, seoScore, seoMax, links, noAltFiles, longestPara, transitionPct, suggestedTags, intent, geo, breakdown, checklist };
 };
 
+// ── Keyword suggestions ──────────────────────────────────────────────────────
+// Skims the draft and ranks candidate focus keywords by what they would actually score.
+//
+// Deliberately a SHORTLIST, not an auto-pick. The score measures keyword *placement* —
+// title, first 100 words, a subheading, the URL slug — not whether anyone searches the
+// term. On our own contest post the top-scoring candidate was "week" (92%), which is
+// worthless as a keyword, while the real target "hivepulse seo contest" scored 75%.
+// Auto-applying the winner would confidently hand out bad SEO advice, so the button
+// surfaces the options with their scores and the writer chooses.
+const GENERIC_KW = new Set([
+  'week','day','days','today','time','times','part','update','news','post','blog','thing',
+  'things','way','ways','now','then','here','there','more','most','back','next','last',
+  'first','one','two','three','year','month','edition','round','issue',
+]);
+
+interface KwSuggestion { keyword: string; pct: number; generic: boolean; }
+
+const suggestKeywords = (
+  content: string, title: string, tags: string[], metaDesc: string,
+): KwSuggestion[] => {
+  const words = title.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 2 && !KW_STOP.has(w));
+  const cands = new Set<string>();
+  const auto = autoDetectKeyword(title, content);
+  if (auto) cands.add(auto);
+  for (let n = 1; n <= 3; n++)
+    for (let i = 0; i + n <= words.length; i++) cands.add(words.slice(i, i + n).join(' '));
+
+  const plain = stripMd(content).toLowerCase();
+  const out: KwSuggestion[] = [];
+  for (const kw of cands) {
+    if (!kw) continue;
+    // must actually appear in the body — a keyword the post never uses is not a keyword
+    if (!plain.includes(kw)) continue;
+    const a = analyze(content, title, tags, metaDesc, kw);
+    const parts = kw.split(' ');
+    out.push({
+      keyword: kw,
+      pct: Math.round((a.seoScore / a.seoMax) * 100),
+      generic: parts.length === 1 && GENERIC_KW.has(kw),
+    });
+  }
+  // Non-generic first, then by score, then prefer the longer (more specific) phrase.
+  out.sort((x, y) =>
+    (Number(x.generic) - Number(y.generic)) ||
+    (y.pct - x.pct) ||
+    (y.keyword.split(' ').length - x.keyword.split(' ').length));
+  return out.slice(0, 5);
+};
+
 // ── Colours ──────────────────────────────────────────────────────────────────
 const scoreColor = (pct: number) => pct >= 70 ? '#34d399' : pct >= 45 ? '#fbbf24' : '#f87171';
 const wcColor    = (n: number)   => n >= 1500 ? '#34d399' : n >= 1000 ? '#6ee7b7' : n >= 300 ? '#fbbf24' : '#f87171';
@@ -793,6 +844,10 @@ let activeTab: 'seo' | 'geo' = 'seo';
 let openInfo: string | null = null;
 // Last render args so tab/info clicks can re-render without recomputing
 let lastArgs: { a: Analysis; kw: string; auto: boolean; onKw: (k: string) => void } | null = null;
+// Raw inputs kept alongside, so the keyword suggester can re-score the draft against
+// candidate keywords without the caller having to thread them through renderPanel.
+let lastInputs: { content: string; title: string; tags: string[]; metaDesc: string } | null = null;
+let kwSuggestions: KwSuggestion[] | null = null;   // non-null while the shortlist is open
 const rerender = () => { if (lastArgs) renderPanel(lastArgs.a, lastArgs.kw, lastArgs.auto, lastArgs.onKw); };
 
 const styleTabs = () => {
@@ -962,10 +1017,49 @@ const renderSeoTab = (body: HTMLElement, a: Analysis, keyword: string, isAuto: b
   kwWrap.innerHTML =
     `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">` +
     `<span style="font-size:10px;color:#94a3b8;font-weight:600">🎯 Focus keyword</span>` +
+    `<span style="display:flex;align-items:center;gap:6px">` +
     (isAuto ? `<span style="font-size:9px;color:#64748b;border:1px solid #334155;padding:1px 6px;border-radius:4px">auto · edit to override</span>` : '') +
-    `</div>`;
+    `<button id="${PANEL_ID}-kw-suggest" style="font-size:9px;color:#fbbf24;background:transparent;border:1px solid #78350f;padding:1px 7px;border-radius:4px;cursor:pointer;font-family:inherit">${kwSuggestions ? 'hide' : '✨ suggest'}</button>` +
+    `</span></div>`;
   kwWrap.appendChild(kwInput);
+
+  // Ranked shortlist of candidate keywords, scored against this draft.
+  if (kwSuggestions) {
+    const list = document.createElement('div');
+    list.style.cssText = 'margin-top:8px;border-top:1px solid #334155;padding-top:7px';
+    if (!kwSuggestions.length) {
+      list.innerHTML = `<div style="font-size:10px;color:#64748b">Not enough content yet — write a title and a few lines first.</div>`;
+    } else {
+      list.innerHTML =
+        `<div style="font-size:9px;color:#64748b;margin-bottom:6px">Scored against your draft. Pick the term you want to rank for — the highest score is not always the best keyword.</div>` +
+        kwSuggestions.map(s => {
+          const col = s.pct >= 70 ? '#34d399' : s.pct >= 45 ? '#fbbf24' : '#f87171';
+          return `<button class="${PANEL_ID}-kw-pick" data-kw="${esc(s.keyword)}" style="display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;background:#1e293b;border:1px solid #334155;border-radius:5px;padding:4px 8px;margin-bottom:4px;cursor:pointer;font-family:inherit;text-align:left">` +
+            `<span style="font-size:10px;color:#e2e8f0">${esc(s.keyword)}${s.generic ? ` <span style="color:#64748b">· generic</span>` : ''}</span>` +
+            `<span style="font-size:10px;font-weight:700;color:${col}">${s.pct}%</span></button>`;
+        }).join('');
+    }
+    kwWrap.appendChild(list);
+  }
   body.appendChild(kwWrap);
+
+  const suggestBtn = document.getElementById(`${PANEL_ID}-kw-suggest`);
+  suggestBtn?.addEventListener('click', e => {
+    e.stopPropagation();
+    if (kwSuggestions) { kwSuggestions = null; rerender(); return; }
+    kwSuggestions = lastInputs
+      ? suggestKeywords(lastInputs.content, lastInputs.title, lastInputs.tags, lastInputs.metaDesc)
+      : [];
+    rerender();
+  });
+  kwWrap.querySelectorAll<HTMLElement>(`.${PANEL_ID}-kw-pick`).forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const kw = btn.getAttribute('data-kw') || '';
+      kwSuggestions = null;
+      onKeyword(kw);
+    });
+  });
 
   // Score
   const sc = a.seoScore, scMax = a.seoMax, scPct = Math.round((sc / scMax) * 100);
@@ -1211,6 +1305,7 @@ if (composePattern) {
     if (!panel) return;
     if (document.activeElement && panel.contains(document.activeElement)) { schedule(); return; }
     const { title, content, tags, metaDesc } = readMerged();
+    lastInputs = { content, title, tags, metaDesc };
     lastSig = `${title.length}:${content.length}:${tags.join(',')}:${metaDesc.length}`;
     if (title.length < 3 && content.trim().length < 5) { showIdle(); return; }
     if (kwSource !== 'user' && (title.length > 3 || content.length > 80)) {

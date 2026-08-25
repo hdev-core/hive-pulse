@@ -46,7 +46,8 @@
         "https://3speak.tv/*",
         "https://actifit.io/*",
         "https://slothbuzz.com/*",
-        "https://www.slothbuzz.com/*"
+        "https://www.slothbuzz.com/*",
+        "https://blog.suseona.com/*"
       ],
       "js": [
         "assets/compose.js"
@@ -104,6 +105,7 @@
     "https://v6-he.atexoras.com/*",
     "https://herpc.actifit.io/*",
     "https://he.c0ff33a.uk/*",
-    "https://herpc.dtools.dev/*"
+    "https://herpc.dtools.dev/*",
+    "https://blog.suseona.com/*"
   ]
 }

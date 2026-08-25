@@ -176,7 +176,7 @@ Week 3 is live. 300 HIVE.
 3️⃣ Comment your link + score screenshot
 4️⃣ Tag #hivepulse
 
-Publish today and you're in. Closes 18 Aug, 23:59 UTC.
+Publish today and you're in. Closes 18 Aug.
 
 #Hive #HivePulse #SEO
 

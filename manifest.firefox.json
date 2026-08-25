@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "HivePulse",
-  "version": "1.12.0",
+  "version": "1.13.1",
   "description": "Your Hive blockchain dashboard: wallet, scam protection, chat, notifications, post SEO analysis, and instant frontend switching.",
   "browser_specific_settings": {
     "gecko": {
@@ -69,7 +69,8 @@
         "https://3speak.tv/*",
         "https://actifit.io/*",
         "https://slothbuzz.com/*",
-        "https://www.slothbuzz.com/*"
+        "https://www.slothbuzz.com/*",
+        "https://blog.suseona.com/*"
       ],
       "js": [
         "assets/compose.js"
@@ -114,6 +115,19 @@
     "https://s3.amazonaws.com/*",
     "https://ipfs.io/*",
     "https://slothbuzz.com/*",
-    "https://www.slothbuzz.com/*"
+    "https://www.slothbuzz.com/*",
+    "https://api.deathwing.me/*",
+    "https://api.openhive.network/*",
+    "https://hiveapi.actifit.io/*",
+    "https://techcoderx.com/*",
+    "https://api.syncad.com/*",
+    "https://rpc.mahdiyari.info/*",
+    "https://api.c0ff33a.uk/*",
+    "https://hive.atexoras.com/*",
+    "https://v6-he.atexoras.com/*",
+    "https://herpc.actifit.io/*",
+    "https://he.c0ff33a.uk/*",
+    "https://herpc.dtools.dev/*",
+    "https://blog.suseona.com/*"
   ]
 }

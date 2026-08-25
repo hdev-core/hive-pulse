@@ -51,11 +51,11 @@ gets**, plus two new ways to earn on top of it.
 |---|---|---|
 | Under 10 | **300 HIVE** | 150 · 100 · 50 |
 | 10 – 19 | **400 HIVE** | 200 · 100 · 60 · 40 |
-| 20+ | **500 HIVE** | 240 · 120 · 80 · 40 · 20 |
+| 20+ | **500 HIVE** | 250 · 120 · 80 · 50 |
 
 This is automatic, not a maybe. Ten valid entries and the pool is 400. Twenty and it is
-500, paid across five places. We will post the running entry count in the comments, so you
-always know which tier we are in.
+500, with a 250 HIVE top prize. We will post the running entry count in the comments, so
+you always know which tier we are in.
 
 ### 2. Referral bonus — 25 HIVE each, for both of you
 
@@ -105,9 +105,16 @@ not saved into the published post — so when we re-score from the blockchain we
 keyword ourselves, and it is not always the one you picked. On one of this week's posts that
 was the difference between 95 and 99.
 
-**We are fixing it on our side, not yours:** from week 5, judging scores every plausible
-keyword for your post and keeps **the best one**. Your ranking can never be lower than what
-the tool showed you. No placement this week was affected — we checked before paying.
+Judging uses the keyword our scorer detects, applied identically to every entry, so the
+ranking stays consistent even where an individual number differs from your screenshot. We
+checked this week's results both ways before paying — the podium was the same either way.
+
+> **Decision needed before publishing:** this paragraph currently explains the difference
+> and stops there. The alternative is to change judging to try every plausible keyword and
+> keep the best-scoring one, which would make the published table match people's
+> screenshots (@nabbas0786 would read 99/100 rather than 95/98) and guarantee nobody is
+> ever ranked below what the tool showed them. That is a rules change and has not been
+> agreed — pick one and this paragraph gets rewritten to match.
 
 ## 🚀 Week 5 — how to enter
 
@@ -166,7 +173,7 @@ From this week the prize pool grows with the number of people who enter:
 
 Under 10 entrants → 300 HIVE
 10–19 → 400 HIVE
-20+ → 500 HIVE, across 5 places
+20+ → 500 HIVE, top prize 250
 
 More writers, bigger pool. Automatic, not a maybe.
 
@@ -209,7 +216,7 @@ Full details 👉 [PASTE_HIVE_POST_URL]
 > Seven entries, **all seven qualified and all seven tagged** — first clean round. 🎉
 >
 > 🆕 **Three things are new for week 5:**
-> • **The pool grows with entrants** — under 10 = 300 HIVE, 10–19 = 400, 20+ = 500 across 5 places
+> • **The pool grows with entrants** — under 10 = 300 HIVE, 10–19 = 400, 20+ = 500 with a 250 top prize
 > • **Referral bonus** — bring someone new, you BOTH get 25 HIVE when their entry qualifies (max 2)
 > • **50 HIVE on X** — quote-RT our announcement with the one line you would change in your last post
 >

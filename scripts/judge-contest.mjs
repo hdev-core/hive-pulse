@@ -33,8 +33,8 @@
 // with week 1, too early to count for week 2. Starting the window on announcement day closes
 // that gap: anyone who reads the post and publishes the same day is in. Cross-check against the
 // previous round's archived CSV so a post can't be awarded twice.
-const WINDOW_START = Date.parse('2026-08-11T00:00:00Z');
-const WINDOW_END   = Date.parse('2026-08-18T23:59:59Z');
+const WINDOW_START = Date.parse('2026-08-18T00:00:00Z');
+const WINDOW_END   = Date.parse('2026-08-25T23:59:59Z');
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 
 // Scoring engine lives in ./lib/seo-score.mjs — shared with scripts/score-post.mjs so the
@@ -56,6 +56,42 @@ const parseEntry = (line) => {
 
 // Post fetching (with node fallback) lives in ./lib/hive-rpc.mjs.
 const getContent = (author, permlink) => getPost(author, permlink);
+
+// ── Best-keyword scoring ─────────────────────────────────────────────────────
+// The analyzer lets an author set their own focus keyword, and that choice is NOT stored
+// on-chain — so re-scoring here would otherwise auto-detect a different one and report a
+// lower number than the entrant saw. The keyword block is worth 35 of 100 points, so the
+// spread is large: one week-4 post scored 67% / 95% / 99% depending on the keyword.
+//
+// Fix: score every plausible keyword and keep the best. An entrant can therefore never be
+// ranked below what the tool showed them, and the rule is identical for everyone. Ties
+// prefer the auto-detected keyword so results stay stable run to run.
+const KW_SKIP = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by',
+  'from','my','me','i','is','it','its','this','that','these','those','how','why','what','when',
+  'best','guide','story','about','your','you','we','our','are','was','not','can','will','new']);
+
+const keywordCandidates = (title, body) => {
+  const words = title.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 2 && !KW_SKIP.has(w));
+  const out = new Set();
+  for (let n = 1; n <= 3; n++)
+    for (let i = 0; i + n <= words.length; i++) out.add(words.slice(i, i + n).join(' '));
+  return [...out].filter(Boolean);
+};
+
+const bestKeywordAnalysis = (post) => {
+  const autoKeyword = autoDetectKeyword(post.title, post.body);
+  const score = (kw) => {
+    const analysis = analyze(post.body, post.title, post.tags, post.description, kw);
+    return { analysis, keyword: kw, pct: analysis.seoScore / analysis.seoMax };
+  };
+  let best = score(autoKeyword);
+  for (const kw of keywordCandidates(post.title, post.body)) {
+    const cand = score(kw);
+    if (cand.pct > best.pct) best = cand;   // strict >, so auto-detected wins ties
+  }
+  return { analysis: best.analysis, keyword: best.keyword, autoKeyword };
+};
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Main
@@ -82,8 +118,7 @@ const main = async () => {
     catch (err) { problems.push(`fetch failed @${e.author}/${e.permlink}: ${err.message}`); continue; }
     if (!post) { problems.push(`not found on-chain: @${e.author}/${e.permlink}`); continue; }
 
-    const keyword = autoDetectKeyword(post.title, post.body);
-    const a = analyze(post.body, post.title, post.tags, post.description, keyword);
+    const { analysis: a, keyword, autoKeyword } = bestKeywordAnalysis(post);
     const seoPct = Math.round((a.seoScore / a.seoMax) * 100);
     const combined = Math.round((seoPct + a.geoScore) / 2);
     const inWindow = post.created >= WINDOW_START && post.created <= WINDOW_END;
@@ -92,7 +127,7 @@ const main = async () => {
     rows.push({
       author: post.author, permlink: post.permlink, created: post.created,
       seoScore: a.seoScore, seoMax: a.seoMax, seoPct, geoScore: a.geoScore, combined,
-      wordCount: a.wordCount, keyword: a.keyword, inWindow, qualifies,
+      wordCount: a.wordCount, keyword, autoKeyword, inWindow, qualifies,
       geoType: a.geoInformational ? 'info' : 'personal', breakdown: a.breakdown,
     });
   }
@@ -119,13 +154,14 @@ const main = async () => {
   winners.forEach((r, i) => console.log(`  ${medals[i]}  @${r.author}/${r.permlink}  — SEO ${r.seoPct}% · GEO ${r.geoScore} · combined ${r.combined}`));
 
   console.log('\nLegend: ✓ qualifies · ✗ below SEO threshold · ⌛ outside contest window');
-  console.log('NOTE: keyword is auto-detected (same default as the tool). Ranking is objective;');
+  console.log('NOTE: each post is scored with its best-performing keyword, so a ranking can never');
+  console.log('      be lower than what the extension showed the author. Ranking is objective;');
   console.log('      do a human quality + originality pass on the top entries before finalizing.');
   if (problems.length) { console.log('\n⚠ Problems:'); problems.forEach(p => console.log('  - ' + p)); }
 
   // CSV alongside
-  const csv = ['author,permlink,created,seo_score,seo_max,seo_pct,geo_score,combined,word_count,in_window,qualifies,keyword']
-    .concat(rows.map(r => `${r.author},${r.permlink},${fmtDate(r.created)},${r.seoScore},${r.seoMax},${r.seoPct},${r.geoScore},${r.combined},${r.wordCount},${r.inWindow},${r.qualifies},"${r.keyword}"`))
+  const csv = ['author,permlink,created,seo_score,seo_max,seo_pct,geo_score,combined,word_count,in_window,qualifies,keyword,auto_keyword']
+    .concat(rows.map(r => `${r.author},${r.permlink},${fmtDate(r.created)},${r.seoScore},${r.seoMax},${r.seoPct},${r.geoScore},${r.combined},${r.wordCount},${r.inWindow},${r.qualifies},"${r.keyword}","${r.autoKeyword}"`))
     .join('\n');
   fs.writeFileSync('contest-results.csv', csv);
   console.log('\n📄 Full results written to contest-results.csv');

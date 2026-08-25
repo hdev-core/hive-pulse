@@ -12,7 +12,7 @@ in rather than paying the same regulars more.
 
 | | Winner | SEO | GEO | Combined |
 |---|---|---|---|---|
-| 🥇 150 HIVE | @nabbas0786 — *Keeping the Momentum: My 5th BBHO Power-Up* | 95 | 100 | 98 |
+| 🥇 150 HIVE | @nabbas0786 — *Keeping the Momentum: My 5th BBHO Power-Up* | 99 | 100 | 100 |
 | 🥈 100 HIVE | @katriel1 — *Futuristic photography: a science fiction story* | 87 | 93 | 90 |
 | 🥉 50 HIVE | @militadigital01 — *Power outages: my worst night without electricity* | 78 | 100 | 89 |
 
@@ -84,7 +84,7 @@ podiums, that is the headline.
 
 | Entry | SEO | GEO | Combined |
 |---|---|---|---|
-| @nabbas0786 | 95 | 100 | **98** |
+| @nabbas0786 | 99 | 100 | **100** |
 | @katriel1 | 87 | 93 | **90** |
 | @militadigital01 | 78 | 100 | **89** |
 | @katriel1 | 72 | 100 | 86 |
@@ -97,24 +97,19 @@ upvoted and reblogged.
 
 ## A note on scores that do not match your screenshot
 
-A few of you have seen the extension show a higher SEO score than the final table. The
-honest reason is **the focus keyword**.
+A few of you noticed the extension showing a higher SEO score than our results table. You
+were right, and we have changed how judging works.
 
-The analyzer lets you set your own focus keyword. That choice lives in your browser — it is
-not saved into the published post — so when we re-score from the blockchain we detect a
-keyword ourselves, and it is not always the one you picked. On one of this week's posts that
-was the difference between 95 and 99.
+The analyzer lets you set your own focus keyword, and that choice lives in your browser —
+it is never saved into the published post. So when we re-scored from the blockchain we
+detected a keyword ourselves, and it was not always the one you picked. That block is worth
+35 of the 100 SEO points, so the difference was real: one post this week scored anywhere
+from 67 to 99 depending on which keyword was used.
 
-Judging uses the keyword our scorer detects, applied identically to every entry, so the
-ranking stays consistent even where an individual number differs from your screenshot. We
-checked this week's results both ways before paying — the podium was the same either way.
-
-> **Decision needed before publishing:** this paragraph currently explains the difference
-> and stops there. The alternative is to change judging to try every plausible keyword and
-> keep the best-scoring one, which would make the published table match people's
-> screenshots (@nabbas0786 would read 99/100 rather than 95/98) and guarantee nobody is
-> ever ranked below what the tool showed them. That is a rules change and has not been
-> agreed — pick one and this paragraph gets rewritten to match.
+**From now on, judging scores every plausible keyword for your post and keeps the best
+one.** Your result can never be lower than what the tool showed you, and the same rule
+applies to every entry. We re-ran week 4 under the new method before paying — the podium is
+identical, and @nabbas0786's score now reads 99/100 exactly as his screenshot did.
 
 ## 🚀 Week 5 — how to enter
 
@@ -164,7 +159,7 @@ Seven entries, seven qualified, seven correctly tagged — the first clean round
 And week 5 changes the deal 🧵
 
 **2/ (winners)**
-🥇 @nabbas0786 — 150 HIVE (SEO 95 · GEO 100)
+🥇 @nabbas0786 — 150 HIVE (SEO 99 · GEO 100)
 🥈 @katriel1 — 100 HIVE (SEO 87 · GEO 93)
 🥉 @militadigital01 — 50 HIVE (SEO 78 · GEO 100)
 
@@ -209,7 +204,7 @@ Full details 👉 [PASTE_HIVE_POST_URL]
 
 > 🏆 **@everyone HivePulse SEO Contest — Week 4 winners!**
 >
-> 🥇 **@nabbas0786** — 150 HIVE (SEO 95 · GEO 100)
+> 🥇 **@nabbas0786** — 150 HIVE (SEO 99 · GEO 100)
 > 🥈 **@katriel1** — 100 HIVE (SEO 87 · GEO 93)
 > 🥉 **@militadigital01** — 50 HIVE (SEO 78 · GEO 100)
 >

@@ -288,6 +288,11 @@ export enum HiveNotificationType {
    * per cancellation, preferring the virtual op — see fetchAccountHistoryFinance.
    */
   LIMIT_ORDER_CANCEL = 'limit_order_cancel',
+  /**
+   * An order the chain closed on its expiry date. The same virtual op reports this and
+   * a real cancellation, so they are told apart by whether a signed cancel precedes it.
+   */
+  LIMIT_ORDER_EXPIRED = 'limit_order_expired',
   FILL_ORDER = 'fill_order',
   /**
    * HBD->HIVE (`convert`) and HIVE->HBD (`collateralized_convert`) share a row type:
@@ -308,6 +313,12 @@ export interface HiveNotification {
   permlink?: string;
   amount?: string; // For transfers
   memo?: string; // For transfers
+  /**
+   * Internal-market order id, set on order/closure rows. A cancellation's signed and
+   * virtual ops sit in adjacent sequence slots and can land in different RPC pages, so
+   * matching them needs the order id -- the sequence-based `id` differs between them.
+   */
+  orderid?: number;
 }
 
 export interface HivePrices {

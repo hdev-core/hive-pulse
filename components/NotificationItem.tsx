@@ -1,6 +1,6 @@
 import React from 'react';
 import { HiveNotification, HiveNotificationType, AppSettings } from '../types';
-import { MessageSquare, AtSign, UserPlus, Repeat2, ArrowRightLeft, Heart, TrendingUp, TrendingDown, Info, Coins, Gift, Zap, PiggyBank, Banknote, Landmark, ListPlus, CandlestickChart, Ban, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, AtSign, UserPlus, Repeat2, ArrowRightLeft, Heart, TrendingUp, TrendingDown, Info, Coins, Gift, Zap, PiggyBank, Banknote, Landmark, ListPlus, CandlestickChart, Ban, ArrowLeftRight, CheckCircle2, Clock } from 'lucide-react';
 import { getTargetUrl } from '../utils/urlHelpers';
 
 interface NotificationItemProps {
@@ -150,18 +150,27 @@ function getTypeConfig(type: HiveNotificationType): TypeConfig {
         rowHover: 'hover:bg-fuchsia-50/60',
       };
     case HiveNotificationType.LIMIT_ORDER_CANCEL:
-      // Deliberately the quietest row in the feed. A cancellation moves no value, and
-      // active traders cancel constantly -- it should not read as loudly as a fill.
+      // Deliberately quiet -- a cancellation moves no value and traders cancel constantly.
+      // Still a shade darker than the `default` fallback, or a cancelled order reads as an
+      // unrecognised/broken row rather than a deliberately understated one.
       return {
         icon: <Ban size={13} />,
         label: 'Cancelled',
-        accent: 'border-l-slate-300 bg-slate-50/40',
-        iconColor: 'bg-slate-100 text-slate-500',
+        accent: 'border-l-slate-400 bg-slate-50/40',
+        iconColor: 'bg-slate-200 text-slate-600',
         rowHover: 'hover:bg-slate-50/60',
+      };
+    case HiveNotificationType.LIMIT_ORDER_EXPIRED:
+      return {
+        icon: <Clock size={13} />,
+        label: 'Expired',
+        accent: 'border-l-stone-300 bg-stone-50/40',
+        iconColor: 'bg-stone-200 text-stone-600',
+        rowHover: 'hover:bg-stone-50/60',
       };
     case HiveNotificationType.CONVERT_REQUEST:
       return {
-        icon: <RefreshCw size={13} />,
+        icon: <ArrowLeftRight size={13} />,
         label: 'Conversion',
         accent: 'border-l-yellow-400 bg-yellow-50/40',
         iconColor: 'bg-yellow-100 text-yellow-700',
@@ -171,9 +180,9 @@ function getTypeConfig(type: HiveNotificationType): TypeConfig {
       return {
         icon: <CheckCircle2 size={13} />,
         label: 'Converted',
-        accent: 'border-l-amber-400 bg-amber-50/40',
-        iconColor: 'bg-amber-100 text-amber-700',
-        rowHover: 'hover:bg-amber-50/60',
+        accent: 'border-l-lime-500 bg-lime-50/40',
+        iconColor: 'bg-lime-200 text-lime-800',
+        rowHover: 'hover:bg-lime-50/60',
       };
     default:
       return {

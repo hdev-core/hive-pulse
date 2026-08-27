@@ -43,6 +43,7 @@ const FINANCE_TYPES    = new Set([
 const MARKET_TYPES     = new Set([
   HiveNotificationType.LIMIT_ORDER_CREATE,
   HiveNotificationType.LIMIT_ORDER_CANCEL,
+  HiveNotificationType.LIMIT_ORDER_EXPIRED,
   HiveNotificationType.FILL_ORDER,
   HiveNotificationType.CONVERT_REQUEST,
   HiveNotificationType.CONVERT_FILL,
@@ -56,6 +57,35 @@ function matchesFilter(n: HiveNotification, tab: FilterTab): boolean {
   if (tab === 'market')     return MARKET_TYPES.has(n.type);
   if (tab === 'engagement') return ENGAGEMENT_TYPES.has(n.type);
   return true;
+}
+
+/**
+ * Drop rows already represented in `prev`.
+ *
+ * Sequence id handles the ordinary case. Order closures need more: a cancellation emits
+ * a signed op and a virtual op in adjacent sequence slots, and whichever one sits at a
+ * page edge loses the lookahead that pairs them, so it re-renders as a second row with a
+ * different sequence id. Matching on order id collapses those.
+ */
+const CLOSURE_TYPES = new Set([
+  HiveNotificationType.LIMIT_ORDER_CANCEL,
+  HiveNotificationType.LIMIT_ORDER_EXPIRED,
+]);
+
+function dedupeHistory(prev: HiveNotification[], incoming: HiveNotification[]): HiveNotification[] {
+  const seenIds = new Set(prev.map(n => n.id));
+  const seenOrders = new Set(
+    prev.filter(n => CLOSURE_TYPES.has(n.type) && n.orderid !== undefined).map(n => n.orderid)
+  );
+  return incoming.filter(n => {
+    if (seenIds.has(n.id)) return false;
+    if (CLOSURE_TYPES.has(n.type) && n.orderid !== undefined) {
+      if (seenOrders.has(n.orderid)) return false;
+      seenOrders.add(n.orderid);
+    }
+    seenIds.add(n.id);
+    return true;
+  });
 }
 
 // Group notifications by recency bucket
@@ -139,9 +169,12 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
 
   // Auto-load more bridge pages when the active filter tab has no visible results
   useEffect(() => {
-    const bridgeFiltered = notifications.filter(n => matchesFilter(n, activeFilter));
-    const historyCount = financeHistory.length;
+    // Market rows only ever come from account history, so paging bridge finds nothing.
     if (activeFilter === 'market') return;
+    const bridgeFiltered = notifications.filter(n => matchesFilter(n, activeFilter));
+    // Count only history rows this tab would actually show. Counting all of them meant a
+    // trader's market rows suppressed the backfill on Social and Votes too.
+    const historyCount = financeHistory.filter(n => matchesFilter(n, activeFilter)).length;
     if (bridgeFiltered.length === 0 && historyCount === 0 && hasMore && !loading && !loadingMore && autoLoadCountRef.current < 10) {
       autoLoadCountRef.current++;
       loadNotifications(false);
@@ -171,13 +204,16 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
     if (!username || financeOldestSeq === null || loadingMoreFinance) return;
     setLoadingMoreFinance(true);
     const { items, hasMore, oldestSeq } = await fetchAccountHistoryFinance(username, settings, financeOldestSeq - 1);
-    setFinanceHistory(prev => [...prev, ...items]);
+    setFinanceHistory(prev => [...prev, ...dedupeHistory(prev, items)]);
     setFinanceHasMore(hasMore);
     setFinanceOldestSeq(oldestSeq);
     setLoadingMoreFinance(false);
   }, [username, financeOldestSeq, loadingMoreFinance]);
 
   const handleScroll = () => {
+    // Account-history tabs page through a different source; firing the bridge fetch here
+    // would round-trip on every scroll and add nothing to the list.
+    if (activeFilter === 'finance' || activeFilter === 'market') return;
     if (!scrollContainerRef.current || loading || loadingMore || !hasMore) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
     if (scrollTop + clientHeight >= scrollHeight - 20) loadNotifications(false);
@@ -189,13 +225,23 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
     new Date(b.date.endsWith('Z') ? b.date : b.date + 'Z').getTime() -
     new Date(a.date.endsWith('Z') ? a.date : a.date + 'Z').getTime();
 
-  // Once account history loads it covers transfers (both directions + memo) — suppress bridge duplicates
-  const historyLoaded = financeHistory.length > 0;
-  const bridgeNotifs  = historyLoaded
-    ? notifications.filter(n => n.type !== HiveNotificationType.TRANSFER)
-    : notifications;
+  // Account history renders transfers better than bridge does (both directions, memo),
+  // so bridge transfers are suppressed once history covers them. "Covers" has to mean
+  // the time window, not `financeHistory.length > 0`: a trader's 1000-op window can be
+  // 100% market ops spanning a few hours, and suppressing on that dropped real transfers
+  // that history had never loaded.
+  const oldestHistoryMs = financeHistory.reduce((oldest, n) => {
+    const t = new Date(n.date.endsWith('Z') ? n.date : n.date + 'Z').getTime();
+    return Number.isFinite(t) && t < oldest ? t : oldest;
+  }, Infinity);
+  const bridgeNotifs = notifications.filter(n => {
+    if (n.type !== HiveNotificationType.TRANSFER) return true;
+    const t = new Date(n.date.endsWith('Z') ? n.date : n.date + 'Z').getTime();
+    return !(Number.isFinite(t) && t >= oldestHistoryMs);
+  });
   const bridgeFinance = bridgeNotifs.filter(n => FINANCE_TYPES.has(n.type));
 
+  const usesAccountHistory = activeFilter === 'finance' || activeFilter === 'market';
   const historyFinance = financeHistory.filter(n => FINANCE_TYPES.has(n.type));
   const historyMarket  = financeHistory.filter(n => MARKET_TYPES.has(n.type));
 
@@ -207,7 +253,11 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
       return [...historyMarket].sort(sortByDate);
     }
     if (activeFilter === 'all') {
-      return [...bridgeNotifs, ...financeHistory].sort(sortByDate);
+      // Market rows are excluded here on purpose. They outnumber every other row type by
+      // roughly 500:1 for a trading account, and All is the default tab -- including them
+      // buries every mention, reply and transfer behind order spam. The Market tab exists
+      // precisely so this one stays readable.
+      return [...bridgeNotifs, ...historyFinance].sort(sortByDate);
     }
     return notifications.filter(n => matchesFilter(n, activeFilter));
   })();
@@ -215,7 +265,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
 
   // Per-tab counts for badges
   const counts: Record<FilterTab, number> = {
-    all:        bridgeNotifs.length + financeHistory.length,
+    all:        bridgeNotifs.length + historyFinance.length,
     social:     notifications.filter(n => SOCIAL_TYPES.has(n.type)).length,
     finance:    bridgeFinance.length + historyFinance.length,
     market:     historyMarket.length,
@@ -248,7 +298,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
       </div>
 
       {/* Filter tabs */}
-      <div className="flex border-b border-slate-100 bg-slate-50/50 px-2 pt-1.5 gap-0.5">
+      <div className="flex border-b border-slate-100 bg-slate-50/50 px-2 pt-1.5 gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {FILTER_TABS.map(tab => {
           const count = counts[tab.key];
           const isActive = activeFilter === tab.key;
@@ -256,7 +306,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
             <button
               key={tab.key}
               onClick={() => setActiveFilter(tab.key)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-t-md transition-all ${
+              className={`flex shrink-0 items-center gap-1 px-2 py-1.5 text-[11px] font-semibold rounded-t-md transition-all ${
                 isActive
                   ? 'bg-white border border-b-white border-slate-200 text-blue-600 -mb-px shadow-sm'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-white/60'
@@ -313,8 +363,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
               </div>
             ))}
 
-            {/* Load more — Finance tab paginates account history; other tabs paginate bridge */}
-            {activeFilter === 'finance' ? (
+            {/* Load more — Finance and Market paginate account history; the rest paginate bridge */}
+            {usesAccountHistory ? (
               financeHasMore && (
                 <button
                   onClick={loadMoreAccountHistory}
@@ -342,7 +392,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
               )
             )}
 
-            {!(activeFilter === 'finance' ? financeHasMore : hasMore) && visible.length > 0 && (
+            {!(usesAccountHistory ? financeHasMore : hasMore) && visible.length > 0 && (
               <div className="py-3 text-center text-[10px] text-slate-300 uppercase tracking-widest font-bold border-t border-slate-50">
                 End of Pulse
               </div>

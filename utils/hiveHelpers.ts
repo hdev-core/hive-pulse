@@ -110,6 +110,7 @@ const ACCOUNT_HISTORY_FINANCE_OPS = new Set([
   // Internal market. `limit_order_cancel` is admitted only so the de-duplication in
   // fetchAccountHistoryFinance can see it; it rarely renders a row of its own.
   'limit_order_create',
+  'limit_order_create2',
   'limit_order_cancel',
   'limit_order_cancelled',
   'fill_order',
@@ -119,11 +120,24 @@ const ACCOUNT_HISTORY_FINANCE_OPS = new Set([
   'collateralized_convert',
   'fill_convert_request',
   'fill_collateralized_convert_request',
+  // The op that actually reports the HBD landing for a collateralized convert. It fires
+  // at request time; the later fill only settles the collateral.
+  'collateralized_convert_immediate_conversion',
 ]);
 
-/** `"208.739 HIVE"` -> `{ amount: 208.739, symbol: 'HIVE' }`. */
-function parseAsset(raw?: string): { amount: number; symbol: string } | null {
-  const m = /^([\d.]+)\s+([A-Z]+)$/.exec((raw || '').trim());
+/**
+ * `"208.739 HIVE"` -> `{ amount: 208.739, symbol: 'HIVE' }`.
+ *
+ * Must never throw. Op payloads come from whatever RPC node the user configured, and
+ * a node answering with appbase assets (`{ amount, precision, nai }`) rather than the
+ * legacy string would otherwise blow up the whole account-history fetch.
+ *
+ * The pattern is deliberately strict: `[\d.]+` would accept `"1.2.3 HIVE"`, which
+ * parseFloat silently truncates to 1.2 — a wrong number stated as fact.
+ */
+function parseAsset(raw?: unknown): { amount: number; symbol: string } | null {
+  if (typeof raw !== 'string') return null;
+  const m = /^(\d+(?:\.\d+)?)\s+([A-Z]+)$/.exec(raw.trim());
   if (!m) return null;
   const amount = parseFloat(m[1]);
   return Number.isFinite(amount) ? { amount, symbol: m[2] } : null;
@@ -141,7 +155,13 @@ function pairRate(a?: string, b?: string): string | null {
   const hive = x.symbol === 'HIVE' ? x : y.symbol === 'HIVE' ? y : null;
   const hbd = x.symbol === 'HBD' ? x : y.symbol === 'HBD' ? y : null;
   if (!hive || !hbd || hive.amount === 0) return null;
-  return `${(hbd.amount / hive.amount).toFixed(4)} HBD/HIVE`;
+  // Dust legs quote nonsense: a 0.001/0.001 fill "prices" HIVE at 1 HBD, ~23x the real
+  // market, and sits in the same column as genuine prices. Below a leg of 0.010 the
+  // rounding dominates the rate, so no rate is better than a wrong one.
+  if (hive.amount < 0.01 || hbd.amount < 0.01) return null;
+  // 4dp is only ~3 significant figures at current prices, which hides exactly the
+  // spread a trader cares about, and rounds small rates to a flat 0.0000.
+  return `${(hbd.amount / hive.amount).toFixed(6)} HBD/HIVE`;
 }
 
 const withRate = (text: string, a?: string, b?: string): string => {
@@ -149,12 +169,22 @@ const withRate = (text: string, a?: string, b?: string): string => {
   return rate ? `${text} @ ${rate}` : text;
 };
 
+/** `{ base, quote }` price -> the quote amount implied by selling `base`. */
+function priceToReceive(rate: any): string | null {
+  const b = parseAsset(rate?.base);
+  const q = parseAsset(rate?.quote);
+  if (!b || !q || b.amount === 0) return null;
+  return `${q.amount.toFixed(3)} ${q.symbol}`;
+}
+
 function normalizeAccountHistoryOp(
   seq: number,
   opType: string,
   opData: Record<string, any>,
   timestamp: string,
-  username: string
+  username: string,
+  /** The op one sequence slot older, used only to classify `limit_order_cancelled`. */
+  prev?: [string, Record<string, any>]
 ): HiveNotification | null {
   const base = {
     id: seq,
@@ -216,25 +246,52 @@ function normalizeAccountHistoryOp(
         msg: `Savings withdrawal completed: ${opData.amount}`, amount: opData.amount };
 
     case 'limit_order_create':
+    case 'limit_order_create2': {
+      // create2 states its price as an exchange_rate instead of min_to_receive.
+      // Without it, the feed shows fills for orders it never showed being placed.
+      const sell = opData.amount_to_sell;
+      const receive = opType === 'limit_order_create2'
+        ? priceToReceive(opData.exchange_rate)
+        : opData.min_to_receive;
+      if (!parseAsset(sell) || !parseAsset(receive)) return null;
       return {
         ...base,
         type: HiveNotificationType.LIMIT_ORDER_CREATE,
-        msg: withRate(
-          `Order placed: sell ${opData.amount_to_sell} for ${opData.min_to_receive}`,
-          opData.amount_to_sell, opData.min_to_receive,
-        ),
-        amount: opData.amount_to_sell,
+        msg: withRate(`Order placed: sell ${sell} for ${receive}`, sell, receive),
+        amount: sell,
       };
+    }
 
-    case 'limit_order_cancelled':
-      // Virtual counterpart of limit_order_cancel; the only one of the pair that knows
-      // how much came back, which is the part worth reading.
+    case 'limit_order_cancelled': {
+      // One virtual op, three very different events: the user cancelled, the order hit
+      // its expiry, or the chain swept a sub-precision remainder after a fill. Calling
+      // all three "cancelled" misreports the most common one -- on an account trading
+      // with short expiries, every single row is an expiry, not a cancellation.
+      if (!parseAsset(opData.amount_back)) return null;
+      const orderid = opData.orderid;
+      const prevType = prev?.[0];
+      const prevData = prev?.[1];
+
+      // Swept remainder immediately after the fill that created it: not an event the
+      // user did anything about, and it lands directly under its own Trade row.
+      if (prevType === 'fill_order' &&
+          (prevData?.current_orderid === orderid || prevData?.open_orderid === orderid)) {
+        return null;
+      }
+
+      const userCancelled = prevType === 'limit_order_cancel' && prevData?.orderid === orderid;
       return {
         ...base,
-        type: HiveNotificationType.LIMIT_ORDER_CANCEL,
-        msg: `Order cancelled — ${opData.amount_back} returned`,
+        type: userCancelled
+          ? HiveNotificationType.LIMIT_ORDER_CANCEL
+          : HiveNotificationType.LIMIT_ORDER_EXPIRED,
+        msg: userCancelled
+          ? `Order cancelled — ${opData.amount_back} returned`
+          : `Order expired — ${opData.amount_back} returned`,
         amount: opData.amount_back,
+        orderid,
       };
+    }
 
     case 'limit_order_cancel':
       // Only reached when the virtual op is not alongside it: history predating the
@@ -243,6 +300,7 @@ function normalizeAccountHistoryOp(
         ...base,
         type: HiveNotificationType.LIMIT_ORDER_CANCEL,
         msg: `Order #${opData.orderid} cancelled`,
+        orderid: opData.orderid,
       };
 
     case 'fill_order': {
@@ -253,21 +311,37 @@ function normalizeAccountHistoryOp(
       if (!isCurrent && !isOpen) return null;
       const paid = isCurrent ? opData.current_pays : opData.open_pays;
       const received = isCurrent ? opData.open_pays : opData.current_pays;
+      if (!parseAsset(paid) || !parseAsset(received)) return null;
+
+      // Hive has no self-trade prevention, and history stores such an op once. Reporting
+      // one leg would assert a directional trade that did not happen.
+      if (isCurrent && isOpen) {
+        return {
+          ...base,
+          type: HiveNotificationType.FILL_ORDER,
+          msg: `Matched your own order: ${paid} against ${received}`,
+          amount: received,
+        };
+      }
+
+      // The counterparty goes in the message, not in `author`. The row renders `author`
+      // as the actor -- "@alice Trade Traded 3.879 HBD for 86.596 HIVE" reads as though
+      // alice made the trade, when the account reading it did.
       const counterparty = isCurrent ? opData.open_owner : opData.current_owner;
+      const withWhom = typeof counterparty === 'string' && counterparty
+        ? ` with @${counterparty}` : '';
       return {
         ...base,
         type: HiveNotificationType.FILL_ORDER,
-        msg: withRate(`Traded ${paid} for ${received}`, paid, received),
+        msg: withRate(`Traded ${paid} for ${received}`, paid, received) + withWhom,
         amount: received,
-        author: counterparty === username ? '' : counterparty,
       };
     }
 
     case 'convert':
     case 'collateralized_convert': {
       // `convert` is HBD -> HIVE, `collateralized_convert` is HIVE -> HBD. Both settle
-      // on the median price later, so the amount received is unknown at request time
-      // and only the fill can state it.
+      // on the median price later, so the amount received is unknown at request time.
       const sold = parseAsset(opData.amount);
       if (!sold) return null;
       const into = sold.symbol === 'HBD' ? 'HIVE' : 'HBD';
@@ -279,22 +353,43 @@ function normalizeAccountHistoryOp(
       };
     }
 
-    case 'fill_convert_request':
-    case 'fill_collateralized_convert_request': {
-      // Drop the row rather than print "undefined to undefined" if the shape is ever
-      // not what is expected. `fill_convert_request` is verified against live ops;
-      // the collateralized variant is far rarer, so it is not assumed to match.
-      if (!parseAsset(opData.amount_in) || !parseAsset(opData.amount_out)) return null;
-      // The collateralized variant also returns unused collateral. It is absent on the
-      // plain fill, so it is appended only when present rather than assumed.
-      const parts = [`Conversion completed: ${opData.amount_in} to ${opData.amount_out}`];
-      const back = parseAsset(opData.excess_collateral);
-      if (back && back.amount > 0) parts.push(`${opData.excess_collateral} collateral returned`);
+    case 'collateralized_convert_immediate_conversion': {
+      // A collateralized convert pays the HBD out immediately, at request time. This is
+      // the op that reports it; the fill days later only settles the collateral.
+      if (!parseAsset(opData.hbd_out)) return null;
       return {
         ...base,
         type: HiveNotificationType.CONVERT_FILL,
-        msg: parts.join(' — '),
+        msg: `Received ${opData.hbd_out} up front — collateral settles in 3.5 days`,
+        amount: opData.hbd_out,
+      };
+    }
+
+    case 'fill_convert_request': {
+      if (!parseAsset(opData.amount_in) || !parseAsset(opData.amount_out)) return null;
+      return {
+        ...base,
+        type: HiveNotificationType.CONVERT_FILL,
+        msg: `Conversion completed: ${opData.amount_in} to ${opData.amount_out}`,
         amount: opData.amount_out,
+      };
+    }
+
+    case 'fill_collateralized_convert_request': {
+      // amount_out was already paid at request time, and amount_in is only the part of
+      // the collateral actually consumed -- so this row is a settlement, not a payout.
+      // Wording it as "completed: X to Y" implies the Y arrives now, and makes the
+      // unconsumed collateral look like it evaporated.
+      if (!parseAsset(opData.amount_in)) return null;
+      const back = parseAsset(opData.excess_collateral);
+      const settled = `Conversion settled: ${opData.amount_in} collateral used`;
+      return {
+        ...base,
+        type: HiveNotificationType.CONVERT_FILL,
+        msg: back && back.amount > 0
+          ? `${settled}, ${opData.excess_collateral} returned`
+          : settled,
+        amount: opData.amount_in,
       };
     }
 
@@ -324,12 +419,12 @@ export const fetchAccountHistoryFinance = async (
 
       // Cancelling an order emits two ops: the signed `limit_order_cancel` and, in the
       // very next sequence slot, the virtual `limit_order_cancelled` carrying the
-      // refunded amount. Rendering both would double every cancellation in the feed —
-      // and for an active trader that is most of the feed. Keep the virtual one.
+      // refunded amount. Rendering both would double every cancellation in the feed --
+      // and for an active trader that is most of the feed. Keep the virtual one, which
+      // is also the only one that can tell a cancellation from an expiry.
       //
       // ops ascends by sequence, so the virtual op sits at i + 1. If it is missing the
-      // signed op still renders, which covers history older than the virtual op and the
-      // rare page boundary that splits a pair.
+      // signed op still renders, which covers history older than the virtual op.
       if (opType === 'limit_order_cancel') {
         const nextOp = ops[i + 1]?.[1]?.op;
         if (nextOp?.[0] === 'limit_order_cancelled' && nextOp[1]?.orderid === opData.orderid) {
@@ -337,13 +432,25 @@ export const fetchAccountHistoryFinance = async (
         }
       }
 
-      const notif = normalizeAccountHistoryOp(seq, opType, opData, entry.timestamp, username);
-      if (notif) result.push(notif);
+      // One malformed op must cost one row, not the whole feed. Before this guard any
+      // throw here escaped to the outer catch and blanked every finance row.
+      try {
+        const prev = ops[i - 1]?.[1]?.op as [string, Record<string, any>] | undefined;
+        const notif = normalizeAccountHistoryOp(seq, opType, opData, entry.timestamp, username, prev);
+        if (notif) result.push(notif);
+      } catch (err) {
+        console.warn(`[HivePulse] Skipped malformed ${opType} op at seq ${seq}`, err);
+      }
     }
+
+    const oldestSeq = ops.length > 0 ? ops[0][0] : null;
     return {
       items: result,
-      hasMore: ops.length >= limit,
-      oldestSeq: ops.length > 0 ? ops[0][0] : null,
+      // `oldestSeq === 0` is the account's very first operation. Reporting hasMore there
+      // would send the next page to `start: -1`, which condenser reads as "newest" and
+      // re-appends the head page forever.
+      hasMore: ops.length >= limit && oldestSeq !== 0,
+      oldestSeq,
     };
   } catch (e) {
     console.error('Failed to fetch account history finance ops', e);

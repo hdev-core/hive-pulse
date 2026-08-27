@@ -1,6 +1,6 @@
 import React from 'react';
 import { HiveNotification, HiveNotificationType, AppSettings } from '../types';
-import { MessageSquare, AtSign, UserPlus, Repeat2, ArrowRightLeft, Heart, TrendingUp, TrendingDown, Info, Coins, Gift, Zap, PiggyBank, Banknote, Landmark } from 'lucide-react';
+import { MessageSquare, AtSign, UserPlus, Repeat2, ArrowRightLeft, Heart, TrendingUp, TrendingDown, Info, Coins, Gift, Zap, PiggyBank, Banknote, Landmark, ListPlus, CandlestickChart, Ban } from 'lucide-react';
 import { getTargetUrl } from '../utils/urlHelpers';
 
 interface NotificationItemProps {
@@ -132,6 +132,32 @@ function getTypeConfig(type: HiveNotificationType): TypeConfig {
         accent: 'border-l-indigo-400 bg-indigo-50/40',
         iconColor: 'bg-indigo-100 text-indigo-600',
         rowHover: 'hover:bg-indigo-50/60',
+      };
+    case HiveNotificationType.LIMIT_ORDER_CREATE:
+      return {
+        icon: <ListPlus size={13} />,
+        label: 'Order',
+        accent: 'border-l-lime-400 bg-lime-50/40',
+        iconColor: 'bg-lime-100 text-lime-700',
+        rowHover: 'hover:bg-lime-50/60',
+      };
+    case HiveNotificationType.FILL_ORDER:
+      return {
+        icon: <CandlestickChart size={13} />,
+        label: 'Trade',
+        accent: 'border-l-fuchsia-400 bg-fuchsia-50/40',
+        iconColor: 'bg-fuchsia-100 text-fuchsia-600',
+        rowHover: 'hover:bg-fuchsia-50/60',
+      };
+    case HiveNotificationType.LIMIT_ORDER_CANCEL:
+      // Deliberately the quietest row in the feed. A cancellation moves no value, and
+      // active traders cancel constantly -- it should not read as loudly as a fill.
+      return {
+        icon: <Ban size={13} />,
+        label: 'Cancelled',
+        accent: 'border-l-slate-300 bg-slate-50/40',
+        iconColor: 'bg-slate-100 text-slate-500',
+        rowHover: 'hover:bg-slate-50/60',
       };
     default:
       return {

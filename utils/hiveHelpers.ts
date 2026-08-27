@@ -107,7 +107,41 @@ const ACCOUNT_HISTORY_FINANCE_OPS = new Set([
   'transfer_from_savings',
   'fill_transfer_from_savings',
   'proposal_pay',
+  // Internal market. `limit_order_cancel` is admitted only so the de-duplication in
+  // fetchAccountHistoryFinance can see it; it rarely renders a row of its own.
+  'limit_order_create',
+  'limit_order_cancel',
+  'limit_order_cancelled',
+  'fill_order',
 ]);
+
+/** `"208.739 HIVE"` -> `{ amount: 208.739, symbol: 'HIVE' }`. */
+function parseAsset(raw?: string): { amount: number; symbol: string } | null {
+  const m = /^([\d.]+)\s+([A-Z]+)$/.exec((raw || '').trim());
+  if (!m) return null;
+  const amount = parseFloat(m[1]);
+  return Number.isFinite(amount) ? { amount, symbol: m[2] } : null;
+}
+
+/**
+ * HBD per HIVE for a HIVE/HBD pair, which is the number traders actually quote.
+ * Returns null for any other pair, so a future non-HBD market cannot render a
+ * meaningless rate.
+ */
+function pairRate(a?: string, b?: string): string | null {
+  const x = parseAsset(a);
+  const y = parseAsset(b);
+  if (!x || !y) return null;
+  const hive = x.symbol === 'HIVE' ? x : y.symbol === 'HIVE' ? y : null;
+  const hbd = x.symbol === 'HBD' ? x : y.symbol === 'HBD' ? y : null;
+  if (!hive || !hbd || hive.amount === 0) return null;
+  return `${(hbd.amount / hive.amount).toFixed(4)} HBD/HIVE`;
+}
+
+const withRate = (text: string, a?: string, b?: string): string => {
+  const rate = pairRate(a, b);
+  return rate ? `${text} @ ${rate}` : text;
+};
 
 function normalizeAccountHistoryOp(
   seq: number,
@@ -174,6 +208,55 @@ function normalizeAccountHistoryOp(
     case 'fill_transfer_from_savings':
       return { ...base, type: HiveNotificationType.SAVINGS_WITHDRAW_FILL,
         msg: `Savings withdrawal completed: ${opData.amount}`, amount: opData.amount };
+
+    case 'limit_order_create':
+      return {
+        ...base,
+        type: HiveNotificationType.LIMIT_ORDER_CREATE,
+        msg: withRate(
+          `Order placed: sell ${opData.amount_to_sell} for ${opData.min_to_receive}`,
+          opData.amount_to_sell, opData.min_to_receive,
+        ),
+        amount: opData.amount_to_sell,
+      };
+
+    case 'limit_order_cancelled':
+      // Virtual counterpart of limit_order_cancel; the only one of the pair that knows
+      // how much came back, which is the part worth reading.
+      return {
+        ...base,
+        type: HiveNotificationType.LIMIT_ORDER_CANCEL,
+        msg: `Order cancelled — ${opData.amount_back} returned`,
+        amount: opData.amount_back,
+      };
+
+    case 'limit_order_cancel':
+      // Only reached when the virtual op is not alongside it: history predating the
+      // virtual op, or a page boundary that split the pair.
+      return {
+        ...base,
+        type: HiveNotificationType.LIMIT_ORDER_CANCEL,
+        msg: `Order #${opData.orderid} cancelled`,
+      };
+
+    case 'fill_order': {
+      // The account sits on exactly one side of the trade, and which side decides what
+      // it paid versus received. Getting this backwards inverts every trade in the feed.
+      const isCurrent = opData.current_owner === username;
+      const isOpen = opData.open_owner === username;
+      if (!isCurrent && !isOpen) return null;
+      const paid = isCurrent ? opData.current_pays : opData.open_pays;
+      const received = isCurrent ? opData.open_pays : opData.current_pays;
+      const counterparty = isCurrent ? opData.open_owner : opData.current_owner;
+      return {
+        ...base,
+        type: HiveNotificationType.FILL_ORDER,
+        msg: withRate(`Traded ${paid} for ${received}`, paid, received),
+        amount: received,
+        author: counterparty === username ? '' : counterparty,
+      };
+    }
+
     default:
       return null;
   }
@@ -197,6 +280,22 @@ export const fetchAccountHistoryFinance = async (
       const [seq, entry] = ops[i];
       const [opType, opData] = entry.op;
       if (!ACCOUNT_HISTORY_FINANCE_OPS.has(opType)) continue;
+
+      // Cancelling an order emits two ops: the signed `limit_order_cancel` and, in the
+      // very next sequence slot, the virtual `limit_order_cancelled` carrying the
+      // refunded amount. Rendering both would double every cancellation in the feed —
+      // and for an active trader that is most of the feed. Keep the virtual one.
+      //
+      // ops ascends by sequence, so the virtual op sits at i + 1. If it is missing the
+      // signed op still renders, which covers history older than the virtual op and the
+      // rare page boundary that splits a pair.
+      if (opType === 'limit_order_cancel') {
+        const nextOp = ops[i + 1]?.[1]?.op;
+        if (nextOp?.[0] === 'limit_order_cancelled' && nextOp[1]?.orderid === opData.orderid) {
+          continue;
+        }
+      }
+
       const notif = normalizeAccountHistoryOp(seq, opType, opData, entry.timestamp, username);
       if (notif) result.push(notif);
     }

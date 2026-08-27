@@ -280,6 +280,15 @@ export enum HiveNotificationType {
   SAVINGS_WITHDRAW = 'transfer_from_savings',
   SAVINGS_WITHDRAW_FILL = 'fill_transfer_from_savings',
   PROPOSAL_PAY = 'proposal_pay',
+  // Internal market (HIVE/HBD DEX)
+  LIMIT_ORDER_CREATE = 'limit_order_create',
+  /**
+   * Cancellations surface as a pair: the signed `limit_order_cancel` and the virtual
+   * `limit_order_cancelled` that carries the refunded amount. One Pulse row is emitted
+   * per cancellation, preferring the virtual op — see fetchAccountHistoryFinance.
+   */
+  LIMIT_ORDER_CANCEL = 'limit_order_cancel',
+  FILL_ORDER = 'fill_order',
 }
 
 export interface HiveNotification {

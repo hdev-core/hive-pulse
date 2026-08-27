@@ -32,6 +32,9 @@ const FINANCE_TYPES    = new Set([
   HiveNotificationType.SAVINGS_WITHDRAW,
   HiveNotificationType.SAVINGS_WITHDRAW_FILL,
   HiveNotificationType.PROPOSAL_PAY,
+  HiveNotificationType.LIMIT_ORDER_CREATE,
+  HiveNotificationType.LIMIT_ORDER_CANCEL,
+  HiveNotificationType.FILL_ORDER,
 ]);
 const ENGAGEMENT_TYPES = new Set([HiveNotificationType.VOTE]);
 

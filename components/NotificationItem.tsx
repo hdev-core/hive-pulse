@@ -1,6 +1,6 @@
 import React from 'react';
 import { HiveNotification, HiveNotificationType, AppSettings } from '../types';
-import { MessageSquare, AtSign, UserPlus, Repeat2, ArrowRightLeft, Heart, TrendingUp, TrendingDown, Info, Coins, Gift, Zap, PiggyBank, Banknote, Landmark, ListPlus, CandlestickChart, Ban } from 'lucide-react';
+import { MessageSquare, AtSign, UserPlus, Repeat2, ArrowRightLeft, Heart, TrendingUp, TrendingDown, Info, Coins, Gift, Zap, PiggyBank, Banknote, Landmark, ListPlus, CandlestickChart, Ban, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { getTargetUrl } from '../utils/urlHelpers';
 
 interface NotificationItemProps {
@@ -158,6 +158,22 @@ function getTypeConfig(type: HiveNotificationType): TypeConfig {
         accent: 'border-l-slate-300 bg-slate-50/40',
         iconColor: 'bg-slate-100 text-slate-500',
         rowHover: 'hover:bg-slate-50/60',
+      };
+    case HiveNotificationType.CONVERT_REQUEST:
+      return {
+        icon: <RefreshCw size={13} />,
+        label: 'Conversion',
+        accent: 'border-l-yellow-400 bg-yellow-50/40',
+        iconColor: 'bg-yellow-100 text-yellow-700',
+        rowHover: 'hover:bg-yellow-50/60',
+      };
+    case HiveNotificationType.CONVERT_FILL:
+      return {
+        icon: <CheckCircle2 size={13} />,
+        label: 'Converted',
+        accent: 'border-l-amber-400 bg-amber-50/40',
+        iconColor: 'bg-amber-100 text-amber-700',
+        rowHover: 'hover:bg-amber-50/60',
       };
     default:
       return {

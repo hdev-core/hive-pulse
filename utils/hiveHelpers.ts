@@ -113,6 +113,12 @@ const ACCOUNT_HISTORY_FINANCE_OPS = new Set([
   'limit_order_cancel',
   'limit_order_cancelled',
   'fill_order',
+  // Conversions. Unlike cancellations these do not pair up: the request and its fill
+  // are days apart, and both are worth a row of their own.
+  'convert',
+  'collateralized_convert',
+  'fill_convert_request',
+  'fill_collateralized_convert_request',
 ]);
 
 /** `"208.739 HIVE"` -> `{ amount: 208.739, symbol: 'HIVE' }`. */
@@ -254,6 +260,41 @@ function normalizeAccountHistoryOp(
         msg: withRate(`Traded ${paid} for ${received}`, paid, received),
         amount: received,
         author: counterparty === username ? '' : counterparty,
+      };
+    }
+
+    case 'convert':
+    case 'collateralized_convert': {
+      // `convert` is HBD -> HIVE, `collateralized_convert` is HIVE -> HBD. Both settle
+      // on the median price later, so the amount received is unknown at request time
+      // and only the fill can state it.
+      const sold = parseAsset(opData.amount);
+      if (!sold) return null;
+      const into = sold.symbol === 'HBD' ? 'HIVE' : 'HBD';
+      return {
+        ...base,
+        type: HiveNotificationType.CONVERT_REQUEST,
+        msg: `Conversion requested: ${opData.amount} to ${into}`,
+        amount: opData.amount,
+      };
+    }
+
+    case 'fill_convert_request':
+    case 'fill_collateralized_convert_request': {
+      // Drop the row rather than print "undefined to undefined" if the shape is ever
+      // not what is expected. `fill_convert_request` is verified against live ops;
+      // the collateralized variant is far rarer, so it is not assumed to match.
+      if (!parseAsset(opData.amount_in) || !parseAsset(opData.amount_out)) return null;
+      // The collateralized variant also returns unused collateral. It is absent on the
+      // plain fill, so it is appended only when present rather than assumed.
+      const parts = [`Conversion completed: ${opData.amount_in} to ${opData.amount_out}`];
+      const back = parseAsset(opData.excess_collateral);
+      if (back && back.amount > 0) parts.push(`${opData.excess_collateral} collateral returned`);
+      return {
+        ...base,
+        type: HiveNotificationType.CONVERT_FILL,
+        msg: parts.join(' — '),
+        amount: opData.amount_out,
       };
     }
 

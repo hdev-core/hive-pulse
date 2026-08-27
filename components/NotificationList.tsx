@@ -10,12 +10,13 @@ interface NotificationListProps {
   allFrontends: any[];
 }
 
-type FilterTab = 'all' | 'social' | 'finance' | 'engagement';
+type FilterTab = 'all' | 'social' | 'finance' | 'market' | 'engagement';
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
   { key: 'all',        label: 'All' },
   { key: 'social',     label: 'Social' },
   { key: 'finance',    label: 'Finance' },
+  { key: 'market',     label: 'Market' },
   { key: 'engagement', label: 'Votes' },
 ];
 
@@ -32,9 +33,19 @@ const FINANCE_TYPES    = new Set([
   HiveNotificationType.SAVINGS_WITHDRAW,
   HiveNotificationType.SAVINGS_WITHDRAW_FILL,
   HiveNotificationType.PROPOSAL_PAY,
+]);
+/**
+ * Market and Finance are deliberately disjoint. Finance is value moving in or out of
+ * the account; Market is one asset being swapped for another. Leaving market rows in
+ * both would defeat the split -- an active trader's cancellations alone outnumber
+ * every other finance row put together, which is what pushed them into their own tab.
+ */
+const MARKET_TYPES     = new Set([
   HiveNotificationType.LIMIT_ORDER_CREATE,
   HiveNotificationType.LIMIT_ORDER_CANCEL,
   HiveNotificationType.FILL_ORDER,
+  HiveNotificationType.CONVERT_REQUEST,
+  HiveNotificationType.CONVERT_FILL,
 ]);
 const ENGAGEMENT_TYPES = new Set([HiveNotificationType.VOTE]);
 
@@ -42,6 +53,7 @@ function matchesFilter(n: HiveNotification, tab: FilterTab): boolean {
   if (tab === 'all')        return true;
   if (tab === 'social')     return SOCIAL_TYPES.has(n.type);
   if (tab === 'finance')    return FINANCE_TYPES.has(n.type);
+  if (tab === 'market')     return MARKET_TYPES.has(n.type);
   if (tab === 'engagement') return ENGAGEMENT_TYPES.has(n.type);
   return true;
 }
@@ -129,6 +141,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
   useEffect(() => {
     const bridgeFiltered = notifications.filter(n => matchesFilter(n, activeFilter));
     const historyCount = financeHistory.length;
+    if (activeFilter === 'market') return;
     if (bridgeFiltered.length === 0 && historyCount === 0 && hasMore && !loading && !loadingMore && autoLoadCountRef.current < 10) {
       autoLoadCountRef.current++;
       loadNotifications(false);
@@ -183,9 +196,15 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
     : notifications;
   const bridgeFinance = bridgeNotifs.filter(n => FINANCE_TYPES.has(n.type));
 
+  const historyFinance = financeHistory.filter(n => FINANCE_TYPES.has(n.type));
+  const historyMarket  = financeHistory.filter(n => MARKET_TYPES.has(n.type));
+
   const visible = (() => {
     if (activeFilter === 'finance') {
-      return [...bridgeFinance, ...financeHistory].sort(sortByDate);
+      return [...bridgeFinance, ...historyFinance].sort(sortByDate);
+    }
+    if (activeFilter === 'market') {
+      return [...historyMarket].sort(sortByDate);
     }
     if (activeFilter === 'all') {
       return [...bridgeNotifs, ...financeHistory].sort(sortByDate);
@@ -198,7 +217,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
   const counts: Record<FilterTab, number> = {
     all:        bridgeNotifs.length + financeHistory.length,
     social:     notifications.filter(n => SOCIAL_TYPES.has(n.type)).length,
-    finance:    bridgeFinance.length + financeHistory.length,
+    finance:    bridgeFinance.length + historyFinance.length,
+    market:     historyMarket.length,
     engagement: notifications.filter(n => ENGAGEMENT_TYPES.has(n.type)).length,
   };
 

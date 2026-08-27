@@ -289,6 +289,12 @@ export enum HiveNotificationType {
    */
   LIMIT_ORDER_CANCEL = 'limit_order_cancel',
   FILL_ORDER = 'fill_order',
+  /**
+   * HBD->HIVE (`convert`) and HIVE->HBD (`collateralized_convert`) share a row type:
+   * both are "I asked the chain to convert", and the message names the direction.
+   */
+  CONVERT_REQUEST = 'convert',
+  CONVERT_FILL = 'fill_convert_request',
 }
 
 export interface HiveNotification {

@@ -173,6 +173,12 @@ rather than pretending the trend continued.
 
 ## The Hive blog post
 
+> ⚠️ **Paste this section as-is.** Every paragraph below is a single unbroken line on
+> purpose. Hive frontends treat a newline inside a paragraph as a real line break, so
+> hard-wrapping the source splits sentences at arbitrary points in the published post.
+> Do not re-wrap it to a column width when editing.
+
+
 > **Focus keyword** (set this in the analyzer's focus-keyword field): `hivepulse seo contest`
 >
 > Meta description (paste into the preview-description field — 148 chars):
@@ -184,20 +190,15 @@ rather than pretending the trend continued.
 
 ![HivePulse SEO Contest week 6 cover: three prize tiers on a dark gold background reading 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 and 500 HIVE at 20 or more, above a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](PASTE_UPLOADED_COVER_URL_HERE)
 
-**Summary:** Week 5 of the HivePulse SEO Contest is settled. Eight valid entries, all
-eight above the score floor, three creators paid — and the prize pool stayed at 300 HIVE
-because the field finished **two entries short of 400**.
+**Summary:** Week 5 of the HivePulse SEO Contest is settled. Eight valid entries, all eight above the score floor, three creators paid — and the prize pool stayed at 300 HIVE because the field finished **two entries short of 400**.
 
 ## We were two entries away from a bigger pool
 
-The rule was published before the round started: under 10 valid entries pays 300 HIVE,
-10–19 pays 400, 20 or more pays 500 with a 250 top prize.
+The rule was published before the round started: under 10 valid entries pays 300 HIVE, 10–19 pays 400, 20 or more pays 500 with a 250 top prize.
 
 Eight people entered. So the pool is 300, and we are paying 300.
 
-We are telling you this plainly because the alternative — quietly paying 400 anyway —
-would make the ladder meaningless. It is a rule, not a hope. **Two more writers next
-round and every prize on the board goes up.**
+We are telling you this plainly because the alternative — quietly paying 400 anyway — would make the ladder meaningless. It is a rule, not a hope. **Two more writers next round and every prize on the board goes up.**
 
 | Entrants | Prize pool | Places paid |
 |---|---|---|
@@ -205,34 +206,27 @@ round and every prize on the board goes up.**
 | 10 – 19 | **400 HIVE** | 200 · 100 · 60 · 40 |
 | 20+ | **500 HIVE** | 250 · 120 · 80 · 50 |
 
-We post the running entry count in the comments, so you always know how close the field
-is to the next rung.
+We post the running entry count in the comments, so you always know how close the field is to the next rung.
 
 ## HivePulse SEO Contest week 5 winners
 
 ### 🥇 First place — @nabbas0786 (150 HIVE)
 
-**How a 15 Year Old School Boy Lost His First Ever Love?** — SEO **99** · GEO **100** ·
-combined **100**
+**How a 15 Year Old School Boy Lost His First Ever Love?** — SEO **99** · GEO **100** · combined **100**
 
-A bilingual English/Urdu story, 1,422 words, that opens with the answer in its first
-sentence and never buries it. A perfect score on both axes.
+A bilingual English/Urdu story, 1,422 words, that opens with the answer in its first sentence and never buries it. A perfect score on both axes.
 
 ### 🥈 Second place — @militadigital01 (100 HIVE)
 
-**Isla El Saco, Puerto La Cruz: Ultimate Island Guide** — SEO **97** · GEO **100** ·
-combined **99**
+**Isla El Saco, Puerto La Cruz: Ultimate Island Guide** — SEO **97** · GEO **100** · combined **99**
 
-A travel guide carried by 24 original photographs, every one with a real description
-rather than a filename. A masterclass in the media half of the score.
+A travel guide carried by 24 original photographs, every one with a real description rather than a filename. A masterclass in the media half of the score.
 
 ### 🥉 Third place — @les90 (50 HIVE)
 
-**2 sides of being stubborn: when it is best or worst** — SEO **99** · GEO **97** ·
-combined **98**
+**2 sides of being stubborn: when it is best or worst** — SEO **99** · GEO **97** · combined **98**
 
-782 words, seven headings, a clean two-sided structure — and the most-read post of the
-round by a wide margin.
+782 words, seven headings, a clean two-sided structure — and the most-read post of the round by a wide margin.
 
 Congratulations to all three. Paid, upvoted and reblogged.
 
@@ -250,48 +244,33 @@ Congratulations to all three. Paid, upvoted and reblogged.
 | @ekads | 79 | 77 | 78 | qualified |
 | @katerinaramm | 70 | 77 | 74 | not tagged |
 
-**Every single valid entry cleared the SEO 70 floor** — the second clean round in a row
-on the score itself.
+**Every single valid entry cleared the SEO 70 floor** — the second clean round in a row on the score itself.
 
 ## The tag is still the most expensive two seconds in this contest
 
-@katerinaramm wrote a full guide to HivePulse and this contest, published it, and tagged
-it `hdev · hive · seo · tutorial · guide`. No `#hivepulse`. The rule is enforced evenly,
-so the entry does not count — for a post that exists to explain the contest to other
-people.
+@katerinaramm wrote a full guide to HivePulse and this contest, published it, and tagged it `hdev · hive · seo · tutorial · guide`. No `#hivepulse`. The rule is enforced evenly, so the entry does not count — for a post that exists to explain the contest to other people.
 
-That is four rounds out of five where the tag has decided or damaged an entry. Put it in
-first, before you write a word.
+That is four rounds out of five where the tag has decided or damaged an entry. Put it in first, before you write a word.
 
 @katerinaramm — thank you genuinely for the guide. Please enter week 6; it takes one tag.
 
 ## The referral bonus paid out for the first time
 
-@cositav brought @cayitus63, who had never entered before. @cayitus63's post qualified at
-SEO 81, so **both of them earned 25 HIVE**, on top of anything else they won.
+@cositav brought @cayitus63, who had never entered before. @cayitus63's post qualified at SEO 81, so **both of them earned 25 HIVE**, on top of anything else they won.
 
-**Two** referrals actually paid out this round: @cositav brought @cayitus63, and
-@nabbas0786 brought @les90 — who then took third place, so @les90 leaves with 75 HIVE and
-@nabbas0786 with 175.
+**Two** referrals actually paid out this round: @cositav brought @cayitus63, and @nabbas0786 brought @les90 — who then took third place, so @les90 leaves with 75 HIVE and @nabbas0786 with 175.
 
-One request: write it as **`referred by @username`**, in those words. We nearly missed a
-payout this round because it was phrased differently, and we would rather pay everyone
-who earned it.
+One request: write it as **`referred by @username`**, in those words. We nearly missed a payout this round because it was phrased differently, and we would rather pay everyone who earned it.
 
 ## 🐦 The 50 HIVE X prize rolls over — and the rules just got much easier
 
-Nobody won it last round. Two people quote-retweeted us and we are grateful for the
-reach, but neither answered the question we asked. That is on us: we asked a crypto-X
-audience to publicly criticise their own writing, which is the opposite of what that
-platform trains people to do.
+Nobody won it last round. Two people quote-retweeted us and we are grateful for the reach, but neither answered the question we asked. That is on us: we asked a crypto-X audience to publicly criticise their own writing, which is the opposite of what that platform trains people to do.
 
 So we are changing both halves of it.
 
 ### It is now judged on engagement, not on our opinion
 
-**The quote-retweet with the most engagement wins 50 HIVE.** Likes + reposts + replies,
-added together, counted when week 6 closes. No taste, no debate, no "best answer" — the
-number decides, and you can watch it yourself.
+**The quote-retweet with the most engagement wins 50 HIVE.** Likes + reposts + replies, added together, counted when week 6 closes. No taste, no debate, no "best answer" — the number decides, and you can watch it yourself.
 
 ### Say whatever is true. Here are four angles that actually travel
 
@@ -309,25 +288,18 @@ You do not need to be clever. You need to be specific. Any of these works:
 **4. What you'd tell a Hive writer who has never heard of it.**
 > *"It reads your draft while you write and tells you what Google and ChatGPT will each ignore. Free. That's it, that's the tool."*
 
-Pick one. Add your screenshot if you have one — posts with an image travel further, which
-matters now that engagement is the scoreboard.
+Pick one. Add your screenshot if you have one — posts with an image travel further, which matters now that engagement is the scoreboard.
 
 ### The only rules
 
 - It has to **quote-retweet our week-6 announcement**, not be a standalone post
 - It has to be **your own words and your own experience**
-- **No engagement farming.** Follow-for-follow, like-for-like, reply-chain rings and
-  bought engagement are disqualified. We will look before paying.
+- **No engagement farming.** Follow-for-follow, like-for-like, reply-chain rings and bought engagement are disqualified. We will look before paying.
 - Counted at week 6 close, **8 September 23:59 UTC**
 
-**One honest caveat about this format.** Engagement rewards reach, and reach follows
-follower count — so a large account starts ahead of a small one no matter how good the
-post is. We are trying it because our problem right now is distribution, not taste. If it
-turns into "the biggest account always wins", we will change it again and say so.
+**One honest caveat about this format.** Engagement rewards reach, and reach follows follower count — so a large account starts ahead of a small one no matter how good the post is. We are trying it because our problem right now is distribution, not taste. If it turns into "the biggest account always wins", we will change it again and say so.
 
-*Optional if you would rather not disadvantage small accounts: split the prize — 30 HIVE
-for most engagement, 20 HIVE for the answer we personally found most useful. Keeps the
-objective headline metric while leaving a lane where a 40-follower account can still win.*
+*Optional if you would rather not disadvantage small accounts: split the prize — 30 HIVE for most engagement, 20 HIVE for the answer we personally found most useful. Keeps the objective headline metric while leaving a lane where a 40-follower account can still win.*
 
 ## 🚀 Week 6 — how to enter
 
@@ -335,25 +307,19 @@ objective headline metric while leaving a lane where a 40-follower account can s
 2. Write and publish a **new** post on any supported Hive frontend, with the analyzer open as you write.
 3. **Comment below** with a link to the post **and** a screenshot of your SEO and GEO panel. Both are required.
 4. **Tag the post `#hivepulse`.** Enforced. It has cost someone their entry in four of five rounds.
-5. Referred by someone? Write **exactly** `referred by @username` in your comment — that
-   wording, so nothing gets missed — and you both earn 25 HIVE.
+5. Referred by someone? Write **exactly** `referred by @username` in your comment — that wording, so nothing gets missed — and you both earn 25 HIVE.
 
-**Runs 1 September → 8 September 2026, 23:59 UTC.** Minimum SEO score of 70. One entry
-per person; post several and your best tagged one counts. Any language welcome.
+**Runs 1 September → 8 September 2026, 23:59 UTC.** Minimum SEO score of 70. One entry per person; post several and your best tagged one counts. Any language welcome.
 
 ## Where the points actually are
 
-Five rounds in, 37 posts scored on both axes. The pattern is stable: SEO scores cluster
-high because Hive creators already write decent titles and headings. GEO — whether an AI
-answer engine can lift a passage and cite it — is where the gap sits.
+Five rounds in, 37 posts scored on both axes. The pattern is stable: SEO scores cluster high because Hive creators already write decent titles and headings. GEO — whether an AI answer engine can lift a passage and cite it — is where the gap sits.
 
 1. **Open with the answer.** First 8–60 words, before any preamble. Every 100-scoring post this round did this.
 2. **Write self-contained sentences.** "This shows…" means nothing quoted alone. Name the subject.
 3. **Describe your images.** @militadigital01 scored 97 with 24 photos, every one carrying a real description instead of a filename.
 
-And the cheapest points on the board: **fill in the preview description** — 10 SEO
-points, 15 seconds. PeakD calls it "Short preview description", under the editor. On
-Ecency it is in the Story preview step.
+And the cheapest points on the board: **fill in the preview description** — 10 SEO points, 15 seconds. PeakD calls it "Short preview description", under the editor. On Ecency it is in the Story preview step.
 
 ## Join in
 

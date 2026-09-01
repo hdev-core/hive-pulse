@@ -159,14 +159,15 @@ rather than pretending the trend continued.
 - [ ] Upvote + reblog the three winning posts from @hdev
 - [ ] Reply to @katerinaramm on their entry comment — thank them for the guide, explain
       the tag, invite them into week 6
-- [ ] Generate `enhancements/images/contest-week6-cover.jpg`, upload via the editor
-      (**drag the file, never paste**) and replace the cover URL
+- [x] ~~Generate the cover~~ — `enhancements/images/contest-week6-cover.jpg` is ready
+- [ ] Upload it via the editor (**drag the file, never paste** — pasting inflates it 5-8x)
+      and replace `PASTE_UPLOADED_COVER_URL_HERE`
 - [ ] Post the X thread first, then paste its URL into the quote-RT section below
 - [ ] Post into **Hdev Contests** (`hive-177727`), tags: `hivepulse` `seo` `contest`
       `hive` `writing`
 - [ ] Paste the meta description into the preview-description field
 - [ ] `contest-results.csv` already archived to `contest-results-week5.csv`
-- [ ] Update the judge window to 1 → 8 Sep for next round
+- [x] ~~Update the judge window to 1 → 8 Sep~~ — done in `scripts/judge-contest.mjs`
 
 ---
 
@@ -181,7 +182,7 @@ rather than pretending the trend continued.
 
 ---
 
-![Gold trophy and Hive coins beside a HivePulse analyzer panel, headlined Week 6 now open, with a prize ladder showing 300 HIVE at under ten entrants, 400 at ten and 500 at twenty](PASTE_UPLOADED_COVER_URL_HERE)
+![HivePulse SEO Contest week 6 cover: three prize tiers on a dark gold background reading 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 and 500 HIVE at 20 or more, above a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](PASTE_UPLOADED_COVER_URL_HERE)
 
 **Summary:** Week 5 of the HivePulse SEO Contest is settled. Eight valid entries, all
 eight above the score floor, three creators paid — and the prize pool stayed at 300 HIVE

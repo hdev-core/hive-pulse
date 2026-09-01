@@ -188,7 +188,7 @@ rather than pretending the trend continued.
 
 ---
 
-![HivePulse SEO Contest week 6 cover: three prize tiers on a dark gold background reading 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 and 500 HIVE at 20 or more, above a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](PASTE_UPLOADED_COVER_URL_HERE)
+![HivePulse SEO Contest week 6 cover: three prize tiers on a dark gold background reading 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 and 500 HIVE at 20 or more, above a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](https://usermedia.actifit.io/MTIN2AZKJVBBZS9VOSIJCTZ8LATOO)
 
 **Summary:** Week 5 of the HivePulse SEO Contest is settled. Eight valid entries, all eight above the score floor, three creators paid — and the prize pool stayed at 300 HIVE because the field finished **two entries short of 400**.
 
@@ -251,6 +251,8 @@ Congratulations to all three. Paid, upvoted and reblogged.
 @katerinaramm wrote a full guide to HivePulse and this contest, published it, and tagged it `hdev · hive · seo · tutorial · guide`. No `#hivepulse`. The rule is enforced evenly, so the entry does not count — for a post that exists to explain the contest to other people.
 
 That is four rounds out of five where the tag has decided or damaged an entry. Put it in first, before you write a word.
+
+**We are paying @katerinaramm 25 HIVE anyway.** Not as a prize — the entry does not qualify and the table above is unchanged — but as a thank-you for writing a guide that sends people our way. The tag rule stays exactly as strict as it was two paragraphs ago. Generosity and enforcement are separate things, and we would rather do both than blur either.
 
 @katerinaramm — thank you genuinely for the guide. Please enter week 6; it takes one tag.
 
@@ -365,14 +367,19 @@ The referral bonus paid out twice. @cositav brought @cayitus63. @nabbas0786 brou
 
 Bring one person and you both get 25 HIVE, on top of anything you win.
 
-**6/ (the X prize, now much simpler)**
+**6/ (the one we paid anyway)**
+@katerinaramm wrote a full guide to HivePulse — then forgot the #hivepulse tag, so her entry could not be ranked.
+
+The rule stands. We are sending her 25 HIVE anyway, as thanks rather than as a prize. Both can be true.
+
+**7/ (the X prize, now much simpler)**
 50 HIVE rolls over — and it is now decided by engagement, not by us.
 
 Quote this tweet with anything true about using HivePulse. Your score screenshot. What surprised you. One before/after line.
 
 Most likes + reposts + replies by 8 Sept wins.
 
-**7/**
+**8/**
 Week 6 runs to 8 Sept, 23:59 UTC.
 
 1️⃣ Install HivePulse (free)
@@ -397,6 +404,8 @@ Full details 👉 [PASTE_HIVE_POST_URL]
 > Eight valid entries, **every one above the score floor**. 🎉
 >
 > 💸 The **referral bonus paid out twice** — @cositav brought @cayitus63, and @nabbas0786 brought @les90, who then finished 3rd. 25 HIVE to each of the four.
+>
+> 🙏 **@katerinaramm gets 25 HIVE anyway.** She wrote a full guide to HivePulse and missed the `#hivepulse` tag, so her entry could not be ranked — the rule stands. The 25 is a thank-you, not a prize.
 >
 > ⚖️ **The pool stayed at 300.** We promised it scales — 10 entrants for 400, 20 for 500 — and eight entered. So we paid 300. It is a rule, not a hope, and **two more people next round moves it.**
 >

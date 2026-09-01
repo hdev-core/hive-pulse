@@ -11,12 +11,14 @@ python scripts/check_tweet_lengths.py enhancements/x-plan-week6.md
 
 ---
 
-## 🚨 Do this first
+## ✅ Done — launch thread posted, live post updated
 
-The live Hive post tells people to "quote-retweet our week-6 announcement" but links only
-`x.com/HdevCore` — **the anchor tweet does not exist yet**. Until the launch thread is
-posted, nobody can enter the 50 HIVE prize, and last round's off-brief entries suggest
-ambiguity here costs us real entries.
+Thread posted and the live post edited on 1 Sep: anchor linked in two places, both 23:59
+references changed to 12:00, and the quote-RT count corrected to three. Verified on-chain.
+
+⚠️ **Still outstanding:** the cover image in the post is the old render and reads
+**23:59 UTC** while the body now says 12:00. Re-upload
+`enhancements/images/contest-week6-cover.jpg` and swap the URL.
 
 1. Post the launch thread (in `seo-contest-week6-announcement.md`, 8 tweets, all verified under 280).
 2. Copy tweet **1/**'s URL — that is the anchor.
@@ -34,7 +36,7 @@ ambiguity here costs us real entries.
 4. Paste the anchor into `[PASTE_HIVE_POST_URL]` in tweet 8 of the thread, and into the
    ANCHOR line below.
 
-**ANCHOR TWEET:** `PASTE_AFTER_POSTING` — every quote-RT bump this week points here.
+**ANCHOR TWEET:** https://x.com/HdevCore/status/2094775318175211839 — every quote-RT bump this week points here, and it is what the 50 HIVE prize is judged on.
 
 ## Where the week stands
 

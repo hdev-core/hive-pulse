@@ -284,7 +284,7 @@ So we are changing both halves of it.
 
 **The quote-retweet with the most engagement wins 50 HIVE.** Likes + reposts + replies, added together, counted when week 6 closes. No taste, no debate, no "best answer" — the number decides, and you can watch it yourself.
 
-👉 **This is the tweet to quote:** PASTE_ANCHOR_TWEET_URL_HERE
+👉 **This is the tweet to quote:** https://x.com/HdevCore/status/2094775318175211839
 
 ### Say whatever is true. Here are four angles that actually travel
 
@@ -306,7 +306,7 @@ Pick one. Add your screenshot if you have one — posts with an image travel fur
 
 ### The only rules
 
-- It has to **quote-retweet [our week-6 announcement](PASTE_ANCHOR_TWEET_URL_HERE)**, not be a standalone post
+- It has to **quote-retweet [our week-6 announcement](https://x.com/HdevCore/status/2094775318175211839)**, not be a standalone post
 - It has to be **your own words and your own experience**
 - **No engagement farming.** Follow-for-follow, like-for-like, reply-chain rings and bought engagement are disqualified. We will look before paying.
 - Counted at week 6 close, **8 September 12:00 UTC**

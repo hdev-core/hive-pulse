@@ -49,16 +49,23 @@ Both submissions were checked against it:
 |---|---|---|---|
 | @les90 | ✅ | ❌ *"Do your best SEO through Hivepulse and enter into week 5 as week 4 is already over"* — a generic CTA | off-brief |
 | @nabbas0786 | ✅ | ❌ *"Hive isn't just a Write to Earn Platform…"* — generic promo | off-brief |
+| @ekads | ✅ | ❌ *"I've finally submitted my entry… come join in and learn SEO"* — generic promo, ~7 views | off-brief |
 
-Both quote-retweeted the correct tweet. Neither answered the question. @nabbas0786 said as
-much himself on the Hive post: *"just used some of words instead of using the sentence
+All three quote-retweeted the correct tweet. None answered the question. @nabbas0786 said
+as much himself on the Hive post: *"just used some of words instead of using the sentence
 from last post."*
+
+**@ekads was found only after this pack was first written**, because they never mentioned
+their quote-RT in a Hive comment — exactly the blind spot flagged below. Three entries,
+three adverts, is a much stronger verdict on the brief than two was: the ask did not fail
+because two people were careless, it failed because it asked the wrong thing of the wrong
+platform.
 
 **Recommendation: do not award it, and roll the 50 HIVE into week 6 with a worked
 example.** Awarding it anyway one week after disqualifying @katerinaramm over a missing
 tag would say the rules bind entrants and not us.
 
-But the failure is ours as much as theirs. Two people tried and **both produced promo**,
+But the failure is ours as much as theirs. Three people tried and **all three produced promo**,
 because the brief asked a crypto-Twitter audience for public self-criticism — an unusual
 move against every habit that platform trains. Restating it with an example of a correct
 answer costs nothing and is likely to fix it:
@@ -72,10 +79,13 @@ Optional, your call: a small goodwill payment to both for amplifying — framed 
 as thanks for the reach, **not** as winning the quote-RT prize. Defensible, but it does
 blur a rule the contest has just spent a round enforcing.
 
-⚠️ **Check X before finalising.** These two surfaced because their authors mentioned them
-in Hive comments, but the brief never required that — it only said quote-RT. Open the
-[anchor tweet](https://x.com/HdevCore/status/2092261884963467626) and read its quote-tweets
-directly; a genuine on-brief entry may exist that never announced itself on Hive.
+⚠️ **Always read the anchor tweet's quote-tweets directly.** Two of the three surfaced
+because their authors mentioned them in Hive comments; @ekads did not, and was missed on
+the first pass. The brief never required a Hive comment — it only said quote-RT — so the
+Hive thread is not the entry list. Open the
+[anchor tweet](https://x.com/HdevCore/status/2092261884963467626), open its Quotes tab, and
+count from there. This matters more now that the prize is decided by engagement: the winner
+is whichever quote-RT has the most, whether or not its author ever tells us it exists.
 
 ---
 
@@ -252,7 +262,7 @@ Congratulations to all three. Paid, upvoted and reblogged.
 
 That is four rounds out of five where the tag has decided or damaged an entry. Put it in first, before you write a word.
 
-**We are paying @katerinaramm 25 HIVE anyway.** Not as a prize — the entry does not qualify and the table above is unchanged — but as a thank-you for writing a guide that sends people our way. The tag rule stays exactly as strict as it was two paragraphs ago. Generosity and enforcement are separate things, and we would rather do both than blur either.
+**We are paying @katerinaramm 25 HIVE.** Despite not qualifying, yet she earned a thank-you for writing a guide that sends people our way while being referred to the project. The tag rule stays exactly as strict as it was two paragraphs ago. Generosity and enforcement are separate things, and we would rather do both than blur either.
 
 @katerinaramm — thank you genuinely for the guide. Please enter week 6; it takes one tag.
 

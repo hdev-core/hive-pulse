@@ -66,7 +66,7 @@ TIERS = [
 ]
 
 
-def tier_card(entries, out):
+def tier_card(entries, out, closes='1 September'):
     im = bs.gold_ground(W, H, bloom=(0.90, 0.24), intensity=0.92)
     d = ImageDraw.Draw(im)
 
@@ -138,7 +138,7 @@ def tier_card(entries, out):
 
     bs.badge(im, 100, H - 118, d=72)
     bs.wordmark(im, 190, H - 110, size=32)
-    d.text((W - 100, H - 92), 'Closes 1 September, 23:59 UTC',
+    d.text((W - 100, H - 92), f'Closes {closes}, 23:59 UTC',
            font=font('semi', 25), fill=bs.INK_2, anchor='rm',
            stroke_width=4, stroke_fill=(10, 16, 34))
 
@@ -155,7 +155,7 @@ W3 = [('mein-senf-dazu', 98, 100), ('nabbas0786', 94, 100), ('katriel1', 83, 93)
 def load():
     rows = []
     for f in ('contest-results-week1.csv', 'contest-results-week2.csv',
-              'contest-results-week4.csv'):
+              'contest-results-week4.csv', 'contest-results-week5.csv'):
         for r in csv.DictReader(open(f, encoding='utf-8')):
             rows.append((int(r['seo_pct']), int(r['geo_score'])))
     rows += [(s, g) for _, s, g in W3]
@@ -180,11 +180,11 @@ def correlation_chart(out):
     im = bs.gold_ground(W, H, bloom=(1.02, 0.14), intensity=0.70, mosaic=0.0)
     d = ImageDraw.Draw(im)
 
-    d.text((100, 66), 'The more posts we score, the less SEO predicts AI-quotability',
+    d.text((100, 66), 'A strong SEO score still tells you little about AI-quotability',
            font=font('bold', 44), fill=INK)
     d.text((100, 128),
            f'{len(data)} Hive posts, each scored on both axes. '
-           f'r = {r:.2f}, down from 0.73 at 14 posts and 0.58 at 25.',
+           f'r = {r:.2f} across five rounds. It fell from 0.73, then flattened.',
            font=font('reg', 27), fill=INK_2)
 
     x0, x1 = 250, W - 400
@@ -218,7 +218,7 @@ def correlation_chart(out):
 
     px = W - 320
     d.text((px, y0 + 6), 'CORRELATION', font=font('semi', 22), fill=INK_3)
-    for i, (n, val) in enumerate([(14, 0.73), (25, 0.58), (len(data), round(r, 2))]):
+    for i, (n, val) in enumerate([(25, 0.58), (28, 0.47), (len(data), round(r, 2))]):
         ty = y0 + 54 + i * 88
         cur = i == 2
         d.text((px, ty), f'{val:.2f}', font=font('bold', 46), fill=(AMBER if cur else INK_3))
@@ -239,10 +239,12 @@ def correlation_chart(out):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--entries', type=int, default=2)
+    ap.add_argument('--week', default='w5', help="output prefix, e.g. w6")
+    ap.add_argument('--closes', default='1 September', help="deadline shown on the tier card")
     a = ap.parse_args()
     od = 'enhancements/images/social'
     os.makedirs(od, exist_ok=True)
-    p = tier_card(a.entries, f'{od}/w5-tier.jpg')
+    p = tier_card(a.entries, f'{od}/{a.week}-tier.jpg', a.closes)
     print(f'  {p}  {os.path.getsize(p)/1024:.0f} KB   (entries={a.entries})')
-    p, n, r = correlation_chart(f'{od}/w5-correlation.jpg')
+    p, n, r = correlation_chart(f'{od}/{a.week}-correlation.jpg')
     print(f'  {p}  {os.path.getsize(p)/1024:.0f} KB   ({n} posts, r={r:.3f})')

@@ -276,13 +276,15 @@ One request: write it as **`referred by @username`**, in those words. We nearly 
 
 ## 🐦 The 50 HIVE X prize rolls over — and the rules just got much easier
 
-Nobody won it last round. Two people quote-retweeted us and we are grateful for the reach, but neither answered the question we asked. That is on us: we asked a crypto-X audience to publicly criticise their own writing, which is the opposite of what that platform trains people to do.
+Nobody won it last round. Three people quote-retweeted us and we are grateful for the reach, but none of them answered the question we asked. That is on us: we asked a crypto-X audience to publicly criticise their own writing, which is the opposite of what that platform trains people to do.
 
 So we are changing both halves of it.
 
 ### It is now judged on engagement, not on our opinion
 
 **The quote-retweet with the most engagement wins 50 HIVE.** Likes + reposts + replies, added together, counted when week 6 closes. No taste, no debate, no "best answer" — the number decides, and you can watch it yourself.
+
+👉 **This is the tweet to quote:** PASTE_ANCHOR_TWEET_URL_HERE
 
 ### Say whatever is true. Here are four angles that actually travel
 
@@ -304,7 +306,7 @@ Pick one. Add your screenshot if you have one — posts with an image travel fur
 
 ### The only rules
 
-- It has to **quote-retweet our week-6 announcement**, not be a standalone post
+- It has to **quote-retweet [our week-6 announcement](PASTE_ANCHOR_TWEET_URL_HERE)**, not be a standalone post
 - It has to be **your own words and your own experience**
 - **No engagement farming.** Follow-for-follow, like-for-like, reply-chain rings and bought engagement are disqualified. We will look before paying.
 - Counted at week 6 close, **8 September 12:00 UTC**

@@ -19,9 +19,20 @@ posted, nobody can enter the 50 HIVE prize, and last round's off-brief entries s
 ambiguity here costs us real entries.
 
 1. Post the launch thread (in `seo-contest-week6-announcement.md`, 8 tweets, all verified under 280).
-2. Copy tweet **1/**'s URL.
-3. **Edit the Hive post** and make "our week-6 announcement" a link to it.
-4. Paste it into `[PASTE_HIVE_POST_URL]` in tweet 8 of the thread, and into the ANCHOR line below.
+2. Copy tweet **1/**'s URL — that is the anchor.
+3. **Edit the live Hive post**, four changes in one pass:
+
+   | Find | Replace with |
+   |---|---|
+   | `**The quote-retweet with the most engagement wins 50 HIVE.**` … end of that paragraph | append a new line: `👉 **This is the tweet to quote:** <anchor URL>` |
+   | `**quote-retweet our week-6 announcement**` | `**quote-retweet [our week-6 announcement](<anchor URL>)**` |
+   | `Counted at week 6 close, **8 September 23:59 UTC**` | `…**8 September 12:00 UTC**` |
+   | `**Runs 1 September → 8 September 2026, 23:59 UTC` | `…12:00 UTC` |
+
+   While there: re-upload `enhancements/images/contest-week6-cover.jpg` (it now reads
+   12:00) and swap the cover URL. Drag the file, never paste.
+4. Paste the anchor into `[PASTE_HIVE_POST_URL]` in tweet 8 of the thread, and into the
+   ANCHOR line below.
 
 **ANCHOR TWEET:** `PASTE_AFTER_POSTING` — every quote-RT bump this week points here.
 

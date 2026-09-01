@@ -17,8 +17,8 @@ every score re-derived from the published post rather than the screenshot.
 | @les90 | **50 HIVE** | 🥉 3rd — combined 98 |
 | @cositav | **25 HIVE** | Referral bonus — brought @cayitus63 |
 | @cayitus63 | **25 HIVE** | Referral bonus — referred by @cositav |
-| *(pending)* | **50 HIVE** | Best quote-RT on X — **needs a human call, see below** |
-| | **400 HIVE** | **Total** |
+| *(nobody)* | **50 HIVE** | Best quote-RT on X — **no valid entry, recommend rolling to week 6** |
+| | **350 HIVE** | **Total to pay now** (400 if the quote-RT prize is awarded anyway) |
 
 Also owed to the three winners: **upvote + reblog from @hdev**.
 
@@ -33,18 +33,43 @@ number moves, and the one mechanic that gives entrants a reason to recruit would
 dead. Being two short is also the most motivating fact available for week 6, so it
 leads the post rather than hiding in it.
 
-### 🐦 The 50 HIVE quote-RT prize needs your judgement
+### 🐦 The 50 HIVE quote-RT prize: nobody followed the brief
 
-Two submissions came in, and I cannot read X content to rank them:
+The ask was specific — quote-RT the announcement with **the one line you would change in
+your last post**, the sentence that buries your point or that an AI would never quote.
+Both submissions were checked against it:
 
-| Entrant | Link | Note |
-|---|---|---|
-| @les90 | https://x.com/Lesly90420/status/2093331587790438676 | Submitted 28 Aug, on time |
-| @nabbas0786 | https://x.com/nabbas_0786/status/2094746017535250901 | Submitted 1 Sep 11:18 — and self-declared off-brief: *"I know I am already late for this, and just used some of words instead of using the sentence from last post"* |
+| Entrant | Quoted the anchor | Named a line from their own post | Verdict |
+|---|---|---|---|
+| @les90 | ✅ | ❌ *"Do your best SEO through Hivepulse and enter into week 5 as week 4 is already over"* — a generic CTA | off-brief |
+| @nabbas0786 | ✅ | ❌ *"Hive isn't just a Write to Earn Platform…"* — generic promo | off-brief |
 
-Judge on the brief — *the one line you would change in your last post* — not on effort.
-On the face of it @les90 is the only on-brief entry, but read both before deciding. If
-neither earns it, rolling the 50 HIVE into week 6 is defensible and worth saying openly.
+Both quote-retweeted the correct tweet. Neither answered the question. @nabbas0786 said as
+much himself on the Hive post: *"just used some of words instead of using the sentence
+from last post."*
+
+**Recommendation: do not award it, and roll the 50 HIVE into week 6 with a worked
+example.** Awarding it anyway one week after disqualifying @katerinaramm over a missing
+tag would say the rules bind entrants and not us.
+
+But the failure is ours as much as theirs. Two people tried and **both produced promo**,
+because the brief asked a crypto-Twitter audience for public self-criticism — an unusual
+move against every habit that platform trains. Restating it with an example of a correct
+answer costs nothing and is likely to fix it:
+
+> ❌ *"Great post everyone, check out HivePulse!"*
+> ✅ *"My last post opened with 'In today's world, many people wonder…' — six words of
+> throat-clearing before the answer. I'd cut straight to 'Heat neutralises mosquito-bite
+> itch in 30 seconds.'"*
+
+Optional, your call: a small goodwill payment to both for amplifying — framed explicitly
+as thanks for the reach, **not** as winning the quote-RT prize. Defensible, but it does
+blur a rule the contest has just spent a round enforcing.
+
+⚠️ **Check X before finalising.** These two surfaced because their authors mentioned them
+in Hive comments, but the brief never required that — it only said quote-RT. Open the
+[anchor tweet](https://x.com/HdevCore/status/2092261884963467626) and read its quote-tweets
+directly; a genuine on-brief entry may exist that never announced itself on Hive.
 
 ---
 
@@ -101,7 +126,8 @@ rather than pretending the trend continued.
 
 ## ⚠️ Pre-publish checklist
 
-- [ ] Decide the quote-RT winner (or roll the 50 HIVE forward) — see above
+- [ ] Confirm the quote-RT call — neither entry was on brief; check X directly for
+      unannounced quote-tweets before rolling the 50 HIVE into week 6
 - [ ] Pay 150 / 100 / 50 to @nabbas0786 / @militadigital01 / @les90
 - [ ] Pay 25 / 25 to @cositav / @cayitus63
 - [ ] Upvote + reblog the three winning posts from @hdev
@@ -219,6 +245,27 @@ SEO 81, so **both of them earned 25 HIVE**, on top of anything else they won.
 
 That is the cheapest prize on the board and only one person claimed it. Bring someone.
 
+## The 50 HIVE X prize rolls over — and this time, an example
+
+Nobody won it. Two people quote-retweeted us, and we are grateful for the reach, but
+neither answered the actual question — both wrote promotion instead.
+
+That is on us for asking badly, so here is exactly what we want. Quote-retweet the week-6
+announcement on X with **the one line you would change in your last post**: the sentence
+that buries your point, or the one an AI would never quote back.
+
+> ❌ Not this: *"Great contest, everyone go check out HivePulse!"*
+>
+> ✅ This: *"My last post opened with 'In today's world, many people wonder…' — six words
+> of throat-clearing before the answer. I'd cut straight to 'Heat neutralises a
+> mosquito-bite itch in about 30 seconds.'"*
+
+One sentence of yours, and what you would replace it with. That is the whole task. It is
+also the single most useful editing habit we know, which is why we are paying for it.
+
+**50 HIVE for the most useful answer.** No tagging friends, no follow-for-follow. We will
+reply to as many as we can with what we would change.
+
 ## 🚀 Week 6 — how to enter
 
 1. Install HivePulse — [Chrome](https://chromewebstore.google.com/detail/hivepulse/hakcpohpejoejmlhiphpkjobpjeckdlg) or [Firefox](https://addons.mozilla.org/en-US/firefox/addon/hivepulse/). Free; the Chrome build covers Opera, Brave and Edge.
@@ -288,7 +335,12 @@ The referral bonus paid out for the first time: @cositav brought someone new, an
 
 One person claimed the cheapest prize on the board. Bring someone.
 
-**6/**
+**6/ (the X prize, restated)**
+The 50 HIVE quote-RT prize rolls over. Nobody won it — two people entered and both wrote promo, which means we asked badly.
+
+So, plainly: quote this with ONE sentence from your last post you'd change, and what you'd change it to.
+
+**7/**
 Week 6 runs to 8 Sept, 23:59 UTC.
 
 1️⃣ Install HivePulse (free)
@@ -315,5 +367,7 @@ Full details 👉 [PASTE_HIVE_POST_URL]
 > 💸 The **referral bonus paid out for the first time** — @cositav brought @cayitus63, and both took 25 HIVE.
 >
 > ⚖️ **The pool stayed at 300.** We promised it scales — 10 entrants for 400, 20 for 500 — and eight entered. So we paid 300. It is a rule, not a hope, and **two more people next round moves it.**
+>
+> 🐦 **The 50 HIVE X prize rolls over.** Two quote-RTs came in and both were promo rather than the ask. Restating it: quote our announcement with **one sentence from your last post you would change**, and what you would change it to. That is the whole task.
 >
 > 🗓️ **Week 6 is open now, closing 8 September, 23:59 UTC.** Link **and** screenshot in the comments, tag `#hivepulse`, and add "referred by @username" if someone brought you.

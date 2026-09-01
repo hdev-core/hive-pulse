@@ -24,8 +24,8 @@
  */
 
 // ── Contest config ────────────────────────────────────────────────────────────
-// Week 3: 11 → 18 August 2026. Results for earlier rounds are archived in
-// contest-results-week{1,2}.csv.
+// Week 5: 25 August → 1 September 2026. Results for earlier rounds are archived in
+// contest-results-week{1,2,4}.csv.
 //
 // The start date deliberately overlaps the day the week-3 announcement publishes. In week 2
 // @angeluxx published a properly tagged post ~3h AFTER the announcement went live but ~2.5h
@@ -33,8 +33,8 @@
 // with week 1, too early to count for week 2. Starting the window on announcement day closes
 // that gap: anyone who reads the post and publishes the same day is in. Cross-check against the
 // previous round's archived CSV so a post can't be awarded twice.
-const WINDOW_START = Date.parse('2026-08-18T00:00:00Z');
-const WINDOW_END   = Date.parse('2026-08-25T23:59:59Z');
+const WINDOW_START = Date.parse('2026-08-25T00:00:00Z');
+const WINDOW_END   = Date.parse('2026-09-01T23:59:59Z');
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 
 // Scoring engine lives in ./lib/seo-score.mjs — shared with scripts/score-post.mjs so the

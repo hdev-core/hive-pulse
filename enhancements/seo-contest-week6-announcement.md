@@ -19,11 +19,12 @@ every score re-derived from the published post rather than the screenshot.
 | @cayitus63 | **25 HIVE** | Referral bonus — referred by @cositav |
 | @nabbas0786 | **25 HIVE** | Referral bonus — brought @les90 |
 | @les90 | **25 HIVE** | Referral bonus — referred by @nabbas0786 |
-| *(nobody)* | **50 HIVE** | Best quote-RT on X — **no valid entry, recommend rolling to week 6** |
-| | **400 HIVE** | **Total to pay now** |
+| @katerinaramm | **25 HIVE** | Discretionary — referred by @mcfarhat, and the guide she wrote |
+| *(nobody)* | **50 HIVE** | Best quote-RT on X — no valid entry, rolls into week 6 |
+| | **425 HIVE** | **Total to pay now** |
 
 Per person: **@nabbas0786 175** (150 + 25) · **@militadigital01 100** ·
-**@les90 75** (50 + 25) · **@cositav 25** · **@cayitus63 25**.
+**@les90 75** (50 + 25) · **@cositav 25** · **@cayitus63 25** · **@katerinaramm 25**.
 
 Also owed to the three winners: **upvote + reblog from @hdev**.
 
@@ -119,10 +120,14 @@ directly; a genuine on-brief entry may exist that never announced itself on Hive
   - @militadigital01 credited @cositav with recommending the tool, but has entered in
     weeks 1 and 4. The bonus requires bringing someone who has **never entered before**,
     so this is not a referral. @cositav is still inside the two-referral cap either way.
-  - @katerinaramm opened with "Thx @mcfarhat for the reminder about this contest" — a
-    thank-you to the host, not a referral, and the bonus is conditional on the referred
-    entry qualifying. Hers is disqualified on the tag, so nothing is owed on either
-    count.
+- **@katerinaramm is paid 25 HIVE by discretion, and it is labelled as discretion.**
+  @mcfarhat did point her at the contest, and she responded by writing a full guide to it.
+  But the referral bonus is conditional on the referred entry qualifying, and hers is
+  disqualified on the tag — so paying it *as a referral bonus* would quietly void the
+  condition for everyone else, one week after that same tag rule cost her the ranking.
+  It is paid instead as an explicit discretionary thank-you: same 25 HIVE, honest label,
+  both rules left intact. @mcfarhat takes no referrer half; paying the host out of the
+  host's own pool is theatre.
 - ⚠️ **Process note.** The @les90 referral was nearly missed: the first pass searched for
   the literal phrase "referred by" and @les90 wrote "referred **from**". Every future
   round must scan for the concept, not the phrase — and the week-6 rules below now name
@@ -272,26 +277,56 @@ One request: write it as **`referred by @username`**, in those words. We nearly 
 payout this round because it was phrased differently, and we would rather pay everyone
 who earned it.
 
-## The 50 HIVE X prize rolls over — and this time, an example
+## 🐦 The 50 HIVE X prize rolls over — and the rules just got much easier
 
-Nobody won it. Two people quote-retweeted us, and we are grateful for the reach, but
-neither answered the actual question — both wrote promotion instead.
+Nobody won it last round. Two people quote-retweeted us and we are grateful for the
+reach, but neither answered the question we asked. That is on us: we asked a crypto-X
+audience to publicly criticise their own writing, which is the opposite of what that
+platform trains people to do.
 
-That is on us for asking badly, so here is exactly what we want. Quote-retweet the week-6
-announcement on X with **the one line you would change in your last post**: the sentence
-that buries your point, or the one an AI would never quote back.
+So we are changing both halves of it.
 
-> ❌ Not this: *"Great contest, everyone go check out HivePulse!"*
->
-> ✅ This: *"My last post opened with 'In today's world, many people wonder…' — six words
-> of throat-clearing before the answer. I'd cut straight to 'Heat neutralises a
-> mosquito-bite itch in about 30 seconds.'"*
+### It is now judged on engagement, not on our opinion
 
-One sentence of yours, and what you would replace it with. That is the whole task. It is
-also the single most useful editing habit we know, which is why we are paying for it.
+**The quote-retweet with the most engagement wins 50 HIVE.** Likes + reposts + replies,
+added together, counted when week 6 closes. No taste, no debate, no "best answer" — the
+number decides, and you can watch it yourself.
 
-**50 HIVE for the most useful answer.** No tagging friends, no follow-for-follow. We will
-reply to as many as we can with what we would change.
+### Say whatever is true. Here are four angles that actually travel
+
+You do not need to be clever. You need to be specific. Any of these works:
+
+**1. Your score, with the screenshot.** The single most shareable thing you have.
+> *"First draft: 62. I fixed three things it flagged. 94. The whole edit took four minutes."* + screenshot
+
+**2. The thing that surprised you.**
+> *"I've written on Hive for two years and had no idea an image with no description was costing me points. Every post I've ever published, apparently."*
+
+**3. One sentence, before and after.**
+> *"Before: 'In today's world, many people wonder about this topic.' After: 'Heat neutralises a mosquito-bite itch in about 30 seconds.' Same paragraph, 20 points apart."*
+
+**4. What you'd tell a Hive writer who has never heard of it.**
+> *"It reads your draft while you write and tells you what Google and ChatGPT will each ignore. Free. That's it, that's the tool."*
+
+Pick one. Add your screenshot if you have one — posts with an image travel further, which
+matters now that engagement is the scoreboard.
+
+### The only rules
+
+- It has to **quote-retweet our week-6 announcement**, not be a standalone post
+- It has to be **your own words and your own experience**
+- **No engagement farming.** Follow-for-follow, like-for-like, reply-chain rings and
+  bought engagement are disqualified. We will look before paying.
+- Counted at week 6 close, **8 September 23:59 UTC**
+
+**One honest caveat about this format.** Engagement rewards reach, and reach follows
+follower count — so a large account starts ahead of a small one no matter how good the
+post is. We are trying it because our problem right now is distribution, not taste. If it
+turns into "the biggest account always wins", we will change it again and say so.
+
+*Optional if you would rather not disadvantage small accounts: split the prize — 30 HIVE
+for most engagement, 20 HIVE for the answer we personally found most useful. Keeps the
+objective headline metric while leaving a lane where a 40-follower account can still win.*
 
 ## 🚀 Week 6 — how to enter
 
@@ -363,10 +398,12 @@ The referral bonus paid out twice. @cositav brought @cayitus63. @nabbas0786 brou
 
 Bring one person and you both get 25 HIVE, on top of anything you win.
 
-**6/ (the X prize, restated)**
-The 50 HIVE quote-RT prize rolls over. Nobody won it — two people entered and both wrote promo, which means we asked badly.
+**6/ (the X prize, now much simpler)**
+50 HIVE rolls over — and it is now decided by engagement, not by us.
 
-So, plainly: quote this with ONE sentence from your last post you'd change, and what you'd change it to.
+Quote this tweet with anything true about using HivePulse. Your score screenshot. What surprised you. One before/after line.
+
+Most likes + reposts + replies by 8 Sept wins.
 
 **7/**
 Week 6 runs to 8 Sept, 23:59 UTC.
@@ -396,6 +433,8 @@ Full details 👉 [PASTE_HIVE_POST_URL]
 >
 > ⚖️ **The pool stayed at 300.** We promised it scales — 10 entrants for 400, 20 for 500 — and eight entered. So we paid 300. It is a rule, not a hope, and **two more people next round moves it.**
 >
-> 🐦 **The 50 HIVE X prize rolls over.** Two quote-RTs came in and both were promo rather than the ask. Restating it: quote our announcement with **one sentence from your last post you would change**, and what you would change it to. That is the whole task.
+> 🐦 **The 50 HIVE X prize rolls over — and the rules got much easier.** It is now decided by **engagement**, not by our opinion: the quote-RT with the most likes + reposts + replies by 8 Sept takes it.
+>
+> Quote our announcement with anything true about using HivePulse — your score screenshot, what surprised you, one before/after sentence. Your own words, no engagement farming.
 >
 > 🗓️ **Week 6 is open now, closing 8 September, 23:59 UTC.** Link **and** screenshot in the comments, tag `#hivepulse`, and add "referred by @username" if someone brought you.

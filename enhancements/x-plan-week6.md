@@ -1,6 +1,6 @@
 # X plan — week 6 (1 → 8 Sep 2026)
 
-Account **@HdevCore**. Contest closes **Tue 8 Sep, 23:59 UTC**.
+Account **@HdevCore**. Contest closes **Tue 8 Sep, 12:00 UTC**.
 Hive post is live: https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-6-open-up-to-500-hive
 
 Verify every tweet before posting:
@@ -190,7 +190,7 @@ https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-6-open-up-to-500
 *Image: `social/w6-final.jpg`*
 
 ```tweet tue-main
-Final day. Closes tonight, 23:59 UTC.
+Final day. Closes tonight, 12:00 UTC.
 
 Publish, score it, comment your link and your screenshot, tag #hivepulse.
 
@@ -251,7 +251,7 @@ python scripts/make_week6_cards.py
 | `w6-qrt.jpg` | Card headlined "Most engagement wins", explaining that the 50 HIVE X prize now goes to the quote-retweet with the most likes, reposts and replies by 8 September. |
 | `w6-images.jpg` | Card headlined "Your images are text too", contrasting a filename used as image alt text with a real description, and noting the week 5 runner-up scored 97 doing the latter across 24 photos. |
 | `w6-referral.jpg` | Card showing the two referrals that paid out in week 5, each earning 25 HIVE for both the referrer and the person they brought. |
-| `w6-final.jpg` | Final-day card listing the four entry steps for the HivePulse SEO Contest above the 23:59 UTC deadline. |
+| `w6-final.jpg` | Final-day card listing the four entry steps for the HivePulse SEO Contest above the 12:00 UTC deadline. |
 
 ## What to watch
 

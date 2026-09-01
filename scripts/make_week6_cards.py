@@ -81,7 +81,7 @@ CARDS = [
         'blocks': [
             {'text': 'FINAL DAY', 'size': 32, 'weight': 'semi',
              'color': bs.CRIMSON, 'gap': 24},
-            {'text': 'Closes tonight, 23:59 UTC', 'size': 62, 'gold': True, 'gap': 30},
+            {'text': 'Closes today, 12:00 UTC', 'size': 62, 'gold': True, 'gap': 30},
             {'text': 'Publish a new post with the analyzer open', 'size': 33,
              'weight': 'reg', 'color': bs.INK_2, 'gap': 14},
             {'text': 'Comment your link and your score screenshot', 'size': 33,

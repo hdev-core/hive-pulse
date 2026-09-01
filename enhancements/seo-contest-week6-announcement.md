@@ -1,7 +1,7 @@
 # HivePulse SEO Contest — Week 5 Results + Week 6 Campaign Pack
 
 Judged **1 September 2026** from the comments on the [week-5 post](https://peakd.com/@hdev/hivepulse-seo-contest-new-week-5-prize-pool-500-hive).
-Week 6 runs **1 September → 8 September 2026, 23:59 UTC**.
+Week 6 runs **1 September → 8 September 2026, 12:00 UTC**.
 
 Scored with `node scripts/judge-contest.mjs entries-week5.txt`, window 25 Aug → 1 Sep,
 every score re-derived from the published post rather than the screenshot.
@@ -307,7 +307,7 @@ Pick one. Add your screenshot if you have one — posts with an image travel fur
 - It has to **quote-retweet our week-6 announcement**, not be a standalone post
 - It has to be **your own words and your own experience**
 - **No engagement farming.** Follow-for-follow, like-for-like, reply-chain rings and bought engagement are disqualified. We will look before paying.
-- Counted at week 6 close, **8 September 23:59 UTC**
+- Counted at week 6 close, **8 September 12:00 UTC**
 
 **One honest caveat about this format.** Engagement rewards reach, and reach follows follower count — so a large account starts ahead of a small one no matter how good the post is. We are trying it because our problem right now is distribution, not taste. If it turns into "the biggest account always wins", we will change it again and say so.
 
@@ -321,7 +321,7 @@ Pick one. Add your screenshot if you have one — posts with an image travel fur
 4. **Tag the post `#hivepulse`.** Enforced. It has cost someone their entry in four of five rounds.
 5. Referred by someone? Write **exactly** `referred by @username` in your comment — that wording, so nothing gets missed — and you both earn 25 HIVE.
 
-**Runs 1 September → 8 September 2026, 23:59 UTC.** Minimum SEO score of 70. One entry per person; post several and your best tagged one counts. Any language welcome.
+**Runs 1 September → 8 September 2026, 12:00 UTC.** Minimum SEO score of 70. One entry per person; post several and your best tagged one counts. Any language welcome.
 
 ## Where the points actually are
 
@@ -390,7 +390,7 @@ Quote this tweet with anything true about using HivePulse. Your score screenshot
 Most likes + reposts + replies by 8 Sept wins.
 
 **8/**
-Week 6 runs to 8 Sept, 23:59 UTC.
+Week 6 runs to 8 Sept, 12:00 UTC.
 
 1️⃣ Install HivePulse (free)
 2️⃣ Optimize & publish
@@ -423,4 +423,4 @@ Full details 👉 [PASTE_HIVE_POST_URL]
 >
 > Quote our announcement with anything true about using HivePulse — your score screenshot, what surprised you, one before/after sentence. Your own words, no engagement farming.
 >
-> 🗓️ **Week 6 is open now, closing 8 September, 23:59 UTC.** Link **and** screenshot in the comments, tag `#hivepulse`, and add "referred by @username" if someone brought you.
+> 🗓️ **Week 6 is open now, closing 8 September, 12:00 UTC.** Link **and** screenshot in the comments, tag `#hivepulse`, and add "referred by @username" if someone brought you.

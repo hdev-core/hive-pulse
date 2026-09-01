@@ -80,7 +80,7 @@ def main():
                stroke_width=4, stroke_fill=SHADOW)
     d.line([(W // 2, by + 6), (W // 2, by + 96)], fill=(72, 88, 120), width=2)
 
-    d.text((W // 2, H - 62), 'Closes 8 September 2026, 23:59 UTC   ·   Tag #hivepulse',
+    d.text((W // 2, H - 62), 'Closes 8 September 2026, 12:00 UTC   ·   Tag #hivepulse',
            font=bs.font('semi', 30), fill=bs.INK_2, anchor='mm',
            stroke_width=5, stroke_fill=SHADOW)
 

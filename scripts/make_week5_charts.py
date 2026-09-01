@@ -66,7 +66,7 @@ TIERS = [
 ]
 
 
-def tier_card(entries, out, closes='1 September'):
+def tier_card(entries, out, closes='1 September, 23:59 UTC'):
     im = bs.gold_ground(W, H, bloom=(0.90, 0.24), intensity=0.92)
     d = ImageDraw.Draw(im)
 
@@ -138,7 +138,7 @@ def tier_card(entries, out, closes='1 September'):
 
     bs.badge(im, 100, H - 118, d=72)
     bs.wordmark(im, 190, H - 110, size=32)
-    d.text((W - 100, H - 92), f'Closes {closes}, 23:59 UTC',
+    d.text((W - 100, H - 92), f'Closes {closes}',
            font=font('semi', 25), fill=bs.INK_2, anchor='rm',
            stroke_width=4, stroke_fill=(10, 16, 34))
 
@@ -240,7 +240,8 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--entries', type=int, default=2)
     ap.add_argument('--week', default='w5', help="output prefix, e.g. w6")
-    ap.add_argument('--closes', default='1 September', help="deadline shown on the tier card")
+    ap.add_argument('--closes', default='1 September, 23:59 UTC',
+                    help="full deadline string shown on the tier card")
     a = ap.parse_args()
     od = 'enhancements/images/social'
     os.makedirs(od, exist_ok=True)

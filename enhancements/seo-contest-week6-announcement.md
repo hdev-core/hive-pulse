@@ -17,8 +17,13 @@ every score re-derived from the published post rather than the screenshot.
 | @les90 | **50 HIVE** | 🥉 3rd — combined 98 |
 | @cositav | **25 HIVE** | Referral bonus — brought @cayitus63 |
 | @cayitus63 | **25 HIVE** | Referral bonus — referred by @cositav |
+| @nabbas0786 | **25 HIVE** | Referral bonus — brought @les90 |
+| @les90 | **25 HIVE** | Referral bonus — referred by @nabbas0786 |
 | *(nobody)* | **50 HIVE** | Best quote-RT on X — **no valid entry, recommend rolling to week 6** |
-| | **350 HIVE** | **Total to pay now** (400 if the quote-RT prize is awarded anyway) |
+| | **400 HIVE** | **Total to pay now** |
+
+Per person: **@nabbas0786 175** (150 + 25) · **@militadigital01 100** ·
+**@les90 75** (50 + 25) · **@cositav 25** · **@cayitus63 25**.
 
 Also owed to the three winners: **upvote + reblog from @hdev**.
 
@@ -103,9 +108,25 @@ directly; a genuine on-brief entry may exist that never announced itself on Hive
   not have podiumed, but it does cost the field one entry toward the tier. Worth a warm
   reply, a reblog, and an explicit invitation to re-enter week 6 — this is someone
   promoting us for free.
-- **Referral verified and paid.** @cayitus63 has never commented on any previous contest
-  round, holds an established account (created 2024, 4,026 posts), and their entry
-  qualified at SEO 81 with the tag present. @cositav gets 25, @cayitus63 gets 25.
+- **Two referrals verified, not one.**
+  - @cositav → @cayitus63, who wrote "## referred by @cositav". Never entered before,
+    established account (created 2024, 4,026 posts), entry qualified at SEO 81 with the
+    tag. 25 HIVE each.
+  - @nabbas0786 → @les90, who wrote "i learned and **referred from** @nabbas0786".
+    Never entered before, and the entry did not merely qualify — it took **third place**.
+    25 HIVE each.
+- **Two near-misses that do not pay, and why.**
+  - @militadigital01 credited @cositav with recommending the tool, but has entered in
+    weeks 1 and 4. The bonus requires bringing someone who has **never entered before**,
+    so this is not a referral. @cositav is still inside the two-referral cap either way.
+  - @katerinaramm opened with "Thx @mcfarhat for the reminder about this contest" — a
+    thank-you to the host, not a referral, and the bonus is conditional on the referred
+    entry qualifying. Hers is disqualified on the tag, so nothing is owed on either
+    count.
+- ⚠️ **Process note.** The @les90 referral was nearly missed: the first pass searched for
+  the literal phrase "referred by" and @les90 wrote "referred **from**". Every future
+  round must scan for the concept, not the phrase — and the week-6 rules below now name
+  the exact wording to remove the ambiguity at source.
 - **All eight valid entries cleared the SEO 70 floor.** No entry was lost to the score
   threshold for the second round running.
 
@@ -243,7 +264,13 @@ first, before you write a word.
 @cositav brought @cayitus63, who had never entered before. @cayitus63's post qualified at
 SEO 81, so **both of them earned 25 HIVE**, on top of anything else they won.
 
-That is the cheapest prize on the board and only one person claimed it. Bring someone.
+**Two** referrals actually paid out this round: @cositav brought @cayitus63, and
+@nabbas0786 brought @les90 — who then took third place, so @les90 leaves with 75 HIVE and
+@nabbas0786 with 175.
+
+One request: write it as **`referred by @username`**, in those words. We nearly missed a
+payout this round because it was phrased differently, and we would rather pay everyone
+who earned it.
 
 ## The 50 HIVE X prize rolls over — and this time, an example
 
@@ -272,7 +299,8 @@ reply to as many as we can with what we would change.
 2. Write and publish a **new** post on any supported Hive frontend, with the analyzer open as you write.
 3. **Comment below** with a link to the post **and** a screenshot of your SEO and GEO panel. Both are required.
 4. **Tag the post `#hivepulse`.** Enforced. It has cost someone their entry in four of five rounds.
-5. Referred by someone? Add **"referred by @username"** to your comment — 25 HIVE each.
+5. Referred by someone? Write **exactly** `referred by @username` in your comment — that
+   wording, so nothing gets missed — and you both earn 25 HIVE.
 
 **Runs 1 September → 8 September 2026, 23:59 UTC.** Minimum SEO score of 70. One entry
 per person; post several and your best tagged one counts. Any language welcome.
@@ -331,9 +359,9 @@ Two more writers next round and every prize on the board goes up.
 That is the whole thing. Not a stretch goal — two people.
 
 **5/ (the referral)**
-The referral bonus paid out for the first time: @cositav brought someone new, and they both took 25 HIVE.
+The referral bonus paid out twice. @cositav brought @cayitus63. @nabbas0786 brought @les90 — who then finished third.
 
-One person claimed the cheapest prize on the board. Bring someone.
+Bring one person and you both get 25 HIVE, on top of anything you win.
 
 **6/ (the X prize, restated)**
 The 50 HIVE quote-RT prize rolls over. Nobody won it — two people entered and both wrote promo, which means we asked badly.
@@ -364,7 +392,7 @@ Full details 👉 [PASTE_HIVE_POST_URL]
 >
 > Eight valid entries, **every one above the score floor**. 🎉
 >
-> 💸 The **referral bonus paid out for the first time** — @cositav brought @cayitus63, and both took 25 HIVE.
+> 💸 The **referral bonus paid out twice** — @cositav brought @cayitus63, and @nabbas0786 brought @les90, who then finished 3rd. 25 HIVE to each of the four.
 >
 > ⚖️ **The pool stayed at 300.** We promised it scales — 10 entrants for 400, 20 for 500 — and eight entered. So we paid 300. It is a rule, not a hope, and **two more people next round moves it.**
 >

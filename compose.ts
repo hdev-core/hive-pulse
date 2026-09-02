@@ -341,22 +341,41 @@ const getTags = (): string[] => {
   }
 
   // SlothBuzz renders chips as "# tag1 ×" with only Tailwind utility classes, so the scan
-  // above finds nothing there. Look around the tag input as a fallback — but ONLY accept a
-  // literal × or leading #. Matching on "contains a button" instead would pull in the editor
-  // toolbar toggles (Visual|Markdown, H1 H2 H3) as phantom tags.
-  const tagInput = document.querySelector<HTMLInputElement>('input[placeholder*="tag" i], input[class*="tag" i]');
-  if (!seen.size && tagInput) {
-    let node: Element | null = tagInput;
-    for (let up = 0; up < 2 && node && !seen.size; up++) {
-      node = node.parentElement;
-      if (!node) continue;
-      for (const el of node.querySelectorAll('*')) {
-        const raw = el.textContent || '';
-        if (!/[×✕✗✖]/.test(raw) && !/^\s*#\s*\S/.test(raw)) continue;
-        const txt = raw.replace(/[×✕✗✖]/g, '').replace(/^[#\s]+/, '').trim();
-        if (!txt || txt.includes(' ') || txt.length > 32) continue;
-        add(txt);
+  // above finds nothing there. Anchor on the tag area and read the chips out of it — but
+  // ONLY accept a literal × or leading #. Matching on "contains a button" instead would
+  // pull in the editor toolbar toggles (Visual|Markdown, H1 H2 H3) as phantom tags.
+  //
+  // Anchoring on the tag INPUT alone was not enough. SlothBuzz removes that input once the
+  // 10-tag cap is reached, so querySelector returned null and the whole fallback was
+  // skipped: a fully tagged post scored 0/8, which is exactly when the author had done the
+  // most work. Reproduced at 10 tags; 8, 5 and 2 all read correctly. The "N/10 tags"
+  // counter is present at every count, so it is tried as the primary anchor.
+  if (!seen.size) {
+    const anchors: Element[] = [];
+    for (const el of document.querySelectorAll('p, span, div, small, label')) {
+      if (el.children.length) continue;                   // the counter is a leaf node
+      if (/\d+\s*\/\s*\d+\s+tags/i.test(el.textContent || '')) { anchors.push(el); break; }
+    }
+    const tagInput = document.querySelector<HTMLInputElement>('input[placeholder*="tag" i], input[class*="tag" i]');
+    if (tagInput) anchors.push(tagInput);
+
+    for (const anchor of anchors) {
+      let node: Element | null = anchor;
+      // Four levels, not two: the counter sits a little further from the chips than the
+      // input did. The !seen.size guard stops at the closest level that yields anything,
+      // so a wider walk cannot start pulling hashtags out of the post body.
+      for (let up = 0; up < 4 && node && !seen.size; up++) {
+        node = node.parentElement;
+        if (!node) continue;
+        for (const el of node.querySelectorAll('*')) {
+          const raw = el.textContent || '';
+          if (!/[×✕✗✖]/.test(raw) && !/^\s*#\s*\S/.test(raw)) continue;
+          const txt = raw.replace(/[×✕✗✖]/g, '').replace(/^[#\s]+/, '').trim();
+          if (!txt || txt.includes(' ') || txt.length > 32) continue;
+          add(txt);
+        }
       }
+      if (seen.size) break;
     }
   }
 

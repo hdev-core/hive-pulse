@@ -127,7 +127,16 @@ export const getTargetUrl = (
   username: string | null,
   author: string | null,
   permlink: string | null,
-  allFrontends: FrontendConfig[]
+  allFrontends: FrontendConfig[],
+  /**
+   * Whether `currentPath` came from a Hive page and is therefore safe to carry across to
+   * another frontend. When it did not, carrying it produces nonsense: switching frontends
+   * from our own Chrome Web Store listing sent people to
+   * peakd.com/detail/hivepulse/<extension-id>, because that store path was pasted onto
+   * peakd's domain. Defaults true so callers that build their own Hive path — the Pulse
+   * feed does — keep working unchanged.
+   */
+  sourceIsHive: boolean = true
 ): string => {
   const targetConfig = allFrontends.find((f) => f.id === targetId);
   
@@ -152,7 +161,10 @@ export const getTargetUrl = (
         finalPath = '/';
       }
     }
-  } else if (targetConfig.isCustom && targetConfig.linkStructure) {
+  } else if (targetConfig.linkStructure) {
+    // Any frontend may declare a linkStructure, not just custom ones. SlothBuzz needs it
+    // because its post URLs are /post/<author>/<permlink>; the standard branch below
+    // hardcodes /@author/permlink and would 404 there.
     targetDomain = targetConfig.customDomain || targetConfig.domain;
 
     const templateArgs = { author, permlink, username };
@@ -170,11 +182,11 @@ export const getTargetUrl = (
         } else if (username && targetConfig.linkStructure.profile) {
             finalPath = resolveLinkTemplate(targetConfig.linkStructure.profile, templateArgs);
         } else {
-            finalPath = currentPath;
+            finalPath = sourceIsHive ? currentPath : '/';
         }
         break;
       default:
-        finalPath = currentPath;
+        finalPath = sourceIsHive ? currentPath : '/';
         break;
     }
   } else {
@@ -191,7 +203,10 @@ export const getTargetUrl = (
       } else if (username) {
         finalPath = `/@${username}`;
       } else {
-        finalPath = currentPath;
+        // No post and no profile to carry over. If the source was not a Hive page there is
+        // nothing meaningful to preserve, so send them to the frontend's home page rather
+        // than to an invented URL.
+        finalPath = sourceIsHive ? currentPath : '/';
       }
     }
 

@@ -50,7 +50,8 @@ export const ShareView: React.FC<ShareViewProps> = ({ tabState, allFrontends }) 
              tabState.username, 
              tabState.author, 
              tabState.permlink, 
-             allFrontends
+             allFrontends,
+             tabState.isHiveUrl
            );
            const isCopied = copiedLink === frontend.id;
            return (

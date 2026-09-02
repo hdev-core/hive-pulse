@@ -44,10 +44,29 @@ const loadHiveApi = (): Promise<void> =>
     } catch { res(); }
   });
 
-// Stay in sync if the user changes the node while a compose tab is open
+// Opt-out switch. Read before the first mount so a disabled panel never flashes on, and
+// kept live so toggling it in the popup takes effect in open compose tabs without a reload.
+let analyzerEnabled = true;
+let onAnalyzerToggle: (() => void) | null = null;
+
+const readAnalyzerSetting = (): Promise<void> =>
+  new Promise(res => {
+    try {
+      chrome.storage.local.get(['settings'], (r: any) => {
+        analyzerEnabled = r?.settings?.postAnalyzerEnabled !== false;
+        res();
+      });
+    } catch { res(); }
+  });
+
+// Stay in sync if the user changes the node, or flips the analyzer off, while a compose
+// tab is open
 try {
   chrome.storage.onChanged.addListener((changes: any, area: string) => {
-    if (area === 'local' && changes.settings) applyNodeSettings(changes.settings.newValue);
+    if (area !== 'local' || !changes.settings) return;
+    applyNodeSettings(changes.settings.newValue);
+    const next = changes.settings.newValue?.postAnalyzerEnabled !== false;
+    if (next !== analyzerEnabled) { analyzerEnabled = next; onAnalyzerToggle?.(); }
   });
 } catch {}
 
@@ -1373,9 +1392,11 @@ if (composePattern) {
   chrome.storage.local.remove(['composeKeyword']);
 
   const checkAndMount = () => {
+    if (!analyzerEnabled) { if (active) removePanel(); return; }
     if (isComposePage()) { if (!active) { injectPanel('initial'); startPolling(); } }
     else { if (active) removePanel(); }
   };
+  onAnalyzerToggle = checkAndMount;
 
   const origPush    = history.pushState.bind(history);
   const origReplace = history.replaceState.bind(history);
@@ -1389,8 +1410,12 @@ if (composePattern) {
   }).observe(document.body, { childList: true });
 
   const initialMount = () => { checkAndMount(); setTimeout(checkAndMount, 1200); };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialMount);
-  else initialMount();
+  // Settings first: mounting before the read resolves would flash the panel for anyone who
+  // has turned it off.
+  readAnalyzerSetting().then(() => {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialMount);
+    else initialMount();
+  });
 
 } // end if (composePattern)
 

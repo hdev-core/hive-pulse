@@ -154,7 +154,16 @@ export const FRONTENDS: FrontendConfig[] = [
     logoUrl: 'https://www.slothbuzz.com/apple-icon.png',
     paths: {
       compose: '/publish',
-      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
+      wallet: () => '/wallet'
+    },
+    // SlothBuzz is the one built-in that does not use /@author/permlink. Posts live under
+    // /post/<author>/<permlink>, the wallet is a single global page, and profiles are the
+    // only path that matches the usual shape. Verified live: /post/... 200, /@a/p 404,
+    // /@user/wallet 404, /wallet 200.
+    linkStructure: {
+      post:    '/post/{{author}}/{{permlink}}',
+      profile: '/@{{username}}',
+      wallet:  '/wallet',
     },
     active: true
   }

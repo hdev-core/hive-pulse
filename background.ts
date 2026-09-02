@@ -467,7 +467,8 @@ chrome.tabs.onUpdated.addListener(async (tabId: number, changeInfo: any, tab: an
         tabState.username,
         tabState.author,
         tabState.permlink,
-        allFrontends
+        allFrontends,
+        tabState.isHiveUrl
       );
 
       if (newUrl && newUrl !== tab.url) {

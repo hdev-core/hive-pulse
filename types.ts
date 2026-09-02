@@ -151,6 +151,11 @@ export interface AppSettings {
   overrideBadgeWithUnreadMessages: boolean;
   /** Show the @username hover card on Hive frontends. Opt-out; some people find it noisy. */
   usernameHoverCards?: boolean;
+  /**
+   * Show the post analyzer panel on supported compose pages. Opt-out: it runs constantly
+   * while you write, and not everyone wants it there for every post.
+   */
+  postAnalyzerEnabled?: boolean;
   activeFrontendIds: (FrontendId | string)[]; // Added for ordered and active frontend IDs
   customFrontends: FrontendConfig[]; // New property to store custom frontends
 }

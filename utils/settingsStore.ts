@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ecencyRefreshToken: '',
   overrideBadgeWithUnreadMessages: true,
   usernameHoverCards: true,
+  postAnalyzerEnabled: true,
   hiveNotificationBadgeEnabled: true,
   hiveNotificationFilterTypes: [
     HiveNotificationType.REPLY,

@@ -492,7 +492,8 @@ const App: React.FC = () => {
       usernameOverride || tabState.username,
       usernameOverride ? null : tabState.author, // Clear author if overriding user to avoid invalid post URLs
       usernameOverride ? null : tabState.permlink, // Clear permlink if overriding user
-      allFrontends // New parameter
+      allFrontends,
+      tabState.isHiveUrl // don't carry a non-Hive path (e.g. a web-store page) across
     );
     if (settings.openInNewTab) {
       window.open(url, '_blank');

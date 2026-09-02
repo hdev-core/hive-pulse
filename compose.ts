@@ -349,24 +349,39 @@ const getTags = (): string[] => {
   // 10-tag cap is reached, so querySelector returned null and the whole fallback was
   // skipped: a fully tagged post scored 0/8, which is exactly when the author had done the
   // most work. Reproduced at 10 tags; 8, 5 and 2 all read correctly. The "N/10 tags"
-  // counter is present at every count, so it is tried as the primary anchor.
-  if (!seen.size) {
+  // counter is present at every count, so it serves as the fallback anchor.
+  //
+  // Gated to SlothBuzz on purpose, following getMetaDescription's ecency.com precedent
+  // below. Ungated, this heuristic actively harmed every other editor: on a PeakD or
+  // hive.blog draft with no tags yet, it climbed into the CodeMirror body and returned
+  // "#posh" and "#hive" as the author's tags. Phantoms also land FIRST in the insertion-
+  // ordered Set, so slice(0, 10) evicts the real tags behind them.
+  if (!seen.size && /slothbuzz\.com$/i.test(location.hostname.replace(/^www\./, ''))) {
+    // Off-limits subtrees. A "#tag" inside prose is content, not metadata, and the
+    // analyzer's own suggested-tag chips are rendered as bare "#foo" spans — reading those
+    // back would make the panel feed on its own output.
+    const OFF_LIMITS = `[contenteditable="true"], textarea, .CodeMirror, .cm-editor, .cm-content, .prose, #${PANEL_ID}`;
+
+    // Input first: it is the specific signal, and it is absent only in the capped case that
+    // this fallback exists for. Counter second, and only then — page text can say "3/10
+    // tags", and an anchor taken from prose drags the whole walk into the post body.
     const anchors: Element[] = [];
+    const tagInput = document.querySelector<HTMLInputElement>('input[placeholder*="tag" i], input[class*="tag" i]');
+    if (tagInput) anchors.push(tagInput);
     for (const el of document.querySelectorAll('p, span, div, small, label')) {
       if (el.children.length) continue;                   // the counter is a leaf node
       if (/\d+\s*\/\s*\d+\s+tags/i.test(el.textContent || '')) { anchors.push(el); break; }
     }
-    const tagInput = document.querySelector<HTMLInputElement>('input[placeholder*="tag" i], input[class*="tag" i]');
-    if (tagInput) anchors.push(tagInput);
 
     for (const anchor of anchors) {
       let node: Element | null = anchor;
-      // Four levels, not two: the counter sits a little further from the chips than the
-      // input did. The !seen.size guard stops at the closest level that yields anything,
-      // so a wider walk cannot start pulling hashtags out of the post body.
+      // Bound the climb structurally. !seen.size cannot do it: this whole block only runs
+      // when seen is empty, so the guard is vacuous until a level yields something — which
+      // is exactly the untagged case where the walk must NOT reach the editor.
       for (let up = 0; up < 4 && node && !seen.size; up++) {
-        node = node.parentElement;
-        if (!node) continue;
+        const parent: Element | null = node.parentElement;
+        if (!parent || parent === document.body || parent.querySelector(OFF_LIMITS)) break;
+        node = parent;
         for (const el of node.querySelectorAll('*')) {
           const raw = el.textContent || '';
           if (!/[×✕✗✖]/.test(raw) && !/^\s*#\s*\S/.test(raw)) continue;

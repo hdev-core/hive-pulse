@@ -25,7 +25,43 @@ export const parseUrl = (urlString: string, allFrontends: FrontendConfig[]): Cur
     let author: string | null = null;
     let permlink: string | null = null;
 
-    if (hostname === '3speak.tv') {
+    // Only read identities off a frontend we actually recognise. USERNAME_REGEX matches
+    // "/@name" on ANY site, so an unguarded parse turned medium.com/@dan/some-post into
+    // peakd.com/@dan/some-post — and where the foreign handle happens to be a real Hive
+    // account, that is someone else's profile.
+    if (!detectedFrontend) {
+      return {
+        url: urlString, isHiveUrl: false, detectedFrontendId: null,
+        path: url.pathname + url.search + url.hash,
+        username: null, author: null, permlink: null,
+      };
+    }
+
+    // A frontend may declare its own post shape. SlothBuzz serves /post/<author>/<permlink>,
+    // so without this the outbound fix has no inbound half: you could reach a SlothBuzz post
+    // but switching away from it carried the raw path to peakd.com/post/...
+    const tpl = detectedFrontend.linkStructure?.post;
+    if (tpl) {
+      const parts = tpl.split(/(\{\{author\}\}|\{\{permlink\}\}|\{\{username\}\})/);
+      const order: string[] = [];
+      let src = '^';
+      for (const p of parts) {
+        if (p === '{{author}}')        { src += '([a-z0-9.-]+)';  order.push('author'); }
+        else if (p === '{{permlink}}') { src += '([a-z0-9-]+)';   order.push('permlink'); }
+        else if (p === '{{username}}') { src += '([a-z0-9.-]+)';  order.push('username'); }
+        else if (p)                    { src += p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+      }
+      const m = url.pathname.match(new RegExp(src + '/?$', 'i'));
+      if (m) order.forEach((k, i) => {
+        if (k === 'author') author = m[i + 1];
+        else if (k === 'permlink') permlink = m[i + 1];
+        else username = m[i + 1];
+      });
+    }
+
+    if (author && permlink) {
+      // already resolved from the frontend's own template
+    } else if (hostname === '3speak.tv') {
       const searchParams = new URLSearchParams(url.search);
       const v = searchParams.get('v');
       if (v) {
@@ -66,8 +102,11 @@ export const parseUrl = (urlString: string, allFrontends: FrontendConfig[]): Cur
     
     return {
       url: urlString,
-      isHiveUrl: !!detectedFrontend || (!!username || (!!author && !!permlink)), // Consider it a Hive URL if a user or post is detected
-      detectedFrontendId: detectedFrontend ? detectedFrontend.id : null,
+      // A recognised frontend is now the whole test: identities are only parsed above when
+      // one matched, so the old "or a username was found" clause could only ever be true
+      // for a non-Hive site that happens to use /@handle URLs.
+      isHiveUrl: true,
+      detectedFrontendId: detectedFrontend.id,
       path: url.pathname + url.search + url.hash,
       username,
       author,
@@ -174,7 +213,11 @@ export const getTargetUrl = (
         finalPath = targetConfig.paths.compose;
         break;
       case ActionMode.WALLET:
-        finalPath = resolveLinkTemplate(targetConfig.linkStructure.wallet, templateArgs);
+        // walletPath, not a bare resolveLinkTemplate: it tolerates a config whose
+        // linkStructure has no wallet key (older stored custom frontends) instead of
+        // throwing on undefined, and it substitutes nothing for a null username rather
+        // than shipping a literal "{{username}}" in the URL.
+        finalPath = walletPath(targetConfig, username);
         break;
       case ActionMode.SAME_PAGE:
         if (author && permlink && targetConfig.linkStructure.post) {
@@ -182,11 +225,14 @@ export const getTargetUrl = (
         } else if (username && targetConfig.linkStructure.profile) {
             finalPath = resolveLinkTemplate(targetConfig.linkStructure.profile, templateArgs);
         } else {
-            finalPath = sourceIsHive ? currentPath : '/';
+            // This branch exists precisely because the target's paths differ from
+            // everyone else's, so the source path is meaningless here even when it came
+            // from a Hive page: peakd.com/trending/x -> slothbuzz.com/trending/x is a 404.
+            finalPath = '/';
         }
         break;
       default:
-        finalPath = sourceIsHive ? currentPath : '/';
+        finalPath = '/';
         break;
     }
   } else {

@@ -1426,7 +1426,14 @@ if (composePattern) {
   chrome.storage.local.remove(['composeKeyword']);
 
   const checkAndMount = () => {
-    if (!analyzerEnabled) { if (active) removePanel(); return; }
+    if (!analyzerEnabled) {
+      // Tear down, don't just hide. Leaving the 3s poll and a pending debounce alive would
+      // keep scraping the page for the tab's lifetime after the user asked us to stop.
+      removePanel();
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (debounce)  { clearTimeout(debounce);   debounce  = null; }
+      return;
+    }
     if (isComposePage()) { if (!active) { injectPanel('initial'); startPolling(); } }
     else { if (active) removePanel(); }
   };

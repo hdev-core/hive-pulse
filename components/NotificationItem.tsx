@@ -1,7 +1,7 @@
 import React from 'react';
-import { HiveNotification, HiveNotificationType, AppSettings } from '../types';
+import { HiveNotification, HiveNotificationType, AppSettings, ActionMode } from '../types';
 import { MessageSquare, AtSign, UserPlus, Repeat2, ArrowRightLeft, Heart, TrendingUp, TrendingDown, Info, Coins, Gift, Zap, PiggyBank, Banknote, Landmark } from 'lucide-react';
-import { getTargetUrl } from '../utils/urlHelpers';
+import { getTargetUrl, AUTHOR_PERMLINK_REGEX } from '../utils/urlHelpers';
 
 interface NotificationItemProps {
   notification: HiveNotification;
@@ -194,7 +194,25 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
     }
     if (!path) return;
 
-    const url = getTargetUrl(settings.preferredFrontendId, path, 'SAME_PAGE' as any, null, null, null, allFrontends);
+    // Pull the identity out of the path instead of passing nulls. With nulls, getTargetUrl
+    // has nothing to build from and falls back to carrying this path verbatim — which sends
+    // every notification click to /@author/permlink, a 404 on any frontend that does not use
+    // that shape (SlothBuzz serves /post/<author>/<permlink>) and a bare homepage on 3Speak.
+    const post = path.match(AUTHOR_PERMLINK_REGEX);
+    const user = path.match(/^\/@([a-z0-9.-]+)\/?$/);
+    // A wallet-ish path is an action, not a page: let the target resolve its own wallet URL
+    // rather than assuming /@user/transfers exists there.
+    const walletish = /^\/@[a-z0-9.-]+\/(transfers|wallet|permissions|password)$/.test(path);
+    const mode = walletish ? ActionMode.WALLET : ActionMode.SAME_PAGE;
+    const who = walletish ? path.match(/^\/@([a-z0-9.-]+)\//)?.[1] ?? null : (user?.[1] ?? null);
+
+    const url = getTargetUrl(
+      settings.preferredFrontendId, path, mode,
+      who,
+      post ? post[1] : null,
+      post ? post[2] : null,
+      allFrontends,
+    );
     if (url) window.open(url, '_blank');
   };
 

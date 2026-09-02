@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sparkles, RefreshCw, Loader, ExternalLink, Users, MessageSquare, ThumbsUp } from 'lucide-react';
-import { AppSettings, TrendingPost, TrendingCommunity } from '../../types';
+import { AppSettings, TrendingPost, TrendingCommunity, ActionMode } from '../../types';
+import { getTargetUrl } from '../../utils/urlHelpers';
 import { fetchTrendingPosts, fetchTrendingCommunities, fetchFypPosts } from '../../utils/hiveHelpers';
 
 interface TrendingViewProps {
@@ -55,10 +56,20 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
   const fypUser = settings.ecencyUsername || settings.rcUser || '';
 
   const preferredFrontend = allFrontends.find(f => f.id === settings.preferredFrontendId);
-  const baseDomain = preferredFrontend?.domain ?? 'peakd.com';
+  const baseDomain = preferredFrontend?.customDomain ?? preferredFrontend?.domain ?? 'peakd.com';
 
-  const postUrl      = (author: string, permlink: string) => `https://${baseDomain}/@${author}/${permlink}`;
-  const communityUrl = (name: string) => `https://${baseDomain}/trending/${name}`;
+  // Route posts through getTargetUrl rather than assembling /@author/permlink here. Pasting
+  // that shape onto the preferred frontend's domain ignores every frontend whose posts do
+  // not live there: SlothBuzz (/post/...), 3Speak (/watch?v=...) and any custom frontend's
+  // linkStructure. Every trending row was a 404 for a SlothBuzz user.
+  const postUrl = (author: string, permlink: string) =>
+    getTargetUrl(settings.preferredFrontendId, `/@${author}/${permlink}`,
+                 ActionMode.SAME_PAGE, null, author, permlink, allFrontends);
+
+  // Communities have no template to resolve, and the path differs per frontend, so only
+  // build one where the shape is actually known to work.
+  const communityUrl = (name: string) =>
+    preferredFrontend?.linkStructure ? `https://${baseDomain}/` : `https://${baseDomain}/trending/${name}`;
 
   const load = useCallback(async (force = false) => {
     const ts = lastFetched[sort];

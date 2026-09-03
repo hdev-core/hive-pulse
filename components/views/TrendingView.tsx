@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sparkles, RefreshCw, Loader, ExternalLink, Users, MessageSquare, ThumbsUp } from 'lucide-react';
-import { AppSettings, TrendingPost, TrendingCommunity } from '../../types';
+import { AppSettings, TrendingPost, TrendingCommunity, ActionMode } from '../../types';
+import { getTargetUrl, frontendIsStandard } from '../../utils/urlHelpers';
+
+// Module scope: this was being reallocated on every render.
+const COMMUNITY_OK = new Set(['peakd.com', 'ecency.com', 'hive.blog', 'inleo.io',
+                              'waivio.com', 'ureka.social']);
 import { fetchTrendingPosts, fetchTrendingCommunities, fetchFypPosts } from '../../utils/hiveHelpers';
 
 interface TrendingViewProps {
@@ -55,10 +60,32 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
   const fypUser = settings.ecencyUsername || settings.rcUser || '';
 
   const preferredFrontend = allFrontends.find(f => f.id === settings.preferredFrontendId);
-  const baseDomain = preferredFrontend?.domain ?? 'peakd.com';
+  const baseDomain = preferredFrontend?.customDomain ?? preferredFrontend?.domain ?? 'peakd.com';
 
-  const postUrl      = (author: string, permlink: string) => `https://${baseDomain}/@${author}/${permlink}`;
-  const communityUrl = (name: string) => `https://${baseDomain}/trending/${name}`;
+  // Route posts through getTargetUrl rather than assembling /@author/permlink here. Pasting
+  // that shape onto the preferred frontend's domain ignores every frontend whose posts do
+  // not live there: SlothBuzz (/post/...), 3Speak (/watch?v=...) and any custom frontend's
+  // linkStructure. Every trending row was a 404 for a SlothBuzz user.
+  const postUrl = (author: string, permlink: string) =>
+    getTargetUrl(settings.preferredFrontendId, `/@${author}/${permlink}`,
+                 ActionMode.SAME_PAGE, null, author, permlink, allFrontends);
+
+  // There is no community template to resolve, so this is an explicit list rather than a
+  // guess. Using "has a linkStructure" as the discriminator was wrong in both directions:
+  // it sent every custom condenser mirror to its home page, while still handing Actifit a
+  // /trending/<community> URL that answers HTTP 500. Verified live per frontend; anything
+  // not listed falls back to the home page rather than a URL we have not checked.
+  // Confirmed to render a real community feed at /trending/<name>. liketu.com and
+  // hivescan.info were dropped after checking content rather than status: both answer 200
+  // for any path, but liketu returns its homepage byte-for-byte and hivescan has no
+  // /trending route at all. actifit.io answers 500. A custom frontend using the standard
+  // condenser shape is a mirror, so it qualifies too — keying on the domain alone sent
+  // every custom mirror to its home page, which is what the previous version got wrong.
+  const communitySupported =
+    COMMUNITY_OK.has(baseDomain) || (preferredFrontend?.isCustom === true
+      && frontendIsStandard(preferredFrontend));
+  const communityUrl = (name: string) =>
+    communitySupported ? `https://${baseDomain}/trending/${name}` : `https://${baseDomain}/`;
 
   const load = useCallback(async (force = false) => {
     const ts = lastFetched[sort];

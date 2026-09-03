@@ -21,9 +21,11 @@ export const SwitcherView: React.FC<SwitcherViewProps> = ({ tabState, onSwitch, 
   const [appsOpen, setAppsOpen] = useState(false);
 
   // Ensure displayFrontends are ordered according to activeFrontendIds from settings
+  // Filter on `active` as well as the stored order: a frontend added as active:false is a
+  // source-detection entry, and an id persisted before it was demoted must not revive it.
   const displayFrontends = settings.activeFrontendIds
     .map(id => allFrontends.find(f => f.id === id))
-    .filter(Boolean) as FrontendConfig[];
+    .filter((f): f is FrontendConfig => !!f && (f.active !== false || !!f.isCustom));
 
   const detectedFrontend = displayFrontends.find(f => f.id === tabState.detectedFrontendId);
   const detectedName = detectedFrontend ? detectedFrontend.name : 'Unknown';

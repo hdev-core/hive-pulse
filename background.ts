@@ -1,5 +1,5 @@
 
-import { parseUrl, getTargetUrl } from './utils/urlHelpers';
+import { parseUrl, getTargetUrl, frontendIsStandard } from './utils/urlHelpers';
 import { fetchAccountStats, fetchAccountCard, fetchNotifications, fetchRcOperationCosts } from './utils/hiveHelpers';
 import { assessRecipient } from './utils/scamShield';
 import {
@@ -467,7 +467,9 @@ chrome.tabs.onUpdated.addListener(async (tabId: number, changeInfo: any, tab: an
         tabState.username,
         tabState.author,
         tabState.permlink,
-        allFrontends
+        allFrontends,
+        tabState.isHiveUrl,
+        frontendIsStandard(allFrontends.find(f => f.id === tabState.detectedFrontendId))
       );
 
       if (newUrl && newUrl !== tab.url) {

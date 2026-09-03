@@ -144,6 +144,34 @@ export const FRONTENDS: FrontendConfig[] = [
     active: true
   },
   {
+    // The extension already injects its content script and post analyzer here (see the
+    // manifests, content.ts HIVE_HOSTS and compose.ts COMPOSE_HOSTS), but it was missing
+    // from this list — so once parseUrl started treating FRONTENDS as the sole authority
+    // on "is this Hive", the popup announced "No Hive frontend detected" on a site we
+    // actively support.
+    //
+    // active: false, and that flag is now actually enforced — settingsStore's default list
+    // filters on it and SwitcherView re-checks it, because previously neither did and this
+    // entry appeared as a switch target on fresh installs despite the flag.
+    //
+    // Source detection only, deliberately: Cloudflare answers 403 to every non-browser
+    // request, so its post URL scheme could not be verified. The standard shape below is
+    // what the generic parser already assumed here, so this is no worse than before. Flip
+    // to active: true once someone confirms /@author/permlink resolves in a real browser.
+    id: FrontendId.SUSEONA,
+    name: 'Suseona',
+    domain: 'blog.suseona.com',
+    aliases: [],
+    color: '#1f2937',
+    textColor: '#ffffff',
+    description: 'Hive blogging on Suseona.',
+    paths: {
+      compose: '/create',
+      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
+    },
+    active: false
+  },
+  {
     id: FrontendId.SLOTHBUZZ,
     name: 'SlothBuzz',
     domain: 'slothbuzz.com',
@@ -154,7 +182,16 @@ export const FRONTENDS: FrontendConfig[] = [
     logoUrl: 'https://www.slothbuzz.com/apple-icon.png',
     paths: {
       compose: '/publish',
-      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
+      wallet: () => '/wallet'
+    },
+    // SlothBuzz is the one built-in that does not use /@author/permlink. Posts live under
+    // /post/<author>/<permlink>, the wallet is a single global page, and profiles are the
+    // only path that matches the usual shape. Verified live: /post/... 200, /@a/p 404,
+    // /@user/wallet 404, /wallet 200.
+    linkStructure: {
+      post:    '/post/{{author}}/{{permlink}}',
+      profile: '/@{{username}}',
+      wallet:  '/wallet',
     },
     active: true
   }

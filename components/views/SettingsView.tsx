@@ -726,6 +726,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   />
                 </label>
 
+                <label className="flex items-start justify-between gap-3 mb-3 cursor-pointer">
+                  <span className="text-sm text-slate-600">
+                    Post analyzer
+                    <span className="block text-[11px] text-slate-400">
+                      Show the SEO and AI-quotability panel while you write on supported editors. Turning this off hides it everywhere, immediately.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={settings.postAnalyzerEnabled !== false}
+                    onChange={(e) => updateSettings({ postAnalyzerEnabled: e.target.checked })}
+                    className="accent-emerald-500 w-4 h-4 mt-0.5 shrink-0"
+                  />
+                </label>
+
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm text-slate-600">Extension Badge Metric</span>
                   <div className="flex bg-slate-200 rounded p-0.5">

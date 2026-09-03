@@ -1,0 +1,166 @@
+import { describe, it, expect } from 'vitest';
+import { parseUrl, getTargetUrl, frontendIsStandard } from './urlHelpers';
+import { FRONTENDS } from '../constants';
+import { ActionMode, FrontendConfig } from '../types';
+
+/**
+ * Every case here is a bug that actually shipped on a branch and was caught by review
+ * rather than by code. urlHelpers is a pure function of (string, FrontendConfig[]) with no
+ * DOM and no chrome API, so there was never a reason for it to be untested.
+ */
+
+/** A custom frontend created with the Add-Frontend form's pre-filled defaults. */
+const mirror: FrontendConfig = {
+  id: 'custom-mirror', name: 'Mirror', domain: 'mirror.example', aliases: [],
+  color: '#000', textColor: '#fff', description: '', active: true, isCustom: true,
+  customDomain: 'mirror.example', paths: { compose: '/submit' },
+  linkStructure: {
+    post: '/@{{author}}/{{permlink}}',
+    profile: '/@{{username}}',
+    wallet: '/@{{username}}/wallet',
+  },
+};
+const F = [...FRONTENDS, mirror];
+const same = (id: string, path: string, u: string | null, a: string | null, p: string | null,
+              hive = true, std = true) =>
+  getTargetUrl(id, path, ActionMode.SAME_PAGE, u, a, p, F, hive, std);
+
+describe('parseUrl — identities are only read off recognised frontends', () => {
+  it('does not treat a non-Hive site with /@handle URLs as Hive', () => {
+    for (const u of ['https://medium.com/@dan/some-post', 'https://www.youtube.com/@veritasium/videos']) {
+      const s = parseUrl(u, F);
+      expect(s.isHiveUrl).toBe(false);
+      expect(s.username).toBeNull();
+      expect(s.author).toBeNull();
+    }
+  });
+
+  it('sends a switch from a non-Hive page to the frontend home, not a grafted path', () => {
+    const s = parseUrl('https://chromewebstore.google.com/detail/hivepulse/abc', F);
+    expect(same('PEAKD', s.path, s.username, s.author, s.permlink, s.isHiveUrl))
+      .toBe('https://peakd.com/');
+  });
+});
+
+describe('parseUrl — frontend-declared templates', () => {
+  it('parses SlothBuzz /post/<author>/<permlink> in both directions', () => {
+    const s = parseUrl('https://www.slothbuzz.com/post/oflyhigh/4mf15k-and', F);
+    expect([s.author, s.permlink]).toEqual(['oflyhigh', '4mf15k-and']);
+    expect(same('PEAKD', s.path, s.username, s.author, s.permlink))
+      .toBe('https://peakd.com/@oflyhigh/4mf15k-and');
+    expect(same('SLOTHBUZZ', '/x', null, 'oflyhigh', '4mf15k-and'))
+      .toBe('https://slothbuzz.com/post/oflyhigh/4mf15k-and');
+  });
+
+  it('normalises mis-cased identities rather than carrying them through', () => {
+    expect(parseUrl('https://www.slothbuzz.com/post/AlIcE/My-Post', F).author).toBe('alice');
+  });
+
+  it('rejects a capture that is not a valid Hive identity', () => {
+    // [^/]+ will match a percent-encoded slash; validation must drop it so it can never be
+    // pasted onto another origin's path.
+    for (const u of ['https://mirror.example/@a%2Fb/perm', 'https://mirror.example/@%2e%2e%2f%2e%2e/x']) {
+      expect(parseUrl(u, F).author).toBeNull();
+    }
+  });
+
+  it('does not let a template match stall on a pathological path', () => {
+    const evil: FrontendConfig = { ...mirror, id: 'evil', domain: 'evil.example',
+      customDomain: 'evil.example',
+      linkStructure: { ...mirror.linkStructure!, post: '/{{author}}{{permlink}}{{username}}/x' } };
+    const t0 = Date.now();
+    parseUrl('https://evil.example/' + 'a'.repeat(4000), [...F, evil]);
+    expect(Date.now() - t0).toBeLessThan(250);
+  });
+
+  it('parses a profile template, not only a post template', () => {
+    const odd: FrontendConfig = { ...mirror, id: 'odd', domain: 'odd.example',
+      customDomain: 'odd.example',
+      linkStructure: { post: '/p/{{author}}/{{permlink}}', profile: '/user/{{username}}',
+                       wallet: '/wallet' } };
+    expect(parseUrl('https://odd.example/user/acidyo', [...F, odd]).username).toBe('acidyo');
+  });
+});
+
+describe('getTargetUrl — wallets', () => {
+  it('never emits an unresolved placeholder', () => {
+    const url = getTargetUrl('custom-mirror', '/trending', ActionMode.WALLET, null, null, null, F);
+    expect(url).not.toMatch(/\{\{/);
+  });
+
+  it('does not open the post author\'s wallet while reading their post', () => {
+    const s = parseUrl('https://www.slothbuzz.com/post/bob/bobs-post', F);
+    const url = getTargetUrl('PEAKD', s.path, ActionMode.WALLET, s.username, s.author, s.permlink, F);
+    expect(url).not.toContain('@bob');
+  });
+
+  it('keeps hive.blog on its wallet subdomain', () => {
+    expect(getTargetUrl('HIVEBLOG', '/x', ActionMode.WALLET, 'alice', null, null, F))
+      .toBe('https://wallet.hive.blog/@alice/transfers');
+  });
+
+  it('resolves SlothBuzz to its single global wallet page', () => {
+    expect(getTargetUrl('SLOTHBUZZ', '/x', ActionMode.WALLET, 'alice', null, null, F))
+      .toBe('https://slothbuzz.com/wallet');
+  });
+});
+
+describe('getTargetUrl — carrying the source path', () => {
+  it('carries non-post paths between standard condenser frontends', () => {
+    expect(same('PEAKD', '/trending/hive-167922', null, null, null))
+      .toBe('https://peakd.com/trending/hive-167922');
+    expect(same('custom-mirror', '/trending/hive-167922', null, null, null))
+      .toBe('https://mirror.example/trending/hive-167922');
+  });
+
+  it('does not carry a path onto a frontend with a different scheme', () => {
+    expect(same('SLOTHBUZZ', '/trending/hive-167922', null, null, null))
+      .toBe('https://slothbuzz.com/');
+  });
+
+  it('does not carry a non-standard source path onto a standard frontend', () => {
+    // slothbuzz.com/dashboard has no counterpart on a condenser mirror.
+    expect(same('custom-mirror', '/dashboard', null, null, null, true, false))
+      .toBe('https://mirror.example/');
+  });
+});
+
+describe('regressions in frontends that were not the subject of any fix', () => {
+  it('keeps the standard shape for built-ins', () => {
+    expect(same('PEAKD', '/x', null, 'hdev', 'my-post')).toBe('https://peakd.com/@hdev/my-post');
+    expect(same('ECENCY', '/x', 'hdev', null, null)).toBe('https://ecency.com/@hdev');
+  });
+
+  it('keeps 3Speak on its watch URL', () => {
+    expect(same('THREESPEAK', '/x', null, 'hdev', 'my-post'))
+      .toBe('https://3speak.tv/watch?v=hdev/my-post');
+  });
+
+  it('still recovers Actifit @-less URLs', () => {
+    const s = parseUrl('https://actifit.io/alice/my-report', F);
+    expect([s.author, s.permlink]).toEqual(['alice', 'my-report']);
+  });
+
+  it('still extracts author and permlink from a community-prefixed URL', () => {
+    const s = parseUrl('https://peakd.com/hive-167922/@oflyhigh/4mf15k-and', F);
+    expect([s.author, s.permlink]).toEqual(['oflyhigh', '4mf15k-and']);
+  });
+});
+
+describe('frontendIsStandard', () => {
+  it('treats a frontend with no linkStructure as standard', () => {
+    expect(frontendIsStandard(FRONTENDS.find(f => f.id === 'PEAKD'))).toBe(true);
+  });
+
+  it('tolerates cosmetic drift in a user-typed template', () => {
+    for (const post of ['/@{{author}}/{{permlink}}', '/@{{author}}/{{permlink}}/',
+                        ' /@{{author}}/{{permlink}} ', '/@{{ author }}/{{ permlink }}']) {
+      expect(frontendIsStandard({ ...mirror, linkStructure: { ...mirror.linkStructure!, post } }))
+        .toBe(true);
+    }
+  });
+
+  it('recognises SlothBuzz as non-standard', () => {
+    expect(frontendIsStandard(FRONTENDS.find(f => f.id === 'SLOTHBUZZ'))).toBe(false);
+  });
+});

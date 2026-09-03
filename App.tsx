@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice } from './utils/hiveHelpers';
-import { parseUrl, getTargetUrl } from './utils/urlHelpers';
+import { parseUrl, getTargetUrl, frontendIsStandard } from './utils/urlHelpers';
 import {
   bootstrapEcencyChat,
   fetchChannels,
@@ -492,7 +492,9 @@ const App: React.FC = () => {
       usernameOverride || tabState.username,
       usernameOverride ? null : tabState.author, // Clear author if overriding user to avoid invalid post URLs
       usernameOverride ? null : tabState.permlink, // Clear permlink if overriding user
-      allFrontends // New parameter
+      allFrontends,
+      tabState.isHiveUrl, // don't carry a non-Hive path (e.g. a web-store page) across
+      frontendIsStandard(allFrontends.find(f => f.id === tabState.detectedFrontendId))
     );
     if (settings.openInNewTab) {
       window.open(url, '_blank');

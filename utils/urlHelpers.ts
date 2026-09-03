@@ -41,9 +41,18 @@ const MAX_TEMPLATE_PATH = 512;
  */
 const UNRESOLVED_PLACEHOLDER = /\{\{[^}]*\}\}/;
 
-/** A frontend with no linkStructure is a plain condenser; otherwise judge its post shape. */
+/**
+ * Can an arbitrary non-post path from this frontend be carried to another one?
+ *
+ * Only for frontends that actually serve the condenser routes. Inferring this from "has no
+ * linkStructure" treated 3Speak, Actifit, HiveScan and Ureka as condensers because they use
+ * /@author/permlink for posts, and their own routes then rode along: 3speak.tv/creators
+ * became peakd.com/creators. A custom frontend built from the Add-Frontend defaults is a
+ * genuine mirror, so it qualifies on its post shape.
+ */
 export const frontendIsStandard = (f?: FrontendConfig | null): boolean =>
-  !f?.linkStructure || usesStandardPostPath(f.linkStructure.post);
+  !!f && (f.sharesCondenserRoutes === true
+    || (!!f.isCustom && usesStandardPostPath(f.linkStructure?.post)));
 
 /** True when a frontend uses the standard condenser post shape, ignoring cosmetic drift. */
 export const usesStandardPostPath = (tpl?: string): boolean =>
@@ -92,9 +101,15 @@ export const parseUrl = (urlString: string, allFrontends: FrontendConfig[]): Cur
     // so reading only .post made custom frontends one-way — a /user/{{username}} profile
     // could be linked to but never parsed from.
     let matchedTemplate = false;
+    // Two guards, because the length cap alone does not bound the cost: adjacent
+    // placeholders are combinatorial, and a 512-char path still stalled ~10s AT the cap.
+    // A template with two placeholders and no separator between them is also meaningless —
+    // nothing could tell where one capture ends — so it is refused outright.
     const templatable = url.pathname.length <= MAX_TEMPLATE_PATH;
     for (const tpl of [detectedFrontend.linkStructure?.post, detectedFrontend.linkStructure?.profile]) {
       if (!tpl || matchedTemplate || !templatable) continue;
+      // Refuse adjacent placeholders rather than trying to match them.
+      if (/\}\}\s*\{\{/.test(tpl)) continue;
       const parts = tpl.split(/(\{\{author\}\}|\{\{permlink\}\}|\{\{username\}\})/);
       const order: string[] = [];
       let src = '^';

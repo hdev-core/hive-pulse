@@ -14,6 +14,8 @@ export const FRONTENDS: FrontendConfig[] = [
       compose: '/publish',
       wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
     },
+    // /trending, /created, /communities, /witnesses and /proposals all resolve here.
+    sharesCondenserRoutes: true,
     active: true
   },
   {
@@ -28,6 +30,8 @@ export const FRONTENDS: FrontendConfig[] = [
       compose: '/submit',
       wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
     },
+    // /trending, /created, /communities, /witnesses and /proposals all resolve here.
+    sharesCondenserRoutes: true,
     active: true
   },
   {
@@ -42,6 +46,8 @@ export const FRONTENDS: FrontendConfig[] = [
       compose: '/submit.html',
       wallet: (user) => user ? `/@${user}/transfers` : '/transfers'
     },
+    // /trending, /created, /communities, /witnesses and /proposals all resolve here.
+    sharesCondenserRoutes: true,
     active: true
   },
   {
@@ -138,8 +144,19 @@ export const FRONTENDS: FrontendConfig[] = [
     description: 'Decentralized social network on Hive.',
     logoUrl: 'https://ureka.social/apple-touch-icon.png',
     paths: {
-      compose: '/publish',
-      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
+      compose: '/create',
+      wallet: () => '/'
+    },
+    // Taken from Ureka's own client router, not assumed. Its complete route table has
+    // /post/:author/:permlink, /create and /community/:name/trending — and NO /@username
+    // route and NO wallet route at all, so profile and wallet resolve to the home page
+    // rather than to URLs that only hit the /* catch-all. It was previously configured
+    // exactly like a condenser, so every post link it produced was wrong.
+    linkStructure: {
+      post:      '/post/{{author}}/{{permlink}}',
+      profile:   '/',
+      wallet:    '/',
+      community: '/community/{{name}}/trending',
     },
     active: true
   },
@@ -150,14 +167,15 @@ export const FRONTENDS: FrontendConfig[] = [
     // on "is this Hive", the popup announced "No Hive frontend detected" on a site we
     // actively support.
     //
-    // active: false, and that flag is now actually enforced — settingsStore's default list
-    // filters on it and SwitcherView re-checks it, because previously neither did and this
-    // entry appeared as a switch target on fresh installs despite the flag.
+    // active: false means "off by default", not "hidden forever" — settingsStore seeds
+    // activeFrontendIds from this flag, and from then on that list is what the user
+    // controls. Previously the default list ignored the flag entirely, so this appeared as
+    // a switch target on fresh installs.
     //
-    // Source detection only, deliberately: Cloudflare answers 403 to every non-browser
-    // request, so its post URL scheme could not be verified. The standard shape below is
-    // what the generic parser already assumed here, so this is no worse than before. Flip
-    // to active: true once someone confirms /@author/permlink resolves in a real browser.
+    // Off by default because Cloudflare answers 403 to every non-browser request, so its
+    // post URL scheme could not be verified. The standard shape below is what the generic
+    // parser already assumed here, so enabling it is no worse than the old behaviour.
+    // Promote to active: true once someone confirms /@author/permlink in a real browser.
     id: FrontendId.SUSEONA,
     name: 'Suseona',
     domain: 'blog.suseona.com',

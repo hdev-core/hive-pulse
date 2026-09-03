@@ -186,8 +186,10 @@ describe('no result ever ships an unresolved template placeholder', () => {
 });
 
 describe('frontendIsStandard', () => {
-  it('treats a frontend with no linkStructure as standard', () => {
-    expect(frontendIsStandard(FRONTENDS.find(f => f.id === 'PEAKD'))).toBe(true);
+  it('is true for the frontends that actually declare sharesCondenserRoutes', () => {
+    for (const id of ['PEAKD', 'ECENCY', 'HIVEBLOG']) {
+      expect(frontendIsStandard(FRONTENDS.find(f => f.id === id))).toBe(true);
+    }
   });
 
   it('tolerates cosmetic drift in a user-typed template', () => {
@@ -230,5 +232,56 @@ describe('regressions found by review that the first suite missed', () => {
       expect(getTargetUrl('ph', '/x', ActionMode.WALLET, null, null, null, [...F, f]))
         .not.toMatch(/\{\{|\}\}/);
     }
+  });
+});
+
+describe('Ureka — routes taken from its own client router, not assumed', () => {
+  // ureka.social serves a byte-identical SPA shell on every path, so fetching a URL proves
+  // nothing; these come from the route table in its bundle (index-9d738bd6.js). It has
+  // /post/:author/:permlink, /create and /community/:name — and no /@user or wallet route
+  // at all, which is why it was previously sending profile and wallet links to dead paths.
+  const ureka = FRONTENDS.find(f => f.id === 'UREKA')!;
+
+  it('is not a standard condenser frontend', () => {
+    expect(frontendIsStandard(ureka)).toBe(false);
+  });
+
+  it('builds a post link on /post/, and round-trips back to a condenser frontend', () => {
+    expect(same('UREKA', '/x', null, 'oflyhigh', '4mf15k-and'))
+      .toBe('https://ureka.social/post/oflyhigh/4mf15k-and');
+    const s = parseUrl('https://ureka.social/post/oflyhigh/4mf15k-and', F);
+    expect([s.author, s.permlink]).toEqual(['oflyhigh', '4mf15k-and']);
+    expect(same('PEAKD', s.path, s.username, s.author, s.permlink))
+      .toBe('https://peakd.com/@oflyhigh/4mf15k-and');
+  });
+
+  it('sends profile and wallet home rather than to a route that does not exist', () => {
+    expect(same('UREKA', '/x', 'alice', null, null)).toBe('https://ureka.social/');
+    expect(getTargetUrl('UREKA', '/x', ActionMode.WALLET, 'alice', null, null, F))
+      .toBe('https://ureka.social/');
+  });
+
+  it('does not carry a condenser path onto it', () => {
+    expect(same('UREKA', '/trending/hive-167922', null, null, null)).toBe('https://ureka.social/');
+  });
+
+  it('opens its real composer', () => {
+    expect(getTargetUrl('UREKA', '/x', ActionMode.COMPOSE, null, null, null, F))
+      .toBe('https://ureka.social/create');
+  });
+});
+
+describe('frontendIsStandard is declared, not inferred', () => {
+  it('does not call a frontend standard just because it declares no post template', () => {
+    // The old rule was "no linkStructure ⇒ standard", so any frontend added without one
+    // silently inherited condenser routes. Ureka does declare one; this covers the shape.
+    const bare: FrontendConfig = { ...mirror, id: 'bare', domain: 'bare.example',
+      customDomain: 'bare.example', isCustom: false, linkStructure: undefined };
+    expect(frontendIsStandard(bare)).toBe(false);
+  });
+
+  it('is false for a missing frontend rather than throwing', () => {
+    expect(frontendIsStandard(undefined)).toBe(false);
+    expect(frontendIsStandard(FRONTENDS.find(f => f.id === 'NOPE'))).toBe(false);
   });
 });

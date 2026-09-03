@@ -3,9 +3,12 @@ import { Sparkles, RefreshCw, Loader, ExternalLink, Users, MessageSquare, Thumbs
 import { AppSettings, TrendingPost, TrendingCommunity, ActionMode } from '../../types';
 import { getTargetUrl, frontendIsStandard } from '../../utils/urlHelpers';
 
-// Module scope: this was being reallocated on every render.
-const COMMUNITY_OK = new Set(['peakd.com', 'ecency.com', 'hive.blog', 'inleo.io',
-                              'waivio.com', 'ureka.social']);
+// Only where a real community feed was confirmed. peakd/ecency/hive.blog are SSR and were
+// verified by content, not status. Dropped: actifit (HTTP 500), liketu and ureka (byte-
+// identical to their own homepage), hivescan (no /trending route in its manifest), inleo
+// and waivio (403 / indistinguishable — unverified is not the same as working). A frontend
+// with its own community template is handled separately and does not need listing.
+const COMMUNITY_OK = new Set(['peakd.com', 'ecency.com', 'hive.blog']);
 import { fetchTrendingPosts, fetchTrendingCommunities, fetchFypPosts } from '../../utils/hiveHelpers';
 
 interface TrendingViewProps {
@@ -66,9 +69,14 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
   // that shape onto the preferred frontend's domain ignores every frontend whose posts do
   // not live there: SlothBuzz (/post/...), 3Speak (/watch?v=...) and any custom frontend's
   // linkStructure. Every trending row was a 404 for a SlothBuzz user.
-  const postUrl = (author: string, permlink: string) =>
-    getTargetUrl(settings.preferredFrontendId, `/@${author}/${permlink}`,
-                 ActionMode.SAME_PAGE, null, author, permlink, allFrontends);
+  // getTargetUrl returns '#' for an id it cannot resolve, which happens when a custom
+  // frontend is deleted without resetting preferredFrontendId. The old hand-built URL had a
+  // peakd fallback; routing through getTargetUrl removed it and every row became '#'.
+  const postUrl = (author: string, permlink: string) => {
+    const url = getTargetUrl(settings.preferredFrontendId, `/@${author}/${permlink}`,
+                             ActionMode.SAME_PAGE, null, author, permlink, allFrontends);
+    return url === '#' ? `https://${baseDomain}/@${author}/${permlink}` : url;
+  };
 
   // There is no community template to resolve, so this is an explicit list rather than a
   // guess. Using "has a linkStructure" as the discriminator was wrong in both directions:
@@ -81,11 +89,16 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
   // /trending route at all. actifit.io answers 500. A custom frontend using the standard
   // condenser shape is a mirror, so it qualifies too — keying on the domain alone sent
   // every custom mirror to its home page, which is what the previous version got wrong.
+  // A declared template wins: Ureka serves communities at /community/<name>/trending, so
+  // handing it /trending/<name> hit its tag route instead.
+  const communityTpl = preferredFrontend?.linkStructure?.community;
   const communitySupported =
     COMMUNITY_OK.has(baseDomain) || (preferredFrontend?.isCustom === true
       && frontendIsStandard(preferredFrontend));
   const communityUrl = (name: string) =>
-    communitySupported ? `https://${baseDomain}/trending/${name}` : `https://${baseDomain}/`;
+    communityTpl ? `https://${baseDomain}${communityTpl.replace('{{name}}', name)}`
+    : communitySupported ? `https://${baseDomain}/trending/${name}`
+    : `https://${baseDomain}/`;
 
   const load = useCallback(async (force = false) => {
     const ts = lastFetched[sort];

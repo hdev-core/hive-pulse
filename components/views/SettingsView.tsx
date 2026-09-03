@@ -194,6 +194,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     updateSettings({
       customFrontends: updatedCustomFrontends,
       activeFrontendIds: updatedActiveFrontendIds,
+      // Deleting the frontend that auto-redirect points at left a dangling id behind:
+      // getTargetUrl has no config to resolve and returns '#', which background.ts then
+      // handed to chrome.tabs.update on every Hive page the user opened.
+      ...(settings.preferredFrontendId === id ? { preferredFrontendId: FrontendId.PEAKD } : {}),
     });
   };
 
@@ -389,7 +393,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
                   <label className="text-xs font-medium text-slate-500 uppercase">Preferred Frontend</label>
                   <div className="grid grid-cols-1 gap-2">
-                    {allFrontends.map(f => (
+                    {/* Inactive built-ins are source-detection entries, not destinations.
+                        This picker sets the auto-redirect target, so offering one here sent
+                        every page the user opened to a frontend deliberately not enabled. */}
+                    {allFrontends.filter(f => f.active !== false || f.isCustom).map(f => (
                       <button
                         key={f.id}
                         onClick={() => updateSettings({ preferredFrontendId: f.id })}

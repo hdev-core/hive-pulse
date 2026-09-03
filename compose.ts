@@ -356,20 +356,26 @@ const getTags = (): string[] => {
   // hive.blog draft with no tags yet, it climbed into the CodeMirror body and returned
   // "#posh" and "#hive" as the author's tags. Phantoms also land FIRST in the insertion-
   // ordered Set, so slice(0, 10) evicts the real tags behind them.
-  if (!seen.size && /slothbuzz\.com$/i.test(location.hostname.replace(/^www\./, ''))) {
+  if (!seen.size && location.hostname.replace(/^www\./, '').toLowerCase() === 'slothbuzz.com') {
     // Off-limits subtrees. A "#tag" inside prose is content, not metadata, and the
     // analyzer's own suggested-tag chips are rendered as bare "#foo" spans — reading those
     // back would make the panel feed on its own output.
     const OFF_LIMITS = `[contenteditable="true"], textarea, .CodeMirror, .cm-editor, .cm-content, .prose, #${PANEL_ID}`;
 
     // Input first: it is the specific signal, and it is absent only in the capped case that
-    // this fallback exists for. Counter second, and only then — page text can say "3/10
-    // tags", and an anchor taken from prose drags the whole walk into the post body.
+    // this fallback exists for. Counter second — page text can legitimately say "3/10 tags".
+    //
+    // Every candidate is rejected if it SITS INSIDE an off-limits subtree. Checking only on
+    // the way up is not enough: querySelector looks at descendants, so it refuses to climb
+    // into a container that holds the editor while happily starting inside one. With the
+    // input gone at the 10-tag cap, a "5/10 tags" sentence in the body was then the only
+    // anchor, and the walk returned "#posh" from the prose while evicting all ten real tags.
     const anchors: Element[] = [];
     const tagInput = document.querySelector<HTMLInputElement>('input[placeholder*="tag" i], input[class*="tag" i]');
-    if (tagInput) anchors.push(tagInput);
+    if (tagInput && !tagInput.closest(OFF_LIMITS)) anchors.push(tagInput);
     for (const el of document.querySelectorAll('p, span, div, small, label')) {
       if (el.children.length) continue;                   // the counter is a leaf node
+      if (el.closest(OFF_LIMITS)) continue;               // never anchor inside the post body
       if (/\d+\s*\/\s*\d+\s+tags/i.test(el.textContent || '')) { anchors.push(el); break; }
     }
 
@@ -1427,8 +1433,11 @@ if (composePattern) {
 
   const checkAndMount = () => {
     if (!analyzerEnabled) {
-      // Tear down, don't just hide. Leaving the 3s poll and a pending debounce alive would
-      // keep scraping the page for the tab's lifetime after the user asked us to stop.
+      // Stop the work we own: the panel, the 3s poll and any pending debounce. The document
+      // input/change listeners and the MutationObserver stay attached — ensureBootstrap
+      // installs them once and re-enabling relies on them — so keystrokes still schedule a
+      // debounce, which then finds no panel and returns. Cheap, but not nothing: this is a
+      // pause, not a full detach.
       removePanel();
       if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
       if (debounce)  { clearTimeout(debounce);   debounce  = null; }

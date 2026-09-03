@@ -144,6 +144,32 @@ export const FRONTENDS: FrontendConfig[] = [
     active: true
   },
   {
+    // The extension already injects its content script and post analyzer here (see the
+    // manifests, content.ts HIVE_HOSTS and compose.ts COMPOSE_HOSTS), but it was missing
+    // from this list — so once parseUrl started treating FRONTENDS as the sole authority
+    // on "is this Hive", the popup announced "No Hive frontend detected" on a site we
+    // actively support.
+    //
+    // active: false on purpose. Listing it restores SOURCE detection, which is the
+    // regression; it does not add it as a switch TARGET, because Cloudflare answers 403 to
+    // any non-browser request so its post URL scheme could not be verified. The standard
+    // shape below is what the generic parser already assumed here before this change, so
+    // this is no worse than the previous behaviour. Flip active to true once someone
+    // confirms /@author/permlink resolves in a real browser.
+    id: FrontendId.SUSEONA,
+    name: 'Suseona',
+    domain: 'blog.suseona.com',
+    aliases: [],
+    color: '#1f2937',
+    textColor: '#ffffff',
+    description: 'Hive blogging on Suseona.',
+    paths: {
+      compose: '/create',
+      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
+    },
+    active: false
+  },
+  {
     id: FrontendId.SLOTHBUZZ,
     name: 'SlothBuzz',
     domain: 'slothbuzz.com',

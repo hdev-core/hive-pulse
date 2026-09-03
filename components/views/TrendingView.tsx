@@ -66,10 +66,19 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
     getTargetUrl(settings.preferredFrontendId, `/@${author}/${permlink}`,
                  ActionMode.SAME_PAGE, null, author, permlink, allFrontends);
 
-  // Communities have no template to resolve, and the path differs per frontend, so only
-  // build one where the shape is actually known to work.
+  // There is no community template to resolve, so this is an explicit list rather than a
+  // guess. Using "has a linkStructure" as the discriminator was wrong in both directions:
+  // it sent every custom condenser mirror to its home page, while still handing Actifit a
+  // /trending/<community> URL that answers HTTP 500. Verified live per frontend; anything
+  // not listed falls back to the home page rather than a URL we have not checked.
+  const COMMUNITY_OK = new Set([
+    'peakd.com', 'ecency.com', 'hive.blog', 'inleo.io',
+    'waivio.com', 'liketu.com', 'ureka.social', 'hivescan.info',
+  ]);
   const communityUrl = (name: string) =>
-    preferredFrontend?.linkStructure ? `https://${baseDomain}/` : `https://${baseDomain}/trending/${name}`;
+    COMMUNITY_OK.has(preferredFrontend?.domain ?? '')
+      ? `https://${baseDomain}/trending/${name}`
+      : `https://${baseDomain}/`;
 
   const load = useCallback(async (force = false) => {
     const ts = lastFetched[sort];

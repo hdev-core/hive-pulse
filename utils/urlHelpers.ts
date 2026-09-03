@@ -4,6 +4,14 @@ import { FrontendId, CurrentTabState, ActionMode, FrontendConfig } from '../type
 
 // Regex to extract author and permlink from a Hive post URL (e.g., /@author/permlink)
 export const AUTHOR_PERMLINK_REGEX = /\/@([a-z0-9.-]+)\/([a-z0-9-]+)/;
+
+/**
+ * The condenser post shape. A frontend whose linkStructure.post matches this is a mirror
+ * of the standard layout, so an arbitrary source path (/trending, /proposals, /witnesses)
+ * is just as valid there — unlike SlothBuzz, which serves /post/<author>/<permlink> and
+ * shares none of the other routes.
+ */
+export const STANDARD_POST_PATH = '/@{{author}}/{{permlink}}';
 export const THREESPEAK_WATCH_REGEX = /v=([a-z0-9.-]+)\/([a-z0-9-]+)/;
 export const THREESPEAK_USER_REGEX = /\/user\/([a-z0-9.-]+)/;
 
@@ -41,26 +49,43 @@ export const parseUrl = (urlString: string, allFrontends: FrontendConfig[]): Cur
     // so without this the outbound fix has no inbound half: you could reach a SlothBuzz post
     // but switching away from it carried the raw path to peakd.com/post/...
     const tpl = detectedFrontend.linkStructure?.post;
+    let matchedTemplate = false;
     if (tpl) {
       const parts = tpl.split(/(\{\{author\}\}|\{\{permlink\}\}|\{\{username\}\})/);
       const order: string[] = [];
       let src = '^';
       for (const p of parts) {
-        if (p === '{{author}}')        { src += '([a-z0-9.-]+)';  order.push('author'); }
-        else if (p === '{{permlink}}') { src += '([a-z0-9-]+)';   order.push('permlink'); }
-        else if (p === '{{username}}') { src += '([a-z0-9.-]+)';  order.push('username'); }
+        // [^/] rather than a character class with an unbounded quantifier: two adjacent
+        // placeholders in a user-typed template produced overlapping quantifiers that took
+        // ~100s on a long path, and parseUrl runs on every tab update in the service worker.
+        if (p === '{{author}}')        { src += '([^/]+)'; order.push('author'); }
+        else if (p === '{{permlink}}') { src += '([^/]+)'; order.push('permlink'); }
+        else if (p === '{{username}}') { src += '([^/]+)'; order.push('username'); }
         else if (p)                    { src += p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
       }
-      const m = url.pathname.match(new RegExp(src + '/?$', 'i'));
-      if (m) order.forEach((k, i) => {
-        if (k === 'author') author = m[i + 1];
-        else if (k === 'permlink') permlink = m[i + 1];
-        else username = m[i + 1];
-      });
+      // No 'i' flag: Hive account names and permlinks are lowercase-canonical, and matching
+      // case-insensitively let /post/AlIcE through as the author "AlIcE".
+      const m = url.pathname.match(new RegExp(src + '/?$'));
+      if (m) {
+        matchedTemplate = true;
+        // Hive account names and permlinks are lowercase by consensus, so a mis-cased URL
+        // is a typo to normalise rather than a different post: /post/AlIcE must not become
+        // the author "AlIcE" in the URL we hand to the next frontend.
+        order.forEach((k, i) => {
+          const v = (m[i + 1] || '').toLowerCase();
+          if (k === 'author') author = v;
+          else if (k === 'permlink') permlink = v;
+          else username = v;
+        });
+      }
     }
 
-    if (author && permlink) {
-      // already resolved from the frontend's own template
+    // Only skip the generic parse when the template actually resolved a post. Skipping on
+    // "author && permlink" instead threw away the username, and custom frontends default to
+    // /@{{author}}/{{permlink}} — so the common case lost it and the wallet URL came out as
+    // a literal /@{{username}}/wallet.
+    if (matchedTemplate && author && permlink) {
+      username = username || author;
     } else if (hostname === '3speak.tv') {
       const searchParams = new URLSearchParams(url.search);
       const v = searchParams.get('v');
@@ -150,8 +175,12 @@ const walletPath = (config: FrontendConfig, username: string | null): string => 
   if (typeof config.paths?.wallet === 'function') {
     return config.paths.wallet(username || undefined);
   }
-  if (config.linkStructure?.wallet) {
-    return resolveLinkTemplate(config.linkStructure.wallet, { username });
+  // Only usable when the template needs no username, or we have one. resolveLinkTemplate
+  // substitutes nothing for a falsy arg, so using it blindly shipped a literal
+  // "/@{{username}}/wallet" to the address bar from any page with no user in it.
+  const tpl = config.linkStructure?.wallet;
+  if (tpl && (username || !tpl.includes('{{username}}'))) {
+    return resolveLinkTemplate(tpl, { username });
   }
   return username ? `/@${username}/wallet` : '/wallet';
 };
@@ -225,10 +254,15 @@ export const getTargetUrl = (
         } else if (username && targetConfig.linkStructure.profile) {
             finalPath = resolveLinkTemplate(targetConfig.linkStructure.profile, templateArgs);
         } else {
-            // This branch exists precisely because the target's paths differ from
-            // everyone else's, so the source path is meaningless here even when it came
-            // from a Hive page: peakd.com/trending/x -> slothbuzz.com/trending/x is a 404.
-            finalPath = '/';
+            // Carrying the source path is only meaningless where the target's scheme
+            // actually differs: peakd.com/trending/x -> slothbuzz.com/trending/x is a 404.
+            // But the Add-Frontend form pre-fills the STANDARD condenser shape, so most
+            // custom frontends are mirrors where /trending, /proposals and /witnesses all
+            // work. Blanket '/' threw those destinations away, and with autoRedirect on it
+            // bounced every such page to the frontend root.
+            finalPath = targetConfig.linkStructure.post === STANDARD_POST_PATH
+              ? (sourceIsHive ? currentPath : '/')
+              : '/';
         }
         break;
       default:

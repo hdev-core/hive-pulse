@@ -10,7 +10,8 @@ export enum FrontendId {
   HIVESCAN = 'HIVESCAN',
   THREESPEAK = 'THREESPEAK',
   UREKA = 'UREKA',
-  SLOTHBUZZ = 'SLOTHBUZZ'
+  SLOTHBUZZ = 'SLOTHBUZZ',
+  SUSEONA = 'SUSEONA'
 }
 
 export enum ActionMode {

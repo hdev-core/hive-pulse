@@ -202,3 +202,33 @@ describe('frontendIsStandard', () => {
     expect(frontendIsStandard(FRONTENDS.find(f => f.id === 'SLOTHBUZZ'))).toBe(false);
   });
 });
+
+describe('regressions found by review that the first suite missed', () => {
+  it('accepts permlinks beginning with a hyphen — 2.1% of live posts have them', () => {
+    // /post/ismot/-lsn is a real root post. A hand-written "consensus grammar" rejected it
+    // and broke the SlothBuzz round trip this validation sits inside.
+    const s = parseUrl('https://www.slothbuzz.com/post/ismot/-lsn', F);
+    expect([s.author, s.permlink]).toEqual(['ismot', '-lsn']);
+    expect(same('PEAKD', s.path, s.username, s.author, s.permlink))
+      .toBe('https://peakd.com/@ismot/-lsn');
+  });
+
+  it('does not recognise a lookalike host', () => {
+    // hostname.replace('www.', '') is a substring strip: pwww.eakd.com became peakd.com,
+    // and "we only trust recognised frontends" is the whole argument for parsing at all.
+    for (const h of ['pwww.eakd.com', 'hivwww.e.blog', 'peakd.www.com']) {
+      expect(parseUrl(`https://${h}/@alice/x`, F).detectedFrontendId).toBeNull();
+    }
+    expect(parseUrl('https://www.peakd.com/@a/b', F).detectedFrontendId).toBe('PEAKD');
+  });
+
+  it('rejects every placeholder shape a free-text template can hold', () => {
+    for (const wallet of ['/@{{user-name}}/wallet', '/@{{user.name}}/wallet',
+                          '/@{{}}/wallet', '/@{{ }}/wallet']) {
+      const f: FrontendConfig = { ...mirror, id: 'ph', domain: 'ph.example',
+        customDomain: 'ph.example', linkStructure: { ...mirror.linkStructure!, wallet } };
+      expect(getTargetUrl('ph', '/x', ActionMode.WALLET, null, null, null, [...F, f]))
+        .not.toMatch(/\{\{|\}\}/);
+    }
+  });
+});

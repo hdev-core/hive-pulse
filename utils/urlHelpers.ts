@@ -13,9 +13,18 @@ export const AUTHOR_PERMLINK_REGEX = /\/@([a-z0-9.-]+)\/([a-z0-9-]+)/;
  */
 export const STANDARD_POST_PATH = '/@{{author}}/{{permlink}}';
 
-/** Hive consensus grammar. Used to reject anything a permissive template capture let through. */
-export const HIVE_ACCOUNT_RE  = /^[a-z][a-z0-9.-]{2,15}$/;
-export const HIVE_PERMLINK_RE = /^[a-z0-9][a-z0-9-]{0,255}$/;
+/**
+ * Guards on a template capture. Deliberately NOT an attempt to encode Hive's grammar:
+ * writing one rejected 2.1% of live posts, because permlinks beginning with "-" are
+ * ordinary on chain (frontends slugify titles that open with punctuation — "-lsn",
+ * "-hive-open-mic-334---confes-529"). Rejecting those broke the very round trip this
+ * validation sits inside.
+ *
+ * The only job here is to stop a capture that is not one path segment: [^/]+ accepts a
+ * percent-encoded slash, which would otherwise be pasted onto another origin's path.
+ */
+export const HIVE_ACCOUNT_RE  = /^[a-z0-9][a-z0-9.-]{1,15}$/;
+export const HIVE_PERMLINK_RE = /^[a-z0-9-][a-z0-9-]{0,255}$/;
 
 /**
  * Longest path a template matcher will look at. parseUrl runs on every tab update in the
@@ -24,6 +33,13 @@ export const HIVE_PERMLINK_RE = /^[a-z0-9][a-z0-9-]{0,255}$/;
  * seconds. No real Hive URL is anywhere near this.
  */
 const MAX_TEMPLATE_PATH = 512;
+
+/**
+ * Any leftover {{...}}. \w+ was not enough: it misses "{{user-name}}", "{{user.name}}",
+ * "{{}}" and "{{ }}", all of which a free-text template can hold and all of which reached
+ * the address bar verbatim.
+ */
+const UNRESOLVED_PLACEHOLDER = /\{\{[^}]*\}\}/;
 
 /** A frontend with no linkStructure is a plain condenser; otherwise judge its post shape. */
 export const frontendIsStandard = (f?: FrontendConfig | null): boolean =>
@@ -43,7 +59,10 @@ export const THREESPEAK_USER_REGEX = /\/user\/([a-z0-9.-]+)/;
 export const parseUrl = (urlString: string, allFrontends: FrontendConfig[]): CurrentTabState => {
   try {
     const url = new URL(urlString);
-    const hostname = url.hostname.replace('www.', '');
+    // Anchored: a bare substring replace turned pwww.eakd.com into peakd.com, and
+    // "we only trust recognised frontends" is the whole argument for parsing identities
+    // at all, so a registerable lookalike must not satisfy it.
+    const hostname = url.hostname.replace(/^www\./, '');
 
     // Use allFrontends to find the detectedFrontend
     const detectedFrontend = allFrontends.find(
@@ -214,7 +233,7 @@ const walletPath = (config: FrontendConfig, username: string | null): string => 
   const tpl = config.linkStructure?.wallet;
   if (tpl) {
     const resolved = resolveLinkTemplate(tpl, { username });
-    if (!/\{\{\s*\w+\s*\}\}/.test(resolved)) return resolved;
+    if (!UNRESOLVED_PLACEHOLDER.test(resolved)) return resolved;
   }
   return username ? `/@${username}/wallet` : '/wallet';
 };
@@ -353,6 +372,6 @@ export const getTargetUrl = (
   // Last line of defence. A template is free text typed by the user, so any unfilled
   // placeholder that reaches here would be sent to the address bar verbatim. The guard
   // used to exist only in walletPath, which left the post and profile branches exposed.
-  if (/\{\{\s*\w+\s*\}\}/.test(finalPath)) finalPath = '/';
+  if (UNRESOLVED_PLACEHOLDER.test(finalPath)) finalPath = '/';
   return `https://${targetDomain}${finalPath}`;
 };

@@ -190,11 +190,11 @@ interface LinkTemplateArgs {
  * Resolves placeholders in a link template string.
  */
 const resolveLinkTemplate = (template: string, args: LinkTemplateArgs): string => {
-  let resolved = template;
-  if (args.author) resolved = resolved.replace(/{{author}}/g, args.author);
-  if (args.permlink) resolved = resolved.replace(/{{permlink}}/g, args.permlink);
-  if (args.username) resolved = resolved.replace(/{{username}}/g, args.username);
-  return resolved;
+  // Tolerate the same drift frontendIsStandard tolerates. Matching only the unspaced form
+  // meant a template typed as "{{ author }}" was judged standard and then shipped its own
+  // placeholder to the address bar.
+  return template.replace(/\{\{\s*(author|permlink|username)\s*\}\}/g,
+    (whole, key: 'author' | 'permlink' | 'username') => args[key] || whole);
 };
 
 // paths.wallet is a function, so it does not survive a round-trip through storage.local.
@@ -322,10 +322,12 @@ export const getTargetUrl = (
       } else if (username) {
         finalPath = `/@${username}`;
       } else {
-        // No post and no profile to carry over. If the source was not a Hive page there is
-        // nothing meaningful to preserve, so send them to the frontend's home page rather
-        // than to an invented URL.
-        finalPath = sourceIsHive ? currentPath : '/';
+        // No post and no profile to carry over. Carry the source path only when it means
+        // something here: not from a non-Hive page, and not from a frontend with a
+        // different route scheme — slothbuzz.com/dashboard has no peakd.com counterpart.
+        // This branch previously ignored sourceIsStandard entirely, so the guard existed
+        // only for custom targets and the motivating example still produced a 404.
+        finalPath = sourceIsHive && sourceIsStandard ? currentPath : '/';
       }
     }
 
@@ -348,5 +350,9 @@ export const getTargetUrl = (
   }
 
 
+  // Last line of defence. A template is free text typed by the user, so any unfilled
+  // placeholder that reaches here would be sent to the address bar verbatim. The guard
+  // used to exist only in walletPath, which left the post and profile branches exposed.
+  if (/\{\{\s*\w+\s*\}\}/.test(finalPath)) finalPath = '/';
   return `https://${targetDomain}${finalPath}`;
 };

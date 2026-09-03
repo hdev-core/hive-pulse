@@ -83,15 +83,17 @@ describe('parseUrl — frontend-declared templates', () => {
 });
 
 describe('getTargetUrl — wallets', () => {
-  it('never emits an unresolved placeholder', () => {
-    const url = getTargetUrl('custom-mirror', '/trending', ActionMode.WALLET, null, null, null, F);
-    expect(url).not.toMatch(/\{\{/);
+  it('falls back to a real wallet page when the template needs a name it lacks', () => {
+    // Asserted by equality on purpose: `not.toMatch(/{{/)` also passes for any wrong URL,
+    // and did — replacing walletPath with a constant left the old assertion green.
+    expect(getTargetUrl('custom-mirror', '/trending', ActionMode.WALLET, null, null, null, F))
+      .toBe('https://mirror.example/wallet');
   });
 
   it('does not open the post author\'s wallet while reading their post', () => {
     const s = parseUrl('https://www.slothbuzz.com/post/bob/bobs-post', F);
-    const url = getTargetUrl('PEAKD', s.path, ActionMode.WALLET, s.username, s.author, s.permlink, F);
-    expect(url).not.toContain('@bob');
+    expect(getTargetUrl('PEAKD', s.path, ActionMode.WALLET, s.username, s.author, s.permlink, F))
+      .toBe('https://peakd.com/wallet');
   });
 
   it('keeps hive.blog on its wallet subdomain', () => {
@@ -118,10 +120,16 @@ describe('getTargetUrl — carrying the source path', () => {
       .toBe('https://slothbuzz.com/');
   });
 
-  it('does not carry a non-standard source path onto a standard frontend', () => {
-    // slothbuzz.com/dashboard has no counterpart on a condenser mirror.
-    expect(same('custom-mirror', '/dashboard', null, null, null, true, false))
-      .toBe('https://mirror.example/');
+  it('does not carry a non-standard source path onto ANY standard frontend', () => {
+    // slothbuzz.com/dashboard has no counterpart on a condenser frontend. Asserting only
+    // the custom target here let the built-in branch ignore sourceIsStandard entirely, so
+    // the motivating example still produced peakd.com/dashboard.
+    for (const [id, home] of [['custom-mirror', 'https://mirror.example/'],
+                              ['PEAKD', 'https://peakd.com/'],
+                              ['ECENCY', 'https://ecency.com/'],
+                              ['HIVEBLOG', 'https://hive.blog/']] as const) {
+      expect(same(id, '/dashboard', null, null, null, true, false)).toBe(home);
+    }
   });
 });
 
@@ -144,6 +152,36 @@ describe('regressions in frontends that were not the subject of any fix', () => 
   it('still extracts author and permlink from a community-prefixed URL', () => {
     const s = parseUrl('https://peakd.com/hive-167922/@oflyhigh/4mf15k-and', F);
     expect([s.author, s.permlink]).toEqual(['oflyhigh', '4mf15k-and']);
+  });
+});
+
+describe('no result ever ships an unresolved template placeholder', () => {
+  // Templates are free text from the Add-Frontend form. frontendIsStandard tolerates
+  // spacing drift, so resolveLinkTemplate has to fill the same forms it tolerates —
+  // previously it did not, and a spaced template put "{{ author }}" in the address bar.
+  const spaced: FrontendConfig = {
+    ...mirror, id: 'spaced', domain: 'spaced.example', customDomain: 'spaced.example',
+    linkStructure: {
+      post: '/@{{ author }}/{{ permlink }}',
+      profile: '/@{{ username }}',
+      wallet: '/@{{ username }}/wallet',
+    },
+  };
+  const FS = [...F, spaced];
+
+  it.each([
+    ['post', ActionMode.SAME_PAGE, null, 'alice', 'my-post'],
+    ['profile', ActionMode.SAME_PAGE, 'alice', null, null],
+    ['wallet with a name', ActionMode.WALLET, 'alice', null, null],
+    ['wallet without a name', ActionMode.WALLET, null, null, null],
+    ['compose', ActionMode.COMPOSE, null, null, null],
+  ] as const)('%s never leaks a placeholder', (_label, mode, u, a, pl) => {
+    expect(getTargetUrl('spaced', '/x', mode, u, a, pl, FS)).not.toMatch(/\{\{|\}\}/);
+  });
+
+  it('fills a spaced post template rather than emitting it raw', () => {
+    expect(getTargetUrl('spaced', '/x', ActionMode.SAME_PAGE, null, 'alice', 'my-post', FS))
+      .toBe('https://spaced.example/@alice/my-post');
   });
 });
 

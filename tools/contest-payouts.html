@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HivePulse Contest — Payout Console</title>
+<style>
+  :root{
+    --navy:#0d1526; --navy2:#131f38; --panel:#16233d; --line:#27385a;
+    --ink:#eef3fb; --ink2:#a9b8d0; --ink3:#6f819e;
+    --gold:#f7b529; --goldhi:#ffe28a; --green:#34d399; --red:#f87171; --amber:#fbbf24;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--navy);color:var(--ink);
+       font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 22px 90px}
+  h1{font-size:26px;margin:0 0 4px}
+  h2{font-size:17px;margin:30px 0 12px;color:var(--goldhi);
+     border-bottom:1px solid var(--line);padding-bottom:8px}
+  .sub{color:var(--ink2);margin:0 0 22px;font-size:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+         padding:16px 18px;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;color:var(--ink3);font-weight:600;font-size:12px;
+     text-transform:uppercase;letter-spacing:.04em;padding:6px 10px;border-bottom:1px solid var(--line)}
+  td{padding:9px 10px;border-bottom:1px solid rgba(39,56,90,.55);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+  .gold{color:var(--gold);font-weight:700}
+  .muted{color:var(--ink3)}
+  .memo{color:var(--ink2);font-size:12.5px;font-style:italic;
+        background:rgba(0,0,0,.22);border-radius:6px;padding:6px 9px;margin-top:6px;
+        white-space:pre-wrap;word-break:break-word}
+  .tot{background:var(--navy2);border:1px solid var(--gold);border-radius:10px;
+       padding:12px 16px;display:flex;justify-content:space-between;align-items:center;
+       margin-top:12px;font-size:16px}
+  .tot b{color:var(--goldhi);font-size:22px}
+  button{font:inherit;font-weight:700;border:0;border-radius:9px;padding:12px 20px;
+         cursor:pointer;transition:.15s}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .primary{background:var(--gold);color:#25190a}
+  .primary:hover:not(:disabled){background:var(--goldhi)}
+  .danger{background:var(--red);color:#2b0b0b}
+  .danger:hover:not(:disabled){background:#fca5a5}
+  .ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
+  input[type=text]{background:var(--navy);border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:10px 12px;font:inherit;min-width:150px}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;
+        text-transform:uppercase;letter-spacing:.04em}
+  .ok{background:rgba(52,211,153,.16);color:var(--green)}
+  .no{background:rgba(248,113,113,.16);color:var(--red)}
+  .wait{background:rgba(251,191,36,.16);color:var(--amber)}
+  .idle{background:rgba(111,129,158,.18);color:var(--ink3)}
+  #log{background:#080e1c;border:1px solid var(--line);border-radius:10px;padding:14px;
+       font:12.5px/1.6 ui-monospace,Consolas,monospace;max-height:320px;overflow:auto;
+       white-space:pre-wrap;color:var(--ink2)}
+  a{color:var(--gold)}
+  .warn{background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.4);
+        border-radius:10px;padding:12px 15px;color:#f6dfa8;font-size:13.5px;margin-bottom:16px}
+  .err{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.45);
+       border-radius:10px;padding:12px 15px;color:#fecaca;font-size:13.5px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>HivePulse SEO Contest — Payout Console</h1>
+  <p class="sub" id="roundline"></p>
+
+  <div id="selfcheck"></div>
+
+  <div class="panel">
+    <div class="row" style="margin-top:0">
+      <label>Broadcast from <input type="text" id="acct" value="hdev"></label>
+      <span id="kcstate" class="pill idle">checking Keychain…</span>
+      <span id="balstate" class="pill idle">balance —</span>
+      <button class="ghost" id="refresh">Re-check on-chain state</button>
+    </div>
+  </div>
+
+  <!-- ─────────────── curation ─────────────── -->
+  <h2>1 · Upvote + reblog the winning posts</h2>
+  <p class="sub" style="margin:-4px 0 12px">
+    One transaction, signed with your <b>posting</b> key. Every operation below is included;
+    if any one is rejected the whole transaction fails and nothing is applied.
+  </p>
+  <div class="panel"><table id="curTable"></table></div>
+  <div class="row">
+    <label>Vote weight <input type="text" id="weight" value="100" style="min-width:70px"> %</label>
+    <button class="primary" id="btnCurate">Upvote + reblog — <span id="curCount"></span> operations</button>
+    <span id="curStatus" class="pill idle">not run</span>
+  </div>
+
+  <!-- ─────────────── payouts ─────────────── -->
+  <h2>2 · Send the rewards</h2>
+  <p class="sub" style="margin:-4px 0 12px">
+    One transaction, signed with your <b>active</b> key, containing every transfer below.
+    Atomic: they all send, or none do. The note beside each recipient is the transfer memo,
+    exactly as they will receive it.
+  </p>
+  <div class="panel"><table id="payTable"></table></div>
+  <div class="tot"><span>Total to send</span><b id="payTotal"></b></div>
+
+  <div class="row">
+    <label>Type <b style="color:var(--goldhi)">SEND</b> to arm
+      <input type="text" id="arm" placeholder="SEND" autocomplete="off"></label>
+    <button class="danger" id="btnPay" disabled>Send rewards — <span id="paySum"></span></button>
+    <span id="payStatus" class="pill idle">not run</span>
+  </div>
+
+  <h2>Activity</h2>
+  <div id="log">Ready.</div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════════
+   ROUND DATA — the only block to edit between rounds.
+
+   `parts` exists so the arithmetic is checked rather than trusted: the console
+   refuses to arm if any recipient's parts do not sum to their stated amount, or
+   if the stated total does not match the sum of the transfers.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const ROUND = {
+  label:  'Week 5',
+  window: '25 August – 1 September 2026',
+  post:   'https://peakd.com/@hdev/hivepulse-seo-contest-new-week-5-prize-pool-500-hive',
+  expectedTotal: 425,          // cross-checked against the transfers below
+};
+
+const CURATION = [
+  { author:'nabbas0786',      permlink:'how-a-15-year-old-school-boy-lost-his-first-ever-love',
+    place:'1st', seo:99, geo:100 },
+  { author:'militadigital01', permlink:'isla-el-saco-puerto-la-cruz-ultimate-island-guide-2026',
+    place:'2nd', seo:97, geo:100 },
+  { author:'les90',           permlink:'2-sides-of-being-stubborn-when-it-is-best-or-worst',
+    place:'3rd', seo:99, geo:97 },
+];
+
+const PAYMENTS = [
+  { to:'nabbas0786', amount:175,
+    parts:[['1st place — SEO 99 / GEO 100', 150], ['Referral bonus — brought @les90', 25]],
+    memo:'HivePulse SEO Contest week 5: 1st place (SEO 99 / GEO 100) = 150 HIVE, plus 25 HIVE referral bonus for bringing @les90. Total 175 HIVE. Congratulations!' },
+
+  { to:'militadigital01', amount:100,
+    parts:[['2nd place — SEO 97 / GEO 100', 100]],
+    memo:'HivePulse SEO Contest week 5: 2nd place (SEO 97 / GEO 100) = 100 HIVE. 24 images, every one with a real description - that is how you win the media points. Congratulations!' },
+
+  { to:'les90', amount:75,
+    parts:[['3rd place — SEO 99 / GEO 97', 50], ['Referral bonus — referred by @nabbas0786', 25]],
+    memo:'HivePulse SEO Contest week 5: 3rd place (SEO 99 / GEO 97) = 50 HIVE, plus 25 HIVE referral bonus (referred by @nabbas0786). Total 75 HIVE. Great first entry - congratulations!' },
+
+  { to:'cositav', amount:25,
+    parts:[['Referral bonus — brought @cayitus63', 25]],
+    memo:'HivePulse SEO Contest week 5: 25 HIVE referral bonus for bringing @cayitus63, whose entry qualified. Thank you for growing the contest!' },
+
+  { to:'cayitus63', amount:25,
+    parts:[['Referral bonus — referred by @cositav', 25]],
+    memo:'HivePulse SEO Contest week 5: 25 HIVE referral bonus (referred by @cositav). Your entry qualified at SEO 81. Welcome, and see you in week 6!' },
+
+  { to:'katerinaramm', amount:25,
+    parts:[['Discretionary — thank you for the guide', 25]],
+    memo:'HivePulse SEO Contest week 5: 25 HIVE as a thank you for the HivePulse guide you wrote. Your entry could not be ranked because it was missing the #hivepulse tag - that is the one enforced rule. Please enter week 6, it takes one tag!' },
+];
+
+/* ══════════════════════════════════════════════════════════════════════════════ */
+
+const RPC = 'https://api.hive.blog';
+const $ = id => document.getElementById(id);
+const fmt = n => Number(n).toFixed(3);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const acct = () => $('acct').value.trim().toLowerCase();
+
+function log(msg, kind){
+  const t = new Date().toISOString().slice(11,19);
+  const col = kind === 'ok' ? 'var(--green)' : kind === 'err' ? 'var(--red)'
+            : kind === 'warn' ? 'var(--amber)' : 'var(--ink2)';
+  $('log').innerHTML += `\n<span style="color:${col}">[${t}] ${esc(msg)}</span>`;
+  $('log').scrollTop = $('log').scrollHeight;
+}
+function pill(id, cls, text){ const e=$(id); e.className='pill '+cls; e.textContent=text; }
+
+async function rpc(method, params){
+  const r = await fetch(RPC, {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({jsonrpc:'2.0', method, params, id:1})});
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.message || 'RPC error');
+  return j.result;
+}
+
+/* ── self-check: never render a payout sheet whose arithmetic does not hold ── */
+function selfCheck(){
+  const errs = [];
+  const seen = new Set();
+  for (const p of PAYMENTS){
+    const sum = p.parts.reduce((a,[,v]) => a+v, 0);
+    if (sum !== p.amount) errs.push(`@${p.to}: parts sum to ${sum} but amount says ${p.amount}`);
+    if (seen.has(p.to)) errs.push(`@${p.to} appears twice — merge into one transfer`);
+    seen.add(p.to);
+    if (!p.memo || p.memo.length > 2000) errs.push(`@${p.to}: memo missing or too long`);
+    if (p.amount <= 0) errs.push(`@${p.to}: non-positive amount`);
+  }
+  const total = PAYMENTS.reduce((a,p) => a+p.amount, 0);
+  if (total !== ROUND.expectedTotal)
+    errs.push(`transfers sum to ${total} HIVE but expectedTotal says ${ROUND.expectedTotal}`);
+  for (const c of CURATION)
+    if (!c.author || !c.permlink) errs.push('a curation target is missing author or permlink');
+
+  if (errs.length){
+    $('selfcheck').innerHTML =
+      `<div class="err"><b>Self-check failed — nothing can be sent.</b><br>` +
+      errs.map(esc).join('<br>') + `</div>`;
+    return false;
+  }
+  $('selfcheck').innerHTML =
+    `<div class="warn">Self-check passed: ${PAYMENTS.length} recipients, parts reconcile to ` +
+    `<b>${total} HIVE</b>, no duplicates. Nothing is broadcast until you press a button.</div>`;
+  return true;
+}
+
+/* ── render ── */
+function render(){
+  $('roundline').textContent =
+    `${ROUND.label} · window ${ROUND.window} · ${CURATION.length} posts to curate · ${PAYMENTS.length} recipients`;
+
+  $('curTable').innerHTML =
+    `<tr><th>Post</th><th>Score</th><th>Operations</th><th>On chain</th></tr>` +
+    CURATION.map((c,i) => `<tr>
+      <td><b>@${esc(c.author)}</b> <span class="muted">${esc(c.place)}</span><br>
+          <a href="https://peakd.com/@${esc(c.author)}/${esc(c.permlink)}" target="_blank"
+             rel="noopener" class="muted" style="font-size:12.5px">${esc(c.permlink)}</a></td>
+      <td class="num">SEO ${c.seo}<br>GEO ${c.geo}</td>
+      <td class="muted" style="font-size:12.5px">vote (<span class="wv">100</span>%)<br>reblog</td>
+      <td><span class="pill idle" id="cur${i}">—</span></td></tr>`).join('');
+
+  $('payTable').innerHTML =
+    `<tr><th>Recipient</th><th>Breakdown</th><th class="num">Amount</th><th>Already paid?</th></tr>` +
+    PAYMENTS.map((p,i) => `<tr>
+      <td><b>@${esc(p.to)}</b><div class="memo">${esc(p.memo)}</div></td>
+      <td class="muted" style="font-size:13px">${p.parts.map(([l,v]) =>
+          `${esc(l)} <span class="gold">${v}</span>`).join('<br>')}</td>
+      <td class="num gold" style="font-size:17px">${fmt(p.amount)}<br>
+          <span class="muted" style="font-size:11px">HIVE</span></td>
+      <td><span class="pill idle" id="pay${i}">—</span></td></tr>`).join('');
+
+  const total = PAYMENTS.reduce((a,p)=>a+p.amount,0);
+  $('payTotal').textContent = fmt(total) + ' HIVE';
+  $('paySum').textContent = fmt(total) + ' HIVE';
+  $('curCount').textContent = CURATION.length * 2;
+}
+
+/* ── on-chain state: has any of this already happened? ── */
+async function checkState(){
+  const me = acct();
+  if (!me) return;
+  try {
+    const [a] = await rpc('condenser_api.get_accounts', [[me]]);
+    if (!a){ pill('balstate','no',`@${me} not found`); return; }
+    const bal = parseFloat(a.balance);
+    const total = PAYMENTS.reduce((x,p)=>x+p.amount,0);
+    pill('balstate', bal >= total ? 'ok' : 'no',
+         `balance ${bal.toFixed(3)} HIVE${bal < total ? ' — NOT ENOUGH' : ''}`);
+    if (bal < total) log(`Balance ${bal.toFixed(3)} HIVE is below the ${total} HIVE required.`, 'err');
+  } catch(e){ pill('balstate','no','balance lookup failed'); }
+
+  // votes already cast?
+  for (let i=0;i<CURATION.length;i++){
+    const c = CURATION[i];
+    try {
+      const votes = await rpc('condenser_api.get_active_votes', [c.author, c.permlink]);
+      const voted = (votes||[]).some(v => v.voter === me);
+      const e = $('cur'+i);
+      e.className = 'pill ' + (voted ? 'ok' : 'idle');
+      e.textContent = voted ? 'already voted' : 'not voted';
+    } catch(e){ $('cur'+i).textContent = '?'; }
+  }
+
+  // transfers already sent? scan recent outgoing history
+  try {
+    const hist = await rpc('condenser_api.get_account_history', [me, -1, 1000]);
+    const sent = new Map();
+    for (const [,entry] of hist){
+      const [type, d] = entry.op;
+      if (type !== 'transfer' || d.from !== me) continue;
+      const key = d.to + '|' + d.amount;
+      sent.set(key, entry.timestamp);
+    }
+    PAYMENTS.forEach((p,i) => {
+      const key = p.to + '|' + fmt(p.amount) + ' HIVE';
+      const when = sent.get(key);
+      const e = $('pay'+i);
+      e.className = 'pill ' + (when ? 'no' : 'idle');
+      e.textContent = when ? 'SENT ' + when.slice(0,10) : 'not sent';
+      if (when) log(`WARNING: @${p.to} already received ${fmt(p.amount)} HIVE on ${when.slice(0,10)}.`, 'warn');
+    });
+  } catch(e){ log('History check failed: ' + e.message, 'warn'); }
+}
+
+/* ── keychain ── */
+function keychain(){ return window.hive_keychain; }
+
+function broadcast(ops, keyType, label){
+  return new Promise(resolve => {
+    const kc = keychain();
+    if (!kc) return resolve({success:false, message:'Hive Keychain not detected on this page.'});
+    kc.requestBroadcast(acct(), ops, keyType, r => resolve(r));
+  });
+}
+
+/* ── actions ── */
+$('btnCurate').onclick = async () => {
+  const me = acct();
+  const pct = parseFloat($('weight').value);
+  if (!(pct > 0 && pct <= 100)) return alert('Vote weight must be between 1 and 100.');
+  const weight = Math.round(pct * 100);
+
+  const ops = [];
+  for (const c of CURATION){
+    ops.push(['vote', {voter:me, author:c.author, permlink:c.permlink, weight}]);
+    ops.push(['custom_json', {
+      required_auths: [], required_posting_auths: [me], id: 'follow',
+      json: JSON.stringify(['reblog', {account:me, author:c.author, permlink:c.permlink}])
+    }]);
+  }
+
+  const summary = CURATION.map(c => `  vote ${pct}% + reblog  @${c.author}/${c.permlink}`).join('\n');
+  if (!confirm(`Broadcast ${ops.length} operations as @${me} with your POSTING key?\n\n${summary}\n\nThis is one atomic transaction.`)) return;
+
+  $('btnCurate').disabled = true; pill('curStatus','wait','broadcasting…');
+  log(`Broadcasting ${ops.length} curation ops as @${me}…`);
+  const r = await broadcast(ops, 'Posting');
+  if (r.success){
+    pill('curStatus','ok','done');
+    log('Curation broadcast OK. tx ' + (r.result?.id || '(id not returned)'), 'ok');
+  } else {
+    pill('curStatus','no','failed');
+    log('Curation FAILED: ' + (r.message || r.error || 'unknown'), 'err');
+    $('btnCurate').disabled = false;
+  }
+  checkState();
+};
+
+$('arm').oninput = e => {
+  $('btnPay').disabled = e.target.value.trim().toUpperCase() !== 'SEND';
+};
+
+$('btnPay').onclick = async () => {
+  const me = acct();
+  const total = PAYMENTS.reduce((a,p)=>a+p.amount,0);
+
+  const ops = PAYMENTS.map(p => ['transfer', {
+    from: me, to: p.to, amount: fmt(p.amount) + ' HIVE', memo: p.memo
+  }]);
+
+  const lines = PAYMENTS.map(p => `  ${fmt(p.amount).padStart(9)} HIVE  ->  @${p.to}`).join('\n');
+  if (!confirm(`SEND ${fmt(total)} HIVE from @${me}, in ONE atomic transaction?\n\n${lines}\n\nSigned with your ACTIVE key. This cannot be undone.`)) return;
+
+  $('btnPay').disabled = true; $('arm').value=''; pill('payStatus','wait','broadcasting…');
+  log(`Broadcasting ${ops.length} transfers totalling ${fmt(total)} HIVE as @${me}…`);
+  const r = await broadcast(ops, 'Active');
+  if (r.success){
+    pill('payStatus','ok','sent');
+    log('Payout broadcast OK. tx ' + (r.result?.id || '(id not returned)'), 'ok');
+    PAYMENTS.forEach(p => log(`  paid @${p.to} ${fmt(p.amount)} HIVE`, 'ok'));
+  } else {
+    pill('payStatus','no','failed');
+    log('Payout FAILED — nothing was sent: ' + (r.message || r.error || 'unknown'), 'err');
+  }
+  setTimeout(checkState, 3500);
+};
+
+$('refresh').onclick = () => { log('Re-checking on-chain state…'); checkState(); };
+$('acct').onchange  = () => checkState();
+$('weight').oninput = e => document.querySelectorAll('.wv')
+  .forEach(n => n.textContent = e.target.value);
+
+/* ── boot ── */
+if (selfCheck()){
+  render();
+  const probe = () => {
+    if (keychain()){ pill('kcstate','ok','Keychain ready'); checkState(); }
+    else {
+      pill('kcstate','no','Keychain NOT found');
+      log('Hive Keychain was not injected into this page. Serve this file over http://localhost '
+        + '(python -m http.server) rather than opening it as a file:// URL, or enable the extension\'s '
+        + '"Allow access to file URLs" setting.', 'err');
+    }
+  };
+  setTimeout(probe, 600);
+} else {
+  log('Self-check failed. Fix the ROUND DATA block before using this console.', 'err');
+}
+</script>
+</body>
+</html>

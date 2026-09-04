@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { fetchAccountStats, fetchHivePrice, fetchInternalMarketPrice } from './utils/hiveHelpers';
-import { parseUrl, getTargetUrl } from './utils/urlHelpers';
+import { parseUrl, getTargetUrl, frontendIsStandard } from './utils/urlHelpers';
 import {
   bootstrapEcencyChat,
   fetchChannels,
@@ -380,16 +380,44 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [refreshPrices]);
 
-  // Effect to parse URL when allFrontends or tab changes
+  // Keep tabState tracking the active tab for as long as this UI is mounted.
+  //
+  // This was a one-shot query, which is correct for the browser-action popup because it
+  // remounts on every open. The side panel (manifest side_panel) renders the same
+  // index.html and stays mounted across navigation, so the one-shot left it describing
+  // whichever page the panel was opened on: switching Ureka -> PeakD navigated the tab
+  // but the panel still marked Ureka "Current" and offered PeakD as a destination.
   useEffect(() => {
-    if (typeof chrome !== 'undefined' && chrome.tabs && allFrontends.length > 0) {
+    if (typeof chrome === 'undefined' || !chrome.tabs || allFrontends.length === 0) return;
+
+    let cancelled = false;
+    const sync = () => {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
-        if (tabs && tabs.length > 0 && tabs[0].url) {
-          setTabState(parseUrl(tabs[0].url, allFrontends));
-        }
+        // The panel outlives the query, so a result arriving after unmount (or after a
+        // newer sync) must not overwrite fresher state.
+        if (cancelled) return;
+        const url = tabs?.[0]?.url;
+        if (url) setTabState(parseUrl(url, allFrontends));
       });
-    }
-  }, [allFrontends]); // Depend on allFrontends
+    };
+    sync();
+
+    // changeInfo.url covers same-document SPA navigation (peakd, ecency and ureka are all
+    // SPAs, so a post-to-post move fires nothing else); status === 'complete' covers the
+    // full page loads that a frontend switch performs.
+    const onUpdated = (_tabId: number, changeInfo: any, tab: any) => {
+      if ((changeInfo.url || changeInfo.status === 'complete') && tab?.active) sync();
+    };
+    const onActivated = () => sync();
+
+    chrome.tabs.onUpdated.addListener(onUpdated);
+    chrome.tabs.onActivated.addListener(onActivated);
+    return () => {
+      cancelled = true;
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      chrome.tabs.onActivated.removeListener(onActivated);
+    };
+  }, [allFrontends]);
 
   const totalUnreadMessages = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
 
@@ -492,7 +520,9 @@ const App: React.FC = () => {
       usernameOverride || tabState.username,
       usernameOverride ? null : tabState.author, // Clear author if overriding user to avoid invalid post URLs
       usernameOverride ? null : tabState.permlink, // Clear permlink if overriding user
-      allFrontends // New parameter
+      allFrontends,
+      tabState.isHiveUrl, // don't carry a non-Hive path (e.g. a web-store page) across
+      frontendIsStandard(allFrontends.find(f => f.id === tabState.detectedFrontendId))
     );
     if (settings.openInNewTab) {
       window.open(url, '_blank');

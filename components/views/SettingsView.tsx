@@ -194,6 +194,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     updateSettings({
       customFrontends: updatedCustomFrontends,
       activeFrontendIds: updatedActiveFrontendIds,
+      // Deleting the frontend that auto-redirect points at left a dangling id behind:
+      // getTargetUrl has no config to resolve and returns '#', which background.ts then
+      // handed to chrome.tabs.update on every Hive page the user opened.
+      ...(settings.preferredFrontendId === id ? { preferredFrontendId: FrontendId.PEAKD } : {}),
     });
   };
 
@@ -389,7 +393,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
                   <label className="text-xs font-medium text-slate-500 uppercase">Preferred Frontend</label>
                   <div className="grid grid-cols-1 gap-2">
-                    {allFrontends.map(f => (
+                    {/* Inactive built-ins are source-detection entries, not destinations.
+                        This picker sets the auto-redirect target, so offering one here sent
+                        every page the user opened to a frontend deliberately not enabled. */}
+                    {allFrontends.filter(f => f.active !== false || f.isCustom).map(f => (
                       <button
                         key={f.id}
                         onClick={() => updateSettings({ preferredFrontendId: f.id })}
@@ -722,6 +729,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     type="checkbox"
                     checked={settings.usernameHoverCards !== false}
                     onChange={(e) => updateSettings({ usernameHoverCards: e.target.checked })}
+                    className="accent-emerald-500 w-4 h-4 mt-0.5 shrink-0"
+                  />
+                </label>
+
+                <label className="flex items-start justify-between gap-3 mb-3 cursor-pointer">
+                  <span className="text-sm text-slate-600">
+                    Post analyzer
+                    <span className="block text-[11px] text-slate-400">
+                      Show the SEO and AI-quotability panel while you write on supported editors. Turning this off hides it everywhere, immediately.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={settings.postAnalyzerEnabled !== false}
+                    onChange={(e) => updateSettings({ postAnalyzerEnabled: e.target.checked })}
                     className="accent-emerald-500 w-4 h-4 mt-0.5 shrink-0"
                   />
                 </label>

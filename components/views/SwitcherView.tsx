@@ -21,11 +21,17 @@ export const SwitcherView: React.FC<SwitcherViewProps> = ({ tabState, onSwitch, 
   const [appsOpen, setAppsOpen] = useState(false);
 
   // Ensure displayFrontends are ordered according to activeFrontendIds from settings
+  // activeFrontendIds is the single source of truth for what the user wants shown. The
+  // `active` flag in constants only seeds the default list (see settingsStore), so
+  // re-checking it here made the Settings toggle dead: flipping a frontend on persisted the
+  // id and turned the switch green while this view kept hiding it.
   const displayFrontends = settings.activeFrontendIds
     .map(id => allFrontends.find(f => f.id === id))
-    .filter(Boolean) as FrontendConfig[];
+    .filter((f): f is FrontendConfig => !!f);
 
-  const detectedFrontend = displayFrontends.find(f => f.id === tabState.detectedFrontendId);
+  // Look in allFrontends, not the displayed subset: a frontend that is detected but not
+  // enabled still has a name, and reading it off the filtered list showed "On Unknown".
+  const detectedFrontend = allFrontends.find(f => f.id === tabState.detectedFrontendId);
   const detectedName = detectedFrontend ? detectedFrontend.name : 'Unknown';
 
   const MODES = [

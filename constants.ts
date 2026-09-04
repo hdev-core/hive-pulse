@@ -14,6 +14,8 @@ export const FRONTENDS: FrontendConfig[] = [
       compose: '/publish',
       wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
     },
+    // /trending, /created, /communities, /witnesses and /proposals all resolve here.
+    sharesCondenserRoutes: true,
     active: true
   },
   {
@@ -28,6 +30,8 @@ export const FRONTENDS: FrontendConfig[] = [
       compose: '/submit',
       wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
     },
+    // /trending, /created, /communities, /witnesses and /proposals all resolve here.
+    sharesCondenserRoutes: true,
     active: true
   },
   {
@@ -42,6 +46,8 @@ export const FRONTENDS: FrontendConfig[] = [
       compose: '/submit.html',
       wallet: (user) => user ? `/@${user}/transfers` : '/transfers'
     },
+    // /trending, /created, /communities, /witnesses and /proposals all resolve here.
+    sharesCondenserRoutes: true,
     active: true
   },
   {
@@ -138,10 +144,61 @@ export const FRONTENDS: FrontendConfig[] = [
     description: 'Decentralized social network on Hive.',
     logoUrl: 'https://ureka.social/apple-touch-icon.png',
     paths: {
-      compose: '/publish',
-      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
+      compose: '/create',
+      // Wins over linkStructure.wallet, and only for the no-username case: '/wallet' is
+      // walletPath's generic fallback but is not a Ureka route, so it would land on the
+      // catch-all's not-found rather than anywhere useful.
+      wallet: (u?: string) => (u ? `/@${u}/wallet` : '/'),
+    },
+    // Ureka's declarative route table lists /post/:author/:permlink, but the app never
+    // links to it — there is not one `/post/` href in the bundle, while every post link is
+    // built as `/@${author}/${permlink}`. The @-routes live inside the /* catch-all
+    // component, which regex-matches /@user, /@user/wallet, /@user/posts|comments|replies|
+    // feed, /@user/thread/:permlink and finally /@user/:permlink. So Ureka is condenser-
+    // shaped after all; reading only the declared `path:` entries missed all of it.
+    // NOT sharesCondenserRoutes. Its post, profile and wallet shapes match condenser,
+    // which is what was verified — but the flag means "serves /trending, /created,
+    // /communities, /witnesses, /proposals", and Ureka's bundle declares no /created and
+    // no /witnesses or /proposals route at all: it links those out to hivehub.dev. Setting
+    // it made a bare path carry across, so /witnesses arrived at a page that does not
+    // exist and /trending/hive-167922 rendered a tag feed for a community id. The
+    // linkStructure below still routes posts and profiles correctly without it.
+    linkStructure: {
+      post:      '/@{{author}}/{{permlink}}',
+      profile:   '/@{{username}}',
+      wallet:    '/@{{username}}/wallet',
+      community: '/community/{{name}}/trending',
     },
     active: true
+  },
+  {
+    // The extension already injects its content script and post analyzer here (see the
+    // manifests, content.ts HIVE_HOSTS and compose.ts COMPOSE_HOSTS), but it was missing
+    // from this list — so once parseUrl started treating FRONTENDS as the sole authority
+    // on "is this Hive", the popup announced "No Hive frontend detected" on a site we
+    // actively support.
+    //
+    // active: false means "off by default", not "hidden forever" — settingsStore seeds
+    // activeFrontendIds from this flag, and from then on that list is what the user
+    // controls. Previously the default list ignored the flag entirely, so this appeared as
+    // a switch target on fresh installs.
+    //
+    // Off by default because Cloudflare answers 403 to every non-browser request, so its
+    // post URL scheme could not be verified. The standard shape below is what the generic
+    // parser already assumed here, so enabling it is no worse than the old behaviour.
+    // Promote to active: true once someone confirms /@author/permlink in a real browser.
+    id: FrontendId.SUSEONA,
+    name: 'Suseona',
+    domain: 'blog.suseona.com',
+    aliases: [],
+    color: '#1f2937',
+    textColor: '#ffffff',
+    description: 'Hive blogging on Suseona.',
+    paths: {
+      compose: '/create',
+      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
+    },
+    active: false
   },
   {
     id: FrontendId.SLOTHBUZZ,
@@ -154,7 +211,16 @@ export const FRONTENDS: FrontendConfig[] = [
     logoUrl: 'https://www.slothbuzz.com/apple-icon.png',
     paths: {
       compose: '/publish',
-      wallet: (user) => user ? `/@${user}/wallet` : '/wallet'
+      wallet: () => '/wallet'
+    },
+    // SlothBuzz is the one built-in that does not use /@author/permlink. Posts live under
+    // /post/<author>/<permlink>, the wallet is a single global page, and profiles are the
+    // only path that matches the usual shape. Verified live: /post/... 200, /@a/p 404,
+    // /@user/wallet 404, /wallet 200.
+    linkStructure: {
+      post:    '/post/{{author}}/{{permlink}}',
+      profile: '/@{{username}}',
+      wallet:  '/wallet',
     },
     active: true
   }
@@ -383,7 +449,11 @@ export const DAPPS: DAppConfig[] = [
 ];
 
 export const GENERIC_HIVE_PATH_REGEX = /(\/@[a-z0-9.-]+(\/[a-z0-9-]+)?)|(\/created\/.+)|(\/trending\/.+)|(\/hot\/.+)/;
-export const USERNAME_REGEX = /\/@([a-z0-9.-]+)/;
+// Case-insensitive: Hive identities are lowercase on chain, but a URL can carry any
+// case and condenser frontends resolve it. Matching lowercase-only meant
+// peakd.com/@Alice/My-Post parsed to no username, no author and no permlink at all.
+// Callers lowercase the capture.
+export const USERNAME_REGEX = /\/@([a-zA-Z0-9.-]+)/;
 
 export const HIVE_RPC_NODES = [
   'https://api.hive.blog',

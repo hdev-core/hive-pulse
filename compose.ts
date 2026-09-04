@@ -1,3 +1,4 @@
+import { scanChipTags } from './utils/tagScan';
 export {};
 declare const chrome: any;
 
@@ -20,6 +21,7 @@ const COMPOSE_HOSTS: Record<string, RegExp> = {
   '3speak.tv':      /\/upload/,
   'actifit.io':     /\/blog\/new|\/videos\/new/,
   'slothbuzz.com':  /\/publish|\/submit/,
+  'blog.suseona.com': /\/create/,
 };
 
 // ── Hive RPC (trending tag suggestions only) ─────────────────────────────────
@@ -43,10 +45,29 @@ const loadHiveApi = (): Promise<void> =>
     } catch { res(); }
   });
 
-// Stay in sync if the user changes the node while a compose tab is open
+// Opt-out switch. Read before the first mount so a disabled panel never flashes on, and
+// kept live so toggling it in the popup takes effect in open compose tabs without a reload.
+let analyzerEnabled = true;
+let onAnalyzerToggle: (() => void) | null = null;
+
+const readAnalyzerSetting = (): Promise<void> =>
+  new Promise(res => {
+    try {
+      chrome.storage.local.get(['settings'], (r: any) => {
+        analyzerEnabled = r?.settings?.postAnalyzerEnabled !== false;
+        res();
+      });
+    } catch { res(); }
+  });
+
+// Stay in sync if the user changes the node, or flips the analyzer off, while a compose
+// tab is open
 try {
   chrome.storage.onChanged.addListener((changes: any, area: string) => {
-    if (area === 'local' && changes.settings) applyNodeSettings(changes.settings.newValue);
+    if (area !== 'local' || !changes.settings) return;
+    applyNodeSettings(changes.settings.newValue);
+    const next = changes.settings.newValue?.postAnalyzerEnabled !== false;
+    if (next !== analyzerEnabled) { analyzerEnabled = next; onAnalyzerToggle?.(); }
   });
 } catch {}
 
@@ -320,25 +341,10 @@ const getTags = (): string[] => {
     add(txt);
   }
 
-  // SlothBuzz renders chips as "# tag1 ×" with only Tailwind utility classes, so the scan
-  // above finds nothing there. Look around the tag input as a fallback — but ONLY accept a
-  // literal × or leading #. Matching on "contains a button" instead would pull in the editor
-  // toolbar toggles (Visual|Markdown, H1 H2 H3) as phantom tags.
-  const tagInput = document.querySelector<HTMLInputElement>('input[placeholder*="tag" i], input[class*="tag" i]');
-  if (!seen.size && tagInput) {
-    let node: Element | null = tagInput;
-    for (let up = 0; up < 2 && node && !seen.size; up++) {
-      node = node.parentElement;
-      if (!node) continue;
-      for (const el of node.querySelectorAll('*')) {
-        const raw = el.textContent || '';
-        if (!/[×✕✗✖]/.test(raw) && !/^\s*#\s*\S/.test(raw)) continue;
-        const txt = raw.replace(/[×✕✗✖]/g, '').replace(/^[#\s]+/, '').trim();
-        if (!txt || txt.includes(' ') || txt.length > 32) continue;
-        add(txt);
-      }
-    }
-  }
+  // Chips with no class-based signal (SlothBuzz). Runs only when the scan above came up
+  // empty, and reads shape rather than names — see utils/tagScan.ts for why a denylist
+  // could not work here.
+  if (!seen.size) scanChipTags(document, `#${PANEL_ID}`).forEach(add);
 
   for (const el of document.querySelectorAll<HTMLInputElement>('input[class*="tag" i], input[placeholder*="tag" i]')) {
     el.value.split(/[\s,]+/).forEach(add);
@@ -363,12 +369,30 @@ const getImageCount = (content: string): number => {
   return Math.max(md + html, dom);
 };
 
+// Alt text that doesn't describe the image: empty, a single generic placeholder word
+// ("image", "photo", "imagen", "grafik"…), or a bare upload filename (e.g. "1100993.png").
+// Editors set these defaults automatically, so they give Google and screen readers nothing —
+// a post whose published markdown saves them as ![](url) would otherwise over-report in the
+// editor DOM, where Ecency etc. hold alt="image" on the <img> element.
+const GENERIC_ALT_WORDS = new Set([
+  'image', 'img', 'photo', 'picture', 'pic', 'foto', 'imagen', 'imagem', 'grafik', 'bild',
+  'screenshot', 'capture', 'captura', 'thumbnail',
+]);
+const isGenericAlt = (alt: string): boolean => {
+  const lower = alt.trim().toLowerCase();
+  if (!lower) return true;
+  if (GENERIC_ALT_WORDS.has(lower)) return true;
+  // bare filename — name plus a common image extension, no descriptive words
+  if (/^[\w.-]+\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(lower)) return true;
+  return false;
+};
+
 const missingAltImages = (content: string): string[] => {
   const out: string[] = [];
   const re = /!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) {
-    if (!m[1].trim()) {
+    if (isGenericAlt(m[1])) {
       const file = m[2].split('/').pop()?.split('?')[0] || m[2];
       out.push(file.length > 24 ? file.slice(0, 21) + '…' : file);
     }
@@ -686,11 +710,14 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
   else if (hierarchy.skips) structHint += ' · don’t skip heading levels';
   const structScore = subScore + hierScore;
 
-  // Media — 9 (image present 4 + alt text 5)
+  // Media — 9. All-or-nothing: any post with at least one image whose alt text is
+  // descriptive scores full marks; a single image is enough. (The score does not
+  // split 4/5 between 'has an image' and 'has alt text' — an earlier comment claimed
+  // it did, but the code has never worked that way.)
   let mediaScore = 0, mediaHint = '';
   if (imageCount === 0)            { mediaHint = 'No image — posts with images get ~2× engagement'; }
   else if (noAltFiles.length === 0){ mediaScore = 9; mediaHint = `${imageCount} image${imageCount > 1 ? 's' : ''} · alt text OK`; }
-  else                             { mediaScore = 4; mediaHint = `${noAltFiles.length} image(s) missing alt text`; }
+  else                             { mediaScore = 4; mediaHint = `${noAltFiles.length} image(s) need descriptive alt text`; }
 
   // Links — 7 (external/citation 3 + internal/on-chain 4)
   const linkScore = (links.external > 0 ? 3 : 0) + (links.internal > 0 ? 4 : 0);
@@ -748,13 +775,63 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
     { label: 'Links a past/own post',      pass: links.internal > 0 },
     { label: '3–5 content tags',           pass: nTags >= 3 && nTags <= 5 },
     { label: '1,000+ words',               pass: wordCount >= 1000 },
-    { label: 'Images have alt text',       pass: imageCount === 0 || noAltFiles.length === 0 },
+    { label: 'Images have descriptive alt text', pass: imageCount === 0 || noAltFiles.length === 0 },
     { label: 'At least 1 image',           pass: imageCount >= 1 },
   ];
 
   const geo = analyzeGeo(content, intent.type);
 
   return { wordCount, readMinutes, imageCount, title, titleChars, subheadings, permlink, tags, metaDesc, grade, ease, kw, hasKw, keyword, seoScore, seoMax, links, noAltFiles, longestPara, transitionPct, suggestedTags, intent, geo, breakdown, checklist };
+};
+
+// ── Keyword suggestions ──────────────────────────────────────────────────────
+// Skims the draft and ranks candidate focus keywords by what they would actually score.
+//
+// Deliberately a SHORTLIST, not an auto-pick. The score measures keyword *placement* —
+// title, first 100 words, a subheading, the URL slug — not whether anyone searches the
+// term. On our own contest post the top-scoring candidate was "week" (92%), which is
+// worthless as a keyword, while the real target "hivepulse seo contest" scored 75%.
+// Auto-applying the winner would confidently hand out bad SEO advice, so the button
+// surfaces the options with their scores and the writer chooses.
+const GENERIC_KW = new Set([
+  'week','day','days','today','time','times','part','update','news','post','blog','thing',
+  'things','way','ways','now','then','here','there','more','most','back','next','last',
+  'first','one','two','three','year','month','edition','round','issue',
+]);
+
+interface KwSuggestion { keyword: string; pct: number; generic: boolean; }
+
+const suggestKeywords = (
+  content: string, title: string, tags: string[], metaDesc: string,
+): KwSuggestion[] => {
+  const words = title.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 2 && !KW_STOP.has(w));
+  const cands = new Set<string>();
+  const auto = autoDetectKeyword(title, content);
+  if (auto) cands.add(auto);
+  for (let n = 1; n <= 3; n++)
+    for (let i = 0; i + n <= words.length; i++) cands.add(words.slice(i, i + n).join(' '));
+
+  const plain = stripMd(content).toLowerCase();
+  const out: KwSuggestion[] = [];
+  for (const kw of cands) {
+    if (!kw) continue;
+    // must actually appear in the body — a keyword the post never uses is not a keyword
+    if (!plain.includes(kw)) continue;
+    const a = analyze(content, title, tags, metaDesc, kw);
+    const parts = kw.split(' ');
+    out.push({
+      keyword: kw,
+      pct: Math.round((a.seoScore / a.seoMax) * 100),
+      generic: parts.length === 1 && GENERIC_KW.has(kw),
+    });
+  }
+  // Non-generic first, then by score, then prefer the longer (more specific) phrase.
+  out.sort((x, y) =>
+    (Number(x.generic) - Number(y.generic)) ||
+    (y.pct - x.pct) ||
+    (y.keyword.split(' ').length - x.keyword.split(' ').length));
+  return out.slice(0, 5);
 };
 
 // ── Colours ──────────────────────────────────────────────────────────────────
@@ -772,6 +849,10 @@ let activeTab: 'seo' | 'geo' = 'seo';
 let openInfo: string | null = null;
 // Last render args so tab/info clicks can re-render without recomputing
 let lastArgs: { a: Analysis; kw: string; auto: boolean; onKw: (k: string) => void } | null = null;
+// Raw inputs kept alongside, so the keyword suggester can re-score the draft against
+// candidate keywords without the caller having to thread them through renderPanel.
+let lastInputs: { content: string; title: string; tags: string[]; metaDesc: string } | null = null;
+let kwSuggestions: KwSuggestion[] | null = null;   // non-null while the shortlist is open
 const rerender = () => { if (lastArgs) renderPanel(lastArgs.a, lastArgs.kw, lastArgs.auto, lastArgs.onKw); };
 
 const styleTabs = () => {
@@ -890,7 +971,7 @@ const INFO: Record<string, { what: string; how: string }> = {
   'Title': { what: 'Google shows ~50–60 characters of a title. Numbers, power words and brackets also lift click-through rate.', how: 'Aim for 50–60 chars, keyword near the start, and add a number or word like "guide"/"best".' },
   'Meta desc': { what: 'The preview description becomes the grey snippet under your link in Google. 120–160 characters is ideal.', how: 'Summarise the post in 1–2 sentences, include the keyword, and give a reason to click.' },
   'Structure': { what: 'Subheadings (##) plus a correct heading hierarchy. The title is the page H1, so a "# " in the body creates a duplicate H1.', how: 'Use ## / ### only in the body, one section every 200–300 words, never skip a level.' },
-  'Media': { what: 'Whether the post has images and whether they carry alt text. Images lift engagement and dwell time; alt text is a direct image-search and accessibility signal Google reads.', how: 'Add at least one relevant image and describe each: ![a hiking trail at sunset](url) — not ![](url).' },
+  'Media': { what: 'Whether the post has images and whether they carry alt text. Images lift engagement and dwell time; alt text is a direct image-search and accessibility signal Google reads.', how: 'Add at least one relevant image and describe each: ![a hiking trail at sunset](url) — not ![](url), ![image](url) or ![IMG_1234.png](url). Editors often fill the filename in for you; replace it with a real description.' },
   'Links': { what: 'Internal links (to your own/other Hive posts) keep readers on-chain and build topical authority; external links cite sources and add trust.', how: 'Link at least one past post of yours and cite one external source.' },
   'Tags': { what: 'Hive tags drive discovery in frontends — topic feeds, trending, communities. 3–5 relevant tags is best.', how: 'Pick 3–5 specific tags. The first tag is permanent after publishing — choose carefully.' },
   'Readability': { what: 'Flesch reading ease (sentence/word length) plus transition-word usage. Easier text keeps readers longer.', how: 'Shorter sentences, everyday words, connectors like "however"/"for example".' },
@@ -941,10 +1022,58 @@ const renderSeoTab = (body: HTMLElement, a: Analysis, keyword: string, isAuto: b
   kwWrap.innerHTML =
     `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">` +
     `<span style="font-size:10px;color:#94a3b8;font-weight:600">🎯 Focus keyword</span>` +
+    `<span style="display:flex;align-items:center;gap:6px">` +
     (isAuto ? `<span style="font-size:9px;color:#64748b;border:1px solid #334155;padding:1px 6px;border-radius:4px">auto · edit to override</span>` : '') +
-    `</div>`;
+    `<button id="${PANEL_ID}-kw-suggest" style="font-size:9px;color:#fbbf24;background:transparent;border:1px solid #78350f;padding:1px 7px;border-radius:4px;cursor:pointer;font-family:inherit">${kwSuggestions ? 'hide' : '✨ suggest'}</button>` +
+    `</span></div>`;
   kwWrap.appendChild(kwInput);
+
+  // Ranked shortlist of candidate keywords, scored against this draft.
+  if (kwSuggestions) {
+    const list = document.createElement('div');
+    list.style.cssText = 'margin-top:8px;border-top:1px solid #334155;padding-top:7px';
+    if (!kwSuggestions.length) {
+      list.innerHTML = `<div style="font-size:10px;color:#64748b">Not enough content yet — write a title and a few lines first.</div>`;
+    } else {
+      list.innerHTML =
+        `<div style="font-size:9px;color:#64748b;margin-bottom:6px">Scored against your draft. Pick the term you want to rank for — the highest score is not always the best keyword.</div>` +
+        kwSuggestions.map(s => {
+          const col = s.pct >= 70 ? '#34d399' : s.pct >= 45 ? '#fbbf24' : '#f87171';
+          return `<button class="${PANEL_ID}-kw-pick" data-kw="${esc(s.keyword)}" style="display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;background:#1e293b;border:1px solid #334155;border-radius:5px;padding:4px 8px;margin-bottom:4px;cursor:pointer;font-family:inherit;text-align:left">` +
+            `<span style="font-size:10px;color:#e2e8f0">${esc(s.keyword)}${s.generic ? ` <span style="color:#64748b">· generic</span>` : ''}</span>` +
+            `<span style="font-size:10px;font-weight:700;color:${col}">${s.pct}%</span></button>`;
+        }).join('');
+    }
+    kwWrap.appendChild(list);
+  }
   body.appendChild(kwWrap);
+
+  const suggestBtn = document.getElementById(`${PANEL_ID}-kw-suggest`);
+  suggestBtn?.addEventListener('click', e => {
+    e.stopPropagation();
+    if (kwSuggestions) { kwSuggestions = null; rerender(); return; }
+    kwSuggestions = lastInputs
+      ? suggestKeywords(lastInputs.content, lastInputs.title, lastInputs.tags, lastInputs.metaDesc)
+      : [];
+    rerender();
+  });
+  kwWrap.querySelectorAll<HTMLElement>(`.${PANEL_ID}-kw-pick`).forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const kw = btn.getAttribute('data-kw') || '';
+      kwSuggestions = null;
+      // Re-score and repaint straight away. onKeyword only schedules the debounced
+      // analysis pass, so on its own the shortlist would stay open and the score stale
+      // for a second or more, which reads as the click having done nothing.
+      if (lastInputs) {
+        renderPanel(analyze(lastInputs.content, lastInputs.title, lastInputs.tags, lastInputs.metaDesc, kw),
+                    kw, false, onKeyword);
+      } else {
+        rerender();
+      }
+      onKeyword(kw);
+    });
+  });
 
   // Score
   const sc = a.seoScore, scMax = a.seoMax, scPct = Math.round((sc / scMax) * 100);
@@ -1190,6 +1319,7 @@ if (composePattern) {
     if (!panel) return;
     if (document.activeElement && panel.contains(document.activeElement)) { schedule(); return; }
     const { title, content, tags, metaDesc } = readMerged();
+    lastInputs = { content, title, tags, metaDesc };
     lastSig = `${title.length}:${content.length}:${tags.join(',')}:${metaDesc.length}`;
     if (title.length < 3 && content.trim().length < 5) { showIdle(); return; }
     if (kwSource !== 'user' && (title.length > 3 || content.length > 80)) {
@@ -1248,9 +1378,21 @@ if (composePattern) {
   chrome.storage.local.remove(['composeKeyword']);
 
   const checkAndMount = () => {
+    if (!analyzerEnabled) {
+      // Stop the work we own: the panel, the 3s poll and any pending debounce. The document
+      // input/change listeners and the MutationObserver stay attached — ensureBootstrap
+      // installs them once and re-enabling relies on them — so keystrokes still schedule a
+      // debounce, which then finds no panel and returns. Cheap, but not nothing: this is a
+      // pause, not a full detach.
+      removePanel();
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (debounce)  { clearTimeout(debounce);   debounce  = null; }
+      return;
+    }
     if (isComposePage()) { if (!active) { injectPanel('initial'); startPolling(); } }
     else { if (active) removePanel(); }
   };
+  onAnalyzerToggle = checkAndMount;
 
   const origPush    = history.pushState.bind(history);
   const origReplace = history.replaceState.bind(history);
@@ -1264,8 +1406,19 @@ if (composePattern) {
   }).observe(document.body, { childList: true });
 
   const initialMount = () => { checkAndMount(); setTimeout(checkAndMount, 1200); };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialMount);
-  else initialMount();
+  // Settings first: mounting before the read resolves would flash the panel for anyone who
+  // has turned it off.
+  // Race a timeout: the mount is now downstream of a storage callback, and if that callback
+  // never fires (extension reloaded while a compose tab is open — an ordinary MV3 event) the
+  // promise never settles and the panel never appears at all. analyzerEnabled defaults to
+  // true, so timing out fails open.
+  Promise.race([
+    readAnalyzerSetting(),
+    new Promise<void>(res => setTimeout(res, 500)),
+  ]).then(() => {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialMount);
+    else initialMount();
+  });
 
 } // end if (composePattern)
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { HiveNotification, HiveNotificationType, AppSettings, ActionMode } from '../types';
-import { MessageSquare, AtSign, UserPlus, Repeat2, ArrowRightLeft, Heart, TrendingUp, TrendingDown, Info, Coins, Gift, Zap, PiggyBank, Banknote, Landmark } from 'lucide-react';
+import { MessageSquare, AtSign, UserPlus, Repeat2, ArrowRightLeft, Heart, TrendingUp, TrendingDown, Info, Coins, Gift, Zap, PiggyBank, Banknote, Landmark, ListPlus, CandlestickChart, Ban, ArrowLeftRight, CheckCircle2, Clock } from 'lucide-react';
 import { getTargetUrl, AUTHOR_PERMLINK_REGEX } from '../utils/urlHelpers';
 
 interface NotificationItemProps {
@@ -132,6 +132,57 @@ function getTypeConfig(type: HiveNotificationType): TypeConfig {
         accent: 'border-l-indigo-400 bg-indigo-50/40',
         iconColor: 'bg-indigo-100 text-indigo-600',
         rowHover: 'hover:bg-indigo-50/60',
+      };
+    case HiveNotificationType.LIMIT_ORDER_CREATE:
+      return {
+        icon: <ListPlus size={13} />,
+        label: 'Order',
+        accent: 'border-l-lime-400 bg-lime-50/40',
+        iconColor: 'bg-lime-100 text-lime-700',
+        rowHover: 'hover:bg-lime-50/60',
+      };
+    case HiveNotificationType.FILL_ORDER:
+      return {
+        icon: <CandlestickChart size={13} />,
+        label: 'Trade',
+        accent: 'border-l-fuchsia-400 bg-fuchsia-50/40',
+        iconColor: 'bg-fuchsia-100 text-fuchsia-600',
+        rowHover: 'hover:bg-fuchsia-50/60',
+      };
+    case HiveNotificationType.LIMIT_ORDER_CANCEL:
+      // Deliberately quiet -- a cancellation moves no value and traders cancel constantly.
+      // Still a shade darker than the `default` fallback, or a cancelled order reads as an
+      // unrecognised/broken row rather than a deliberately understated one.
+      return {
+        icon: <Ban size={13} />,
+        label: 'Cancelled',
+        accent: 'border-l-slate-400 bg-slate-50/40',
+        iconColor: 'bg-slate-200 text-slate-600',
+        rowHover: 'hover:bg-slate-50/60',
+      };
+    case HiveNotificationType.LIMIT_ORDER_EXPIRED:
+      return {
+        icon: <Clock size={13} />,
+        label: 'Expired',
+        accent: 'border-l-stone-300 bg-stone-50/40',
+        iconColor: 'bg-stone-200 text-stone-600',
+        rowHover: 'hover:bg-stone-50/60',
+      };
+    case HiveNotificationType.CONVERT_REQUEST:
+      return {
+        icon: <ArrowLeftRight size={13} />,
+        label: 'Conversion',
+        accent: 'border-l-yellow-400 bg-yellow-50/40',
+        iconColor: 'bg-yellow-100 text-yellow-700',
+        rowHover: 'hover:bg-yellow-50/60',
+      };
+    case HiveNotificationType.CONVERT_FILL:
+      return {
+        icon: <CheckCircle2 size={13} />,
+        label: 'Converted',
+        accent: 'border-l-lime-500 bg-lime-50/40',
+        iconColor: 'bg-lime-200 text-lime-800',
+        rowHover: 'hover:bg-lime-50/60',
       };
     default:
       return {

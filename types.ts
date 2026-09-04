@@ -298,6 +298,26 @@ export enum HiveNotificationType {
   SAVINGS_WITHDRAW = 'transfer_from_savings',
   SAVINGS_WITHDRAW_FILL = 'fill_transfer_from_savings',
   PROPOSAL_PAY = 'proposal_pay',
+  // Internal market (HIVE/HBD DEX)
+  LIMIT_ORDER_CREATE = 'limit_order_create',
+  /**
+   * Cancellations surface as a pair: the signed `limit_order_cancel` and the virtual
+   * `limit_order_cancelled` that carries the refunded amount. One Pulse row is emitted
+   * per cancellation, preferring the virtual op — see fetchAccountHistoryFinance.
+   */
+  LIMIT_ORDER_CANCEL = 'limit_order_cancel',
+  /**
+   * An order the chain closed on its expiry date. The same virtual op reports this and
+   * a real cancellation, so they are told apart by whether a signed cancel precedes it.
+   */
+  LIMIT_ORDER_EXPIRED = 'limit_order_expired',
+  FILL_ORDER = 'fill_order',
+  /**
+   * HBD->HIVE (`convert`) and HIVE->HBD (`collateralized_convert`) share a row type:
+   * both are "I asked the chain to convert", and the message names the direction.
+   */
+  CONVERT_REQUEST = 'convert',
+  CONVERT_FILL = 'fill_convert_request',
 }
 
 export interface HiveNotification {
@@ -311,6 +331,12 @@ export interface HiveNotification {
   permlink?: string;
   amount?: string; // For transfers
   memo?: string; // For transfers
+  /**
+   * Internal-market order id, set on order/closure rows. A cancellation's signed and
+   * virtual ops sit in adjacent sequence slots and can land in different RPC pages, so
+   * matching them needs the order id -- the sequence-based `id` differs between them.
+   */
+  orderid?: number;
 }
 
 export interface HivePrices {

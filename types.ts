@@ -10,7 +10,8 @@ export enum FrontendId {
   HIVESCAN = 'HIVESCAN',
   THREESPEAK = 'THREESPEAK',
   UREKA = 'UREKA',
-  SLOTHBUZZ = 'SLOTHBUZZ'
+  SLOTHBUZZ = 'SLOTHBUZZ',
+  SUSEONA = 'SUSEONA'
 }
 
 export enum ActionMode {
@@ -77,7 +78,8 @@ export interface LinkStructureConfig {
   post: string; // e.g., "/@{{author}}/{{permlink}}"
   profile: string; // e.g., "/@{{username}}"
   wallet: string; // e.g., "/@{{username}}/wallet"
-  // Add other link types as needed
+  /** e.g. "/community/{{name}}/trending". Omitted means the frontend has no community view. */
+  community?: string;
 }
 
 export interface FrontendConfig {
@@ -94,6 +96,17 @@ export interface FrontendConfig {
   logoUrl?: string; // URL for custom logo
   customDomain?: string; // Optional custom domain for custom frontends
   linkStructure?: LinkStructureConfig; // Link structure for custom frontends
+  /**
+   * Whether this frontend serves the condenser's NON-POST routes — /trending, /created,
+   * /communities, /witnesses, /proposals — so an arbitrary path from another such frontend
+   * means the same thing here.
+   *
+   * Explicit rather than inferred. Deriving it from "has no linkStructure" was wrong for
+   * every frontend that uses /@author/permlink for posts but its own routes for everything
+   * else: 3Speak, Actifit, HiveScan and Ureka all had /creators, /rewards, /block/... and
+   * /my-communities carried onto peakd.com verbatim.
+   */
+  sharesCondenserRoutes?: boolean;
 }
 
 export interface CurrentTabState {
@@ -151,6 +164,11 @@ export interface AppSettings {
   overrideBadgeWithUnreadMessages: boolean;
   /** Show the @username hover card on Hive frontends. Opt-out; some people find it noisy. */
   usernameHoverCards?: boolean;
+  /**
+   * Show the post analyzer panel on supported compose pages. Opt-out: it runs constantly
+   * while you write, and not everyone wants it there for every post.
+   */
+  postAnalyzerEnabled?: boolean;
   activeFrontendIds: (FrontendId | string)[]; // Added for ordered and active frontend IDs
   customFrontends: FrontendConfig[]; // New property to store custom frontends
 }

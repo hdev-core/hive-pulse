@@ -1,3 +1,4 @@
+import { scanChipTags } from './utils/tagScan';
 export {};
 declare const chrome: any;
 
@@ -44,10 +45,29 @@ const loadHiveApi = (): Promise<void> =>
     } catch { res(); }
   });
 
-// Stay in sync if the user changes the node while a compose tab is open
+// Opt-out switch. Read before the first mount so a disabled panel never flashes on, and
+// kept live so toggling it in the popup takes effect in open compose tabs without a reload.
+let analyzerEnabled = true;
+let onAnalyzerToggle: (() => void) | null = null;
+
+const readAnalyzerSetting = (): Promise<void> =>
+  new Promise(res => {
+    try {
+      chrome.storage.local.get(['settings'], (r: any) => {
+        analyzerEnabled = r?.settings?.postAnalyzerEnabled !== false;
+        res();
+      });
+    } catch { res(); }
+  });
+
+// Stay in sync if the user changes the node, or flips the analyzer off, while a compose
+// tab is open
 try {
   chrome.storage.onChanged.addListener((changes: any, area: string) => {
-    if (area === 'local' && changes.settings) applyNodeSettings(changes.settings.newValue);
+    if (area !== 'local' || !changes.settings) return;
+    applyNodeSettings(changes.settings.newValue);
+    const next = changes.settings.newValue?.postAnalyzerEnabled !== false;
+    if (next !== analyzerEnabled) { analyzerEnabled = next; onAnalyzerToggle?.(); }
   });
 } catch {}
 
@@ -321,25 +341,10 @@ const getTags = (): string[] => {
     add(txt);
   }
 
-  // SlothBuzz renders chips as "# tag1 ×" with only Tailwind utility classes, so the scan
-  // above finds nothing there. Look around the tag input as a fallback — but ONLY accept a
-  // literal × or leading #. Matching on "contains a button" instead would pull in the editor
-  // toolbar toggles (Visual|Markdown, H1 H2 H3) as phantom tags.
-  const tagInput = document.querySelector<HTMLInputElement>('input[placeholder*="tag" i], input[class*="tag" i]');
-  if (!seen.size && tagInput) {
-    let node: Element | null = tagInput;
-    for (let up = 0; up < 2 && node && !seen.size; up++) {
-      node = node.parentElement;
-      if (!node) continue;
-      for (const el of node.querySelectorAll('*')) {
-        const raw = el.textContent || '';
-        if (!/[×✕✗✖]/.test(raw) && !/^\s*#\s*\S/.test(raw)) continue;
-        const txt = raw.replace(/[×✕✗✖]/g, '').replace(/^[#\s]+/, '').trim();
-        if (!txt || txt.includes(' ') || txt.length > 32) continue;
-        add(txt);
-      }
-    }
-  }
+  // Chips with no class-based signal (SlothBuzz). Runs only when the scan above came up
+  // empty, and reads shape rather than names — see utils/tagScan.ts for why a denylist
+  // could not work here.
+  if (!seen.size) scanChipTags(document, `#${PANEL_ID}`).forEach(add);
 
   for (const el of document.querySelectorAll<HTMLInputElement>('input[class*="tag" i], input[placeholder*="tag" i]')) {
     el.value.split(/[\s,]+/).forEach(add);
@@ -1373,9 +1378,21 @@ if (composePattern) {
   chrome.storage.local.remove(['composeKeyword']);
 
   const checkAndMount = () => {
+    if (!analyzerEnabled) {
+      // Stop the work we own: the panel, the 3s poll and any pending debounce. The document
+      // input/change listeners and the MutationObserver stay attached — ensureBootstrap
+      // installs them once and re-enabling relies on them — so keystrokes still schedule a
+      // debounce, which then finds no panel and returns. Cheap, but not nothing: this is a
+      // pause, not a full detach.
+      removePanel();
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (debounce)  { clearTimeout(debounce);   debounce  = null; }
+      return;
+    }
     if (isComposePage()) { if (!active) { injectPanel('initial'); startPolling(); } }
     else { if (active) removePanel(); }
   };
+  onAnalyzerToggle = checkAndMount;
 
   const origPush    = history.pushState.bind(history);
   const origReplace = history.replaceState.bind(history);
@@ -1389,8 +1406,19 @@ if (composePattern) {
   }).observe(document.body, { childList: true });
 
   const initialMount = () => { checkAndMount(); setTimeout(checkAndMount, 1200); };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialMount);
-  else initialMount();
+  // Settings first: mounting before the read resolves would flash the panel for anyone who
+  // has turned it off.
+  // Race a timeout: the mount is now downstream of a storage callback, and if that callback
+  // never fires (extension reloaded while a compose tab is open — an ordinary MV3 event) the
+  // promise never settles and the panel never appears at all. analyzerEnabled defaults to
+  // true, so timing out fails open.
+  Promise.race([
+    readAnalyzerSetting(),
+    new Promise<void>(res => setTimeout(res, 500)),
+  ]).then(() => {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialMount);
+    else initialMount();
+  });
 
 } // end if (composePattern)
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { AppSettings, HiveNotification, HiveNotificationType } from '../types';
 import { fetchNotifications, fetchAccountHistoryFinance } from '../utils/hiveHelpers';
 import { NotificationItem } from './NotificationItem';
@@ -80,6 +80,20 @@ const CLOSURE_TYPES = new Set([
  * first row seen would preserve the uncertain one forever, so an uncertain row yields to
  * the definite one for the same order id.
  */
+/** Hive timestamps are UTC-naive; both sources need the same Z applied before parsing. */
+const toMs = (d: string): number =>
+  new Date(d.endsWith('Z') ? d : d + 'Z').getTime();
+
+/**
+ * Newest first. Decorate-sort-undecorate: the previous comparator allocated two Date
+ * objects and did two string tests per comparison, so a 20,000-row list parsed dates
+ * hundreds of thousands of times per render. This parses each date once.
+ */
+const sortByDateDesc = (list: HiveNotification[]): HiveNotification[] =>
+  list.map(n => [toMs(n.date), n] as const)
+      .sort((a, b) => b[0] - a[0])
+      .map(([, n]) => n);
+
 function dedupeHistory(
   prev: HiveNotification[], incoming: HiveNotification[],
 ): { add: HiveNotification[]; dropIds: Set<number> } {
@@ -93,7 +107,12 @@ function dedupeHistory(
     if (seenIds.has(n.id)) return false;
     if (CLOSURE_TYPES.has(n.type) && n.orderid !== undefined) {
       const existing = byOrder.get(n.orderid);
-      if (existing) {
+      // orderid is user-chosen and only has to be unique among an account's OPEN orders,
+      // so it is legally reusable once an order closes. Matching on it across the whole
+      // accumulated feed would silently drop a genuine later cancellation from a bot that
+      // restarts its counter. The pair this exists to collapse always sits in adjacent
+      // sequence slots, so require that too.
+      if (existing && Math.abs(existing.id - n.id) <= 1) {
         // Replace only when the existing row was a guess and this one is not.
         if (!existing.closureUncertain || n.closureUncertain) return false;
         dropIds.add(existing.id);
@@ -259,58 +278,66 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
     if (scrollTop + clientHeight >= scrollHeight - 20) loadNotifications(false);
   };
 
-  if (!username) return null;
-
-  const sortByDate = (a: HiveNotification, b: HiveNotification) =>
-    new Date(b.date.endsWith('Z') ? b.date : b.date + 'Z').getTime() -
-    new Date(a.date.endsWith('Z') ? a.date : a.date + 'Z').getTime();
-
   // Account history renders transfers better than bridge does (both directions, memo),
   // so bridge transfers are suppressed once history covers them. "Covers" has to mean
   // the time window, not `financeHistory.length > 0`: a trader's 1000-op window can be
   // 100% market ops spanning a few hours, and suppressing on that dropped real transfers
   // that history had never loaded.
-  const oldestHistoryMs = financeHistory.reduce((oldest, n) => {
-    const t = new Date(n.date.endsWith('Z') ? n.date : n.date + 'Z').getTime();
+  const oldestHistoryMs = useMemo(() => financeHistory.reduce((oldest, n) => {
+    const t = toMs(n.date);
     return Number.isFinite(t) && t < oldest ? t : oldest;
-  }, Infinity);
-  const bridgeNotifs = notifications.filter(n => {
+  }, Infinity), [financeHistory]);
+
+  // All of this used to run on every render, re-parsing every date several times over --
+  // ~8.6ms at 1,000 rows and ~135ms at 20,000, and financeHistory is uncapped, so paging
+  // deep put every later click and scroll behind that. The side panel stays mounted, so it
+  // did not go away.
+  const bridgeNotifs = useMemo(() => notifications.filter(n => {
     if (n.type !== HiveNotificationType.TRANSFER) return true;
-    const t = new Date(n.date.endsWith('Z') ? n.date : n.date + 'Z').getTime();
+    const t = toMs(n.date);
     return !(Number.isFinite(t) && t >= oldestHistoryMs);
-  });
-  const bridgeFinance = bridgeNotifs.filter(n => FINANCE_TYPES.has(n.type));
+  }), [notifications, oldestHistoryMs]);
+  const bridgeFinance = useMemo(
+    () => bridgeNotifs.filter(n => FINANCE_TYPES.has(n.type)), [bridgeNotifs]);
 
   const usesAccountHistory = activeFilter === 'finance' || activeFilter === 'market';
-  const historyFinance = financeHistory.filter(n => FINANCE_TYPES.has(n.type));
-  const historyMarket  = financeHistory.filter(n => MARKET_TYPES.has(n.type));
+  const historyFinance = useMemo(
+    () => financeHistory.filter(n => FINANCE_TYPES.has(n.type)), [financeHistory]);
+  const historyMarket = useMemo(
+    () => financeHistory.filter(n => MARKET_TYPES.has(n.type)), [financeHistory]);
 
-  const visible = (() => {
+  const visible = useMemo(() => {
     if (activeFilter === 'finance') {
-      return [...bridgeFinance, ...historyFinance].sort(sortByDate);
+      return sortByDateDesc([...bridgeFinance, ...historyFinance]);
     }
     if (activeFilter === 'market') {
-      return [...historyMarket].sort(sortByDate);
+      return sortByDateDesc(historyMarket);
     }
     if (activeFilter === 'all') {
       // Market rows are excluded here on purpose. They outnumber every other row type by
       // roughly 500:1 for a trading account, and All is the default tab -- including them
       // buries every mention, reply and transfer behind order spam. The Market tab exists
       // precisely so this one stays readable.
-      return [...bridgeNotifs, ...historyFinance].sort(sortByDate);
+      return sortByDateDesc([...bridgeNotifs, ...historyFinance]);
     }
     return notifications.filter(n => matchesFilter(n, activeFilter));
-  })();
-  const groups = groupByDate(visible);
+  }, [activeFilter, bridgeNotifs, bridgeFinance, historyFinance, historyMarket, notifications]);
+
+  const groups = useMemo(() => groupByDate(visible), [visible]);
+
 
   // Per-tab counts for badges
-  const counts: Record<FilterTab, number> = {
+  const counts: Record<FilterTab, number> = useMemo(() => ({
     all:        bridgeNotifs.length + historyFinance.length,
     social:     notifications.filter(n => SOCIAL_TYPES.has(n.type)).length,
     finance:    bridgeFinance.length + historyFinance.length,
     market:     historyMarket.length,
     engagement: notifications.filter(n => ENGAGEMENT_TYPES.has(n.type)).length,
-  };
+  }), [bridgeNotifs, bridgeFinance, historyFinance, historyMarket, notifications]);
+
+  // Bailing out must come after every hook: React counts hooks per render, so returning
+  // above any of the useMemos would crash the moment a username appeared or cleared.
+  if (!username) return null;
 
   return (
     <div className="flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

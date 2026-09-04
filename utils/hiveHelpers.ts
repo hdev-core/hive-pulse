@@ -5,13 +5,33 @@ const DEFAULT_HIVE_RPC_NODE = HIVE_RPC_NODES[0];
 
 type RpcBody = Record<string, any>;
 
+/**
+ * A hung node used to leave callers pending forever: the Pulse spinner ran with no error
+ * and no retry, and the fallback chain below never advanced because the first request never
+ * settled. Same AbortController shape already used in utils/hiveEngineHelpers.ts.
+ */
+const RPC_TIMEOUT_MS = 12000;
+
 const rpcFetch = async (nodeUrl: string, body: RpcBody): Promise<any> => {
-  const response = await fetch(nodeUrl, {
-    method: 'POST',
-    body: JSON.stringify(body),
-    headers: { 'Content-Type': 'application/json' },
-  });
-  return response.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), RPC_TIMEOUT_MS);
+  try {
+    const response = await fetch(nodeUrl, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+    });
+    return await response.json();
+  } catch (e) {
+    // AbortError carries no useful message for a user, so name the condition.
+    if ((e as any)?.name === 'AbortError') {
+      throw new Error(`${nodeUrl} did not respond within ${RPC_TIMEOUT_MS / 1000}s`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 };
 
 const rpcFetchWithFallback = async (
@@ -20,10 +40,22 @@ const rpcFetchWithFallback = async (
   fallbackNodes?: string[],
   autoSwitch?: boolean
 ): Promise<any> => {
-  const data = await rpcFetch(primaryNode, body);
-  if (data.result !== undefined && data.result !== null) return data;
+  // A primary that times out or refuses the connection now falls through to the fallback
+  // chain instead of rejecting outright — previously only a *reachable* node that returned
+  // no result got that treatment, which is the less likely failure.
+  let data: any;
+  let primaryError: unknown;
+  try {
+    data = await rpcFetch(primaryNode, body);
+    if (data.result !== undefined && data.result !== null) return data;
+  } catch (e) {
+    primaryError = e;
+  }
 
-  if (!autoSwitch || !fallbackNodes?.length) return data;
+  if (!autoSwitch || !fallbackNodes?.length) {
+    if (primaryError) throw primaryError;
+    return data;
+  }
 
   for (const node of fallbackNodes) {
     if (node === primaryNode) continue;
@@ -33,6 +65,7 @@ const rpcFetchWithFallback = async (
     } catch {}
   }
 
+  if (primaryError) throw primaryError;
   return data;
 };
 
@@ -209,6 +242,12 @@ function normalizeAccountHistoryOp(
 
   switch (opType) {
     case 'transfer': {
+      // Every market branch validates its amount with parseAsset first; this one did not,
+      // so a node answering with the appbase {amount, precision, nai} object form instead
+      // of a legacy string rendered "Received [object Object] from @bob". condenser_api
+      // does not return that form today, which is why it has never been seen -- but a
+      // dropped row is the right failure, not a garbage one.
+      if (!parseAsset(opData.amount)) return null;
       const isIncoming = opData.to === username;
       const counterparty = isIncoming ? opData.from : opData.to;
       return {

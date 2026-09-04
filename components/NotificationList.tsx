@@ -10,12 +10,13 @@ interface NotificationListProps {
   allFrontends: any[];
 }
 
-type FilterTab = 'all' | 'social' | 'finance' | 'engagement';
+type FilterTab = 'all' | 'social' | 'finance' | 'market' | 'engagement';
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
   { key: 'all',        label: 'All' },
   { key: 'social',     label: 'Social' },
   { key: 'finance',    label: 'Finance' },
+  { key: 'market',     label: 'Market' },
   { key: 'engagement', label: 'Votes' },
 ];
 
@@ -33,14 +34,76 @@ const FINANCE_TYPES    = new Set([
   HiveNotificationType.SAVINGS_WITHDRAW_FILL,
   HiveNotificationType.PROPOSAL_PAY,
 ]);
+/**
+ * Market and Finance are deliberately disjoint. Finance is value moving in or out of
+ * the account; Market is one asset being swapped for another. Leaving market rows in
+ * both would defeat the split -- an active trader's cancellations alone outnumber
+ * every other finance row put together, which is what pushed them into their own tab.
+ */
+const MARKET_TYPES     = new Set([
+  HiveNotificationType.LIMIT_ORDER_CREATE,
+  HiveNotificationType.LIMIT_ORDER_CANCEL,
+  HiveNotificationType.LIMIT_ORDER_EXPIRED,
+  HiveNotificationType.FILL_ORDER,
+  HiveNotificationType.CONVERT_REQUEST,
+  HiveNotificationType.CONVERT_FILL,
+]);
 const ENGAGEMENT_TYPES = new Set([HiveNotificationType.VOTE]);
 
 function matchesFilter(n: HiveNotification, tab: FilterTab): boolean {
   if (tab === 'all')        return true;
   if (tab === 'social')     return SOCIAL_TYPES.has(n.type);
   if (tab === 'finance')    return FINANCE_TYPES.has(n.type);
+  if (tab === 'market')     return MARKET_TYPES.has(n.type);
   if (tab === 'engagement') return ENGAGEMENT_TYPES.has(n.type);
   return true;
+}
+
+/**
+ * Drop rows already represented in `prev`.
+ *
+ * Sequence id handles the ordinary case. Order closures need more: a cancellation emits
+ * a signed op and a virtual op in adjacent sequence slots, and whichever one sits at a
+ * page edge loses the lookahead that pairs them, so it re-renders as a second row with a
+ * different sequence id. Matching on order id collapses those.
+ */
+const CLOSURE_TYPES = new Set([
+  HiveNotificationType.LIMIT_ORDER_CANCEL,
+  HiveNotificationType.LIMIT_ORDER_EXPIRED,
+]);
+
+/**
+ * Returns the incoming rows to append, and the ids of already-shown rows to drop.
+ *
+ * A closure row at a page edge is classified without its neighbouring op, so it says only
+ * "Order closed". The next (older) page carries the signed op that settles it. Keeping the
+ * first row seen would preserve the uncertain one forever, so an uncertain row yields to
+ * the definite one for the same order id.
+ */
+function dedupeHistory(
+  prev: HiveNotification[], incoming: HiveNotification[],
+): { add: HiveNotification[]; dropIds: Set<number> } {
+  const seenIds = new Set(prev.map(n => n.id));
+  const byOrder = new Map<number, HiveNotification>();
+  for (const n of prev) {
+    if (CLOSURE_TYPES.has(n.type) && n.orderid !== undefined) byOrder.set(n.orderid, n);
+  }
+  const dropIds = new Set<number>();
+  const add = incoming.filter(n => {
+    if (seenIds.has(n.id)) return false;
+    if (CLOSURE_TYPES.has(n.type) && n.orderid !== undefined) {
+      const existing = byOrder.get(n.orderid);
+      if (existing) {
+        // Replace only when the existing row was a guess and this one is not.
+        if (!existing.closureUncertain || n.closureUncertain) return false;
+        dropIds.add(existing.id);
+      }
+      byOrder.set(n.orderid, n);
+    }
+    seenIds.add(n.id);
+    return true;
+  });
+  return { add, dropIds };
 }
 
 // Group notifications by recency bucket
@@ -85,6 +148,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
   const [financeHasMore, setFinanceHasMore]         = useState(false);
   const [financeOldestSeq, setFinanceOldestSeq]     = useState<number | null>(null);
   const [loadingMoreFinance, setLoadingMoreFinance] = useState(false);
+  const [financeError, setFinanceError] = useState<string | null>(null);
+  const [refreshNonce, setRefreshNonce] = useState(0);
   const financeFetchedRef                           = useRef(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -124,8 +189,12 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
 
   // Auto-load more bridge pages when the active filter tab has no visible results
   useEffect(() => {
+    // Market rows only ever come from account history, so paging bridge finds nothing.
+    if (activeFilter === 'market') return;
     const bridgeFiltered = notifications.filter(n => matchesFilter(n, activeFilter));
-    const historyCount = financeHistory.length;
+    // Count only history rows this tab would actually show. Counting all of them meant a
+    // trader's market rows suppressed the backfill on Social and Votes too.
+    const historyCount = financeHistory.filter(n => matchesFilter(n, activeFilter)).length;
     if (bridgeFiltered.length === 0 && historyCount === 0 && hasMore && !loading && !loadingMore && autoLoadCountRef.current < 10) {
       autoLoadCountRef.current++;
       loadNotifications(false);
@@ -143,25 +212,48 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
     if (financeFetchedRef.current || !username) return;
     financeFetchedRef.current = true;
     setFinanceLoading(true);
-    fetchAccountHistoryFinance(username, settings).then(({ items, hasMore, oldestSeq }) => {
+    setFinanceError(null);
+    fetchAccountHistoryFinance(username, settings).then(({ items, hasMore, oldestSeq, error: fetchError }) => {
+      // A failed first page used to be indistinguishable from "this account has never
+      // traded", and financeFetchedRef made it permanent for the life of the mount.
+      if (fetchError) {
+        setFinanceError(fetchError);
+        financeFetchedRef.current = false;
+        setFinanceLoading(false);
+        return;
+      }
       setFinanceHistory(items);
       setFinanceHasMore(hasMore);
       setFinanceOldestSeq(oldestSeq);
       setFinanceLoading(false);
     });
-  }, [username]);
+  }, [username, refreshNonce]);
 
   const loadMoreAccountHistory = useCallback(async () => {
     if (!username || financeOldestSeq === null || loadingMoreFinance) return;
     setLoadingMoreFinance(true);
-    const { items, hasMore, oldestSeq } = await fetchAccountHistoryFinance(username, settings, financeOldestSeq - 1);
-    setFinanceHistory(prev => [...prev, ...items]);
+    const { items, hasMore, oldestSeq, error: fetchError } =
+      await fetchAccountHistoryFinance(username, settings, financeOldestSeq - 1);
+    if (fetchError) {
+      // Keep the cursor so the same page can be retried; clearing it ended the feed.
+      setFinanceError(fetchError);
+      setLoadingMoreFinance(false);
+      return;
+    }
+    setFinanceError(null);
+    setFinanceHistory(prev => {
+      const { add, dropIds } = dedupeHistory(prev, items);
+      return [...(dropIds.size ? prev.filter(n => !dropIds.has(n.id)) : prev), ...add];
+    });
     setFinanceHasMore(hasMore);
     setFinanceOldestSeq(oldestSeq);
     setLoadingMoreFinance(false);
   }, [username, financeOldestSeq, loadingMoreFinance]);
 
   const handleScroll = () => {
+    // Account-history tabs page through a different source; firing the bridge fetch here
+    // would round-trip on every scroll and add nothing to the list.
+    if (activeFilter === 'finance' || activeFilter === 'market') return;
     if (!scrollContainerRef.current || loading || loadingMore || !hasMore) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
     if (scrollTop + clientHeight >= scrollHeight - 20) loadNotifications(false);
@@ -173,19 +265,39 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
     new Date(b.date.endsWith('Z') ? b.date : b.date + 'Z').getTime() -
     new Date(a.date.endsWith('Z') ? a.date : a.date + 'Z').getTime();
 
-  // Once account history loads it covers transfers (both directions + memo) — suppress bridge duplicates
-  const historyLoaded = financeHistory.length > 0;
-  const bridgeNotifs  = historyLoaded
-    ? notifications.filter(n => n.type !== HiveNotificationType.TRANSFER)
-    : notifications;
+  // Account history renders transfers better than bridge does (both directions, memo),
+  // so bridge transfers are suppressed once history covers them. "Covers" has to mean
+  // the time window, not `financeHistory.length > 0`: a trader's 1000-op window can be
+  // 100% market ops spanning a few hours, and suppressing on that dropped real transfers
+  // that history had never loaded.
+  const oldestHistoryMs = financeHistory.reduce((oldest, n) => {
+    const t = new Date(n.date.endsWith('Z') ? n.date : n.date + 'Z').getTime();
+    return Number.isFinite(t) && t < oldest ? t : oldest;
+  }, Infinity);
+  const bridgeNotifs = notifications.filter(n => {
+    if (n.type !== HiveNotificationType.TRANSFER) return true;
+    const t = new Date(n.date.endsWith('Z') ? n.date : n.date + 'Z').getTime();
+    return !(Number.isFinite(t) && t >= oldestHistoryMs);
+  });
   const bridgeFinance = bridgeNotifs.filter(n => FINANCE_TYPES.has(n.type));
+
+  const usesAccountHistory = activeFilter === 'finance' || activeFilter === 'market';
+  const historyFinance = financeHistory.filter(n => FINANCE_TYPES.has(n.type));
+  const historyMarket  = financeHistory.filter(n => MARKET_TYPES.has(n.type));
 
   const visible = (() => {
     if (activeFilter === 'finance') {
-      return [...bridgeFinance, ...financeHistory].sort(sortByDate);
+      return [...bridgeFinance, ...historyFinance].sort(sortByDate);
+    }
+    if (activeFilter === 'market') {
+      return [...historyMarket].sort(sortByDate);
     }
     if (activeFilter === 'all') {
-      return [...bridgeNotifs, ...financeHistory].sort(sortByDate);
+      // Market rows are excluded here on purpose. They outnumber every other row type by
+      // roughly 500:1 for a trading account, and All is the default tab -- including them
+      // buries every mention, reply and transfer behind order spam. The Market tab exists
+      // precisely so this one stays readable.
+      return [...bridgeNotifs, ...historyFinance].sort(sortByDate);
     }
     return notifications.filter(n => matchesFilter(n, activeFilter));
   })();
@@ -193,9 +305,10 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
 
   // Per-tab counts for badges
   const counts: Record<FilterTab, number> = {
-    all:        bridgeNotifs.length + financeHistory.length,
+    all:        bridgeNotifs.length + historyFinance.length,
     social:     notifications.filter(n => SOCIAL_TYPES.has(n.type)).length,
-    finance:    bridgeFinance.length + financeHistory.length,
+    finance:    bridgeFinance.length + historyFinance.length,
+    market:     historyMarket.length,
     engagement: notifications.filter(n => ENGAGEMENT_TYPES.has(n.type)).length,
   };
 
@@ -215,7 +328,17 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
           )}
         </div>
         <button
-          onClick={() => loadNotifications(true)}
+          onClick={() => {
+            // Refresh only re-fetched bridge notifications, so a failed account-history
+            // call left Finance and Market empty with no way back short of reopening.
+            financeFetchedRef.current = false;
+            setFinanceHistory([]);
+            setFinanceOldestSeq(null);
+            setFinanceHasMore(false);
+            setFinanceError(null);
+            setRefreshNonce(n => n + 1);
+            loadNotifications(true);
+          }}
           disabled={loading || loadingMore}
           className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-40"
           title="Refresh"
@@ -225,7 +348,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
       </div>
 
       {/* Filter tabs */}
-      <div className="flex border-b border-slate-100 bg-slate-50/50 px-2 pt-1.5 gap-0.5">
+      <div className="flex border-b border-slate-100 bg-slate-50/50 px-2 pt-1.5 gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {FILTER_TABS.map(tab => {
           const count = counts[tab.key];
           const isActive = activeFilter === tab.key;
@@ -233,7 +356,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
             <button
               key={tab.key}
               onClick={() => setActiveFilter(tab.key)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-t-md transition-all ${
+              className={`flex shrink-0 items-center gap-1 px-2 py-1.5 text-[11px] font-semibold rounded-t-md transition-all ${
                 isActive
                   ? 'bg-white border border-b-white border-slate-200 text-blue-600 -mb-px shadow-sm'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-white/60'
@@ -265,10 +388,44 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
           </div>
         ) : error ? (
           <div className="p-6 text-center text-xs text-red-400 bg-red-50/50">{error}</div>
+        ) : usesAccountHistory && financeError ? (
+          // Distinct from the empty state on purpose: a node that rejected the request and
+          // an account with no market activity used to render identically.
+          <div className="flex flex-col items-center justify-center gap-2 py-10 px-6 text-center">
+            <span className="text-xs text-red-400">Could not load account history</span>
+            <span className="text-[10px] text-slate-400 break-all">{financeError}</span>
+            <button
+              onClick={() => { financeFetchedRef.current = false; setFinanceError(null); setRefreshNonce(n => n + 1); }}
+              className="mt-1 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-lg border border-slate-200 transition-all"
+            >
+              Try again
+            </button>
+          </div>
         ) : visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-slate-400">
             <Bell size={24} className="opacity-20" />
-            <span className="text-xs">No notifications in this category</span>
+            {/* The account-history tabs read one 1000-op page at a time, and an account can
+                easily have none of these ops in its most recent page — an account with
+                millions of ops reliably has none. The load-older button used to live only
+                in the non-empty branch and scrolling is disabled on these tabs, so the
+                empty state was a dead end that read as "you have never traded". */}
+            <span className="text-xs">
+              {usesAccountHistory && financeHasMore
+                ? 'Nothing here in the most recent history yet'
+                : 'No notifications in this category'}
+            </span>
+            {usesAccountHistory && financeHasMore && (
+              <button
+                onClick={loadMoreAccountHistory}
+                disabled={loadingMoreFinance}
+                className="flex items-center gap-1.5 mt-1 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-lg border border-slate-200 transition-all disabled:opacity-40"
+              >
+                {loadingMoreFinance
+                  ? <><Loader size={13} className="animate-spin" /><span>Loading…</span></>
+                  : <><ChevronDown size={13} /><span>Search older history</span></>
+                }
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -290,8 +447,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
               </div>
             ))}
 
-            {/* Load more — Finance tab paginates account history; other tabs paginate bridge */}
-            {activeFilter === 'finance' ? (
+            {/* Load more — Finance and Market paginate account history; the rest paginate bridge */}
+            {usesAccountHistory ? (
               financeHasMore && (
                 <button
                   onClick={loadMoreAccountHistory}
@@ -319,7 +476,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
               )
             )}
 
-            {!(activeFilter === 'finance' ? financeHasMore : hasMore) && visible.length > 0 && (
+            {!(usesAccountHistory ? financeHasMore : hasMore) && visible.length > 0 && (
               <div className="py-3 text-center text-[10px] text-slate-300 uppercase tracking-widest font-bold border-t border-slate-50">
                 End of Pulse
               </div>

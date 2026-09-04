@@ -228,7 +228,12 @@ function formatDate(dateStr: string): string {
 }
 
 export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, settings, allFrontends }) => {
-  const cfg = getTypeConfig(notification.type);
+  const baseCfg = getTypeConfig(notification.type);
+  // A closure row read at a page edge is typed LIMIT_ORDER_CANCEL because that is much the
+  // likelier of the two, but it has not been confirmed — the op that would settle it is in
+  // a page not yet loaded. Rendering "Cancelled" there asserts something unproven, so the
+  // label stays neutral until the older page resolves it (see mergeHistory).
+  const cfg = notification.closureUncertain ? { ...baseCfg, label: 'Closed' } : baseCfg;
   const author = resolveAuthor(notification);
   const body = resolveBody(notification, author);
 

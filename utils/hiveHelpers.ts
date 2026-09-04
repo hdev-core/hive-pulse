@@ -10,7 +10,10 @@ type RpcBody = Record<string, any>;
  * and no retry, and the fallback chain below never advanced because the first request never
  * settled. Same AbortController shape already used in utils/hiveEngineHelpers.ts.
  */
-const RPC_TIMEOUT_MS = 12000;
+// A cold 1000-op get_account_history page was measured at 8.5s on one configured node and
+// 6.0s on another (575 KB), so 12s left almost no margin and would have failed legitimate
+// requests on a slow link.
+const RPC_TIMEOUT_MS = 30000;
 
 const rpcFetch = async (nodeUrl: string, body: RpcBody): Promise<any> => {
   const controller = new AbortController();
@@ -218,7 +221,10 @@ function priceToReceive(rate: any, amountToSell: any): string | null {
   const q = parseAsset(rate?.quote);
   const sell = parseAsset(amountToSell);
   if (!b || !q || !sell || b.amount === 0) return null;
-  return `${(sell.amount * q.amount / b.amount).toFixed(3)} ${q.symbol}`;
+  // The chain truncates; toFixed rounds half-up, which displayed 0.429 HBD for an order
+  // the chain settles at 0.428. Never quote more than is actually receivable.
+  const exact = (sell.amount * q.amount) / b.amount;
+  return `${(Math.floor(exact * 1000) / 1000).toFixed(3)} ${q.symbol}`;
 }
 
 function normalizeAccountHistoryOp(
@@ -385,12 +391,18 @@ function normalizeAccountHistoryOp(
 
       // Hive has no self-trade prevention, and history stores such an op once. Reporting
       // one leg would assert a directional trade that did not happen.
+      // The order id of the account's own side. A sub-precision remainder swept right
+      // after this fill emits a `limit_order_cancelled` carrying the same id; when the two
+      // land in different pages the sweep cannot be recognised without it.
+      const ownOrderId = isCurrent ? opData.current_orderid : opData.open_orderid;
+
       if (isCurrent && isOpen) {
         return {
           ...base,
           type: HiveNotificationType.FILL_ORDER,
           msg: `Matched your own order: ${paid} against ${received}`,
           amount: received,
+          orderid: ownOrderId,
         };
       }
 
@@ -405,6 +417,7 @@ function normalizeAccountHistoryOp(
         type: HiveNotificationType.FILL_ORDER,
         msg: withRate(`Traded ${paid} for ${received}`, paid, received) + withWhom,
         amount: received,
+        orderid: ownOrderId,
       };
     }
 
@@ -473,7 +486,8 @@ export const fetchAccountHistoryFinance = async (
   settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean },
   start: number = -1,
   limit: number = 1000,
-): Promise<{ items: HiveNotification[]; hasMore: boolean; oldestSeq: number | null; error?: string }> => {
+): Promise<{ items: HiveNotification[]; hasMore: boolean; oldestSeq: number | null;
+             newestSeq?: number | null; error?: string }> => {
   try {
     const { primary, fallback, autoSwitch } = getHiveNodes(settings);
     // condenser_api asserts `start >= limit - 1` for any start other than -1, so the final
@@ -517,11 +531,19 @@ export const fetchAccountHistoryFinance = async (
       //
       // ops ascends by sequence, so the virtual op sits at i + 1. If it is missing the
       // signed op still renders, which covers history older than the virtual op.
-      if (opType === 'limit_order_cancel') {
-        const nextOp = ops[i + 1]?.[1]?.op;
-        if (nextOp?.[0] === 'limit_order_cancelled' && nextOp[1]?.orderid === opData.orderid) {
-          continue;
+      // opData is read here, so this has to be guarded too: an op array of just
+      // ['limit_order_cancel'] with no data threw past the guard below and blanked the
+      // page -- the same escape the guard exists to close, one branch earlier.
+      try {
+        if (opType === 'limit_order_cancel') {
+          const nextOp = ops[i + 1]?.[1]?.op;
+          if (nextOp?.[0] === 'limit_order_cancelled' && nextOp[1]?.orderid === opData.orderid) {
+            continue;
+          }
         }
+      } catch (err) {
+        console.warn(`[HivePulse] Skipped malformed ${opType} op at seq ${seq}`, err);
+        continue;
       }
 
       // One malformed op must cost one row, not the whole feed. Before this guard any
@@ -538,16 +560,26 @@ export const fetchAccountHistoryFinance = async (
       }
     }
 
-    const oldestSeq = ops.length > 0 ? ops[0][0] : null;
+    // Read defensively: a malformed FIRST entry made the loop skip its row correctly and
+    // then threw here anyway, blanking the page it had just been careful to preserve.
+    const seqAt = (idx: number): number | null => {
+      const v = ops[idx]?.[0];
+      return typeof v === 'number' ? v : null;
+    };
+    const oldestSeq = ops.length > 0 ? seqAt(0) : null;
+    const newestSeq = ops.length > 0 ? seqAt(ops.length - 1) : null;
     return {
       items: result,
-      // `oldestSeq === 0` is the account's very first operation. Reporting hasMore there
+      // oldestSeq === 0 is the account's first ever operation. Reporting hasMore there
       // would send the next page to `start: -1`, which condenser reads as "newest" and
-      // re-appends the head page forever.
-      // oldestSeq === 0 is the account's first ever operation; anything below `effLimit`
-      // means the clamped request above already returned the whole tail.
+      // re-appends the head page forever. Anything below `effLimit` means the clamped
+      // request above already returned the whole tail.
       hasMore: ops.length >= effLimit && oldestSeq !== null && oldestSeq > 0,
       oldestSeq,
+      // The raw sequence span this page covered, including ops that produced no row.
+      // Resolving a closure row classified at a page edge needs to know whether the slot
+      // one older was actually read, which the rows alone cannot say.
+      newestSeq,
     };
   } catch (e) {
     console.error('Failed to fetch account history finance ops', e);
@@ -768,9 +800,14 @@ export const fetchTransferHistory = async (
   start: number = -1
 ): Promise<{ records: TransferRecord[]; nextCursor: number | null }> => {
   const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+  // Same clamp as fetchAccountHistoryFinance, and for the same reason: condenser asserts
+  // `start >= limit - 1`, so the final page of an account whose transfer count is not a
+  // multiple of PAGE_SIZE was rejected outright. Here it threw rather than reading as an
+  // empty page, and SendForm.tsx rendered the raw assert text at the user.
+  const effLimit = start >= 0 ? Math.min(PAGE_SIZE, start + 1) : PAGE_SIZE;
   // operation_filter_low bitmask: transfer = op type 2 → 1 << 2 = 4
   const data = await rpcFetchWithFallback(
-    { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, start, PAGE_SIZE, 4], id: 1 },
+    { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, start, effLimit, 4], id: 1 },
     primary, fallback, autoSwitch
   );
 

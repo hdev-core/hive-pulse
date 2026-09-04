@@ -78,16 +78,6 @@
       "run_at": "document_idle"
     }
   ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "icon.png"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
-  ],
   "permissions": [
     "activeTab",
     "tabs",
@@ -111,8 +101,6 @@
     "https://api2.hive-engine.com/*",
     "https://api.coingecko.com/*",
     "https://images.hive.blog/*",
-    "https://files.peakd.com/*",
-    "https://s3.amazonaws.com/*",
     "https://ipfs.io/*",
     "https://slothbuzz.com/*",
     "https://www.slothbuzz.com/*",

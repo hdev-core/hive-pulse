@@ -94,35 +94,66 @@ const sortByDateDesc = (list: HiveNotification[]): HiveNotification[] =>
       .sort((a, b) => b[0] - a[0])
       .map(([, n]) => n);
 
-function dedupeHistory(
-  prev: HiveNotification[], incoming: HiveNotification[],
-): { add: HiveNotification[]; dropIds: Set<number> } {
+/**
+ * Merge an older history page into what is already on screen, and settle any closure row
+ * that was classified at a page edge.
+ *
+ * A cancellation is two ops in adjacent sequence slots: the signed `limit_order_cancel`
+ * and the virtual `limit_order_cancelled`, and only the virtual one carries the refunded
+ * amount. When they straddle a page boundary the virtual one is read first, without its
+ * partner, so it can only say "Order closed".
+ *
+ * An earlier attempt settled this by dropping the uncertain row and keeping the signed one
+ * from the next page. That kept a correct label but threw the money away -- measured
+ * against 4,000 real ops it turned "Order cancelled - 1611.627 HBD returned" into
+ * "Order #8176769 cancelled". The row to keep is always the virtual one; what changes is
+ * its label, not which row survives.
+ */
+function mergeHistory(
+  prev: HiveNotification[],
+  incoming: HiveNotification[],
+  /** Raw sequence span the incoming page covered, including ops that produced no row. */
+  page: { oldestSeq: number | null; newestSeq: number | null },
+): { add: HiveNotification[]; dropIds: Set<number>; patch: Map<number, Partial<HiveNotification>> } {
   const seenIds = new Set(prev.map(n => n.id));
-  const byOrder = new Map<number, HiveNotification>();
-  for (const n of prev) {
-    if (CLOSURE_TYPES.has(n.type) && n.orderid !== undefined) byOrder.set(n.orderid, n);
-  }
   const dropIds = new Set<number>();
-  const add = incoming.filter(n => {
-    if (seenIds.has(n.id)) return false;
-    if (CLOSURE_TYPES.has(n.type) && n.orderid !== undefined) {
-      const existing = byOrder.get(n.orderid);
-      // orderid is user-chosen and only has to be unique among an account's OPEN orders,
-      // so it is legally reusable once an order closes. Matching on it across the whole
-      // accumulated feed would silently drop a genuine later cancellation from a bot that
-      // restarts its counter. The pair this exists to collapse always sits in adjacent
-      // sequence slots, so require that too.
-      if (existing && Math.abs(existing.id - n.id) <= 1) {
-        // Replace only when the existing row was a guess and this one is not.
-        if (!existing.closureUncertain || n.closureUncertain) return false;
-        dropIds.add(existing.id);
-      }
-      byOrder.set(n.orderid, n);
+  const patch = new Map<number, Partial<HiveNotification>>();
+
+  // The op one slot older than an uncertain row, if this page read that slot at all.
+  const byPredecessor = new Map<number, HiveNotification>();
+  for (const n of incoming) byPredecessor.set(n.id, n);
+  const covers = (seq: number) =>
+    page.oldestSeq !== null && page.newestSeq !== null &&
+    seq >= page.oldestSeq && seq <= page.newestSeq;
+
+  for (const row of prev) {
+    if (!row.closureUncertain || row.orderid === undefined) continue;
+    const predSeq = row.id - 1;
+    if (!covers(predSeq)) continue;          // still unread; leave the row uncertain
+    const pred = byPredecessor.get(predSeq);
+    const amount = row.amount ?? '';
+
+    if (pred?.type === HiveNotificationType.LIMIT_ORDER_CANCEL && pred.orderid === row.orderid) {
+      // The user cancelled. Keep this row's amount, take the signed row's certainty, and
+      // drop the signed row so the cancellation is not listed twice.
+      patch.set(row.id, { msg: `Order cancelled — ${amount} returned`, closureUncertain: undefined });
+      dropIds.add(pred.id);
+    } else if (pred?.type === HiveNotificationType.FILL_ORDER && pred.orderid === row.orderid) {
+      // A sub-precision remainder swept straight after its own fill. Within a page this is
+      // suppressed outright; across a seam it had leaked through as a phantom row.
+      dropIds.add(row.id);
+    } else {
+      // The slot was read and holds no cancel, so the chain expired the order.
+      patch.set(row.id, {
+        type: HiveNotificationType.LIMIT_ORDER_EXPIRED,
+        msg: `Order expired — ${amount} returned`,
+        closureUncertain: undefined,
+      });
     }
-    seenIds.add(n.id);
-    return true;
-  });
-  return { add, dropIds };
+  }
+
+  const add = incoming.filter(n => !seenIds.has(n.id) && !dropIds.has(n.id));
+  return { add, dropIds, patch };
 }
 
 // Group notifications by recency bucket
@@ -169,6 +200,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
   const [loadingMoreFinance, setLoadingMoreFinance] = useState(false);
   const [financeError, setFinanceError] = useState<string | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  /** Bumped per account-history request so a late response for an old account is ignored. */
+  const financeGenerationRef = useRef(0);
   const financeFetchedRef                           = useRef(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -222,7 +255,11 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
 
   useEffect(() => {
     financeFetchedRef.current = false;
+    financeGenerationRef.current++;
     setFinanceHistory([]);
+    setFinanceOldestSeq(null);
+    setFinanceHasMore(false);
+    setFinanceError(null);
     loadNotifications(true);
   }, [username]);
 
@@ -232,7 +269,12 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
     financeFetchedRef.current = true;
     setFinanceLoading(true);
     setFinanceError(null);
+    // A slow response for a previous username used to land after the switch and render
+    // that account's transfers under the new one. Stamp the request and drop anything that
+    // is no longer the current one. (Reproduced by switching accounts against a slow node.)
+    const generation = ++financeGenerationRef.current;
     fetchAccountHistoryFinance(username, settings).then(({ items, hasMore, oldestSeq, error: fetchError }) => {
+      if (generation !== financeGenerationRef.current) return;
       // A failed first page used to be indistinguishable from "this account has never
       // traded", and financeFetchedRef made it permanent for the life of the mount.
       if (fetchError) {
@@ -251,23 +293,39 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
   const loadMoreAccountHistory = useCallback(async () => {
     if (!username || financeOldestSeq === null || loadingMoreFinance) return;
     setLoadingMoreFinance(true);
-    const { items, hasMore, oldestSeq, error: fetchError } =
+    const generation = financeGenerationRef.current;
+    const { items, hasMore, oldestSeq, newestSeq, error: fetchError } =
       await fetchAccountHistoryFinance(username, settings, financeOldestSeq - 1);
+    // Same guard as the mount fetch: a page for the previous account must not be merged.
+    if (generation !== financeGenerationRef.current) return;
     if (fetchError) {
-      // Keep the cursor so the same page can be retried; clearing it ended the feed.
+      // The cursor is left untouched so pressing the button again re-requests exactly the
+      // page that failed. Rows already loaded stay on screen -- see the error banner.
       setFinanceError(fetchError);
       setLoadingMoreFinance(false);
       return;
     }
     setFinanceError(null);
     setFinanceHistory(prev => {
-      const { add, dropIds } = dedupeHistory(prev, items);
-      return [...(dropIds.size ? prev.filter(n => !dropIds.has(n.id)) : prev), ...add];
+      const { add, dropIds, patch } = mergeHistory(prev, items, { oldestSeq, newestSeq: newestSeq ?? null });
+      const kept = prev
+        .filter(n => !dropIds.has(n.id))
+        .map(n => (patch.has(n.id) ? { ...n, ...patch.get(n.id) } : n));
+      return [...kept, ...add];
     });
     setFinanceHasMore(hasMore);
     setFinanceOldestSeq(oldestSeq);
     setLoadingMoreFinance(false);
   }, [username, financeOldestSeq, loadingMoreFinance]);
+
+  // Only for the case where nothing loaded at all: there is no page to resume from, so
+  // this restarts at the newest page. When rows are present the banner retries the failed
+  // page instead, which is why the two are not the same handler.
+  const retryAccountHistory = useCallback(() => {
+    financeFetchedRef.current = false;
+    setFinanceError(null);
+    setRefreshNonce(n => n + 1);
+  }, []);
 
   const handleScroll = () => {
     // Account-history tabs page through a different source; firing the bridge fetch here
@@ -323,7 +381,16 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
     return notifications.filter(n => matchesFilter(n, activeFilter));
   }, [activeFilter, bridgeNotifs, bridgeFinance, historyFinance, historyMarket, notifications]);
 
-  const groups = useMemo(() => groupByDate(visible), [visible]);
+  // groupByDate buckets against Date.now(), so memoising on `visible` alone froze "Today"
+  // in place -- and the side panel stays mounted for hours, which is the whole reason the
+  // memo exists. Re-bucket when the hour turns; that is the finest granularity any label
+  // here depends on.
+  const [hourTick, setHourTick] = useState(() => Math.floor(Date.now() / 3600000));
+  useEffect(() => {
+    const t = setInterval(() => setHourTick(Math.floor(Date.now() / 3600000)), 60000);
+    return () => clearInterval(t);
+  }, []);
+  const groups = useMemo(() => groupByDate(visible), [visible, hourTick]);
 
 
   // Per-tab counts for badges
@@ -415,14 +482,17 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
           </div>
         ) : error ? (
           <div className="p-6 text-center text-xs text-red-400 bg-red-50/50">{error}</div>
-        ) : usesAccountHistory && financeError ? (
-          // Distinct from the empty state on purpose: a node that rejected the request and
-          // an account with no market activity used to render identically.
+        ) : usesAccountHistory && financeError && visible.length === 0 ? (
+          // Only when there is nothing to show. Rendering this branch whenever financeError
+          // was set replaced every row already loaded -- a failed "Load older" on click 40
+          // wiped 2,000 rows off the screen and the retry then restarted from the newest
+          // page, discarding all 40 clicks. With rows present the banner below is used
+          // instead, and the rows stay put.
           <div className="flex flex-col items-center justify-center gap-2 py-10 px-6 text-center">
             <span className="text-xs text-red-400">Could not load account history</span>
             <span className="text-[10px] text-slate-400 break-all">{financeError}</span>
             <button
-              onClick={() => { financeFetchedRef.current = false; setFinanceError(null); setRefreshNonce(n => n + 1); }}
+              onClick={retryAccountHistory}
               className="mt-1 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-lg border border-slate-200 transition-all"
             >
               Try again
@@ -473,6 +543,24 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
                 ))}
               </div>
             ))}
+
+            {/* A failed page must not cost the rows already loaded, so this sits with the
+                list rather than replacing it. Retrying re-requests the page that failed,
+                because the cursor was deliberately left untouched. */}
+            {usesAccountHistory && financeError && (
+              <div className="flex items-center justify-between gap-2 px-3 py-2 text-[10px] bg-red-50/60 border-t border-red-100">
+                <span className="text-red-400 truncate" title={financeError}>
+                  Could not load older history — {financeError}
+                </span>
+                <button
+                  onClick={loadMoreAccountHistory}
+                  disabled={loadingMoreFinance}
+                  className="shrink-0 font-medium text-slate-500 hover:text-blue-600 underline disabled:opacity-40"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
 
             {/* Load more — Finance and Market paginate account history; the rest paginate bridge */}
             {usesAccountHistory ? (

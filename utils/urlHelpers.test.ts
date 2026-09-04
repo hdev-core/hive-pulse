@@ -245,8 +245,12 @@ describe('Ureka — /@author/permlink, confirmed against a live post', () => {
   // Live proof: ureka.social/@yolimarag/lkt-mtmbgy8c-jei8a2oh renders a real post.
   const ureka = FRONTENDS.find(f => f.id === 'UREKA')!;
 
-  it('is a standard condenser frontend', () => {
-    expect(frontendIsStandard(ureka)).toBe(true);
+  it('is NOT flagged as sharing condenser routes, despite condenser-shaped posts', () => {
+    // Its post/profile/wallet shapes do match condenser — but the flag claims the whole
+    // route set, and Ureka's bundle declares no /created, /witnesses or /proposals; it
+    // links those out to hivehub.dev. Conflating "same post URL" with "same routes" sent
+    // bare paths to pages that do not exist.
+    expect(frontendIsStandard(ureka)).toBe(false);
   });
 
   it('builds post links on /@, and round-trips with a condenser frontend', () => {
@@ -271,9 +275,11 @@ describe('Ureka — /@author/permlink, confirmed against a live post', () => {
       .toBe('https://ureka.social/');
   });
 
-  it('carries a condenser path across, since it shares the routes', () => {
+  it('does not carry a bare condenser path across', () => {
+    // /trending/:tag does exist there, so this would not 404 — it would render a tag feed
+    // for a community id, which is worse than landing on the home page.
     expect(same('UREKA', '/trending/hive-167922', null, null, null))
-      .toBe('https://ureka.social/trending/hive-167922');
+      .toBe('https://ureka.social/');
   });
 
   it('opens its real composer, which is /create and not /submit', () => {
@@ -294,5 +300,49 @@ describe('frontendIsStandard is declared, not inferred', () => {
   it('is false for a missing frontend rather than throwing', () => {
     expect(frontendIsStandard(undefined)).toBe(false);
     expect(frontendIsStandard(FRONTENDS.find(f => f.id === 'NOPE'))).toBe(false);
+  });
+});
+
+describe('regressions found by the release review', () => {
+  it('does not carry a bare path onto a target that does not share condenser routes', () => {
+    // The source check alone was half a fix: peakd.com/trending/hive-167922 -> Actifit
+    // produced a live HTTP 500, and with autoRedirect on that is an automatic navigation
+    // into it. The previous test in this file varied only the TARGET across four already
+    // standard frontends, so it could never have caught this.
+    for (const id of ['ACTIFIT', 'HIVESCAN', 'LIKETU', 'THREESPEAK', 'SLOTHBUZZ', 'UREKA']) {
+      const url = same(id, '/trending/hive-167922', null, null, null);
+      expect(url).not.toContain('/trending/hive-167922');
+      expect(url).toMatch(/\/$/);
+    }
+  });
+
+  it('still carries a bare path between two frontends that do share them', () => {
+    for (const id of ['PEAKD', 'ECENCY', 'HIVEBLOG']) {
+      expect(same(id, '/trending/hive-167922', null, null, null))
+        .toContain('/trending/hive-167922');
+    }
+  });
+
+  it('does not send an ordinary post to the hive.blog wallet subdomain', () => {
+    // The wallet test was unanchored, so any permlink beginning "wallet", "transfers",
+    // "password" or "permissions" was routed to wallet.hive.blog.
+    for (const permlink of ['wallet-update-2024', 'transfers-explained', 'password-tips']) {
+      expect(same('HIVEBLOG', '/x', null, 'alice', permlink))
+        .toBe(`https://hive.blog/@alice/${permlink}`);
+    }
+    // and the real wallet path still goes there
+    expect(getTargetUrl('HIVEBLOG', '/x', ActionMode.WALLET, 'alice', null, null, F))
+      .toBe('https://wallet.hive.blog/@alice/transfers');
+  });
+
+  it('reads mixed-case identities off a condenser URL and normalises them', () => {
+    // Hive identities are lowercase on chain but a URL can carry any case, and condenser
+    // frontends resolve it. Lowercase-only regexes parsed this to all-nulls, so the switch
+    // silently dropped the post. The existing case test passed only because it used
+    // SlothBuzz, which takes the template branch where toLowerCase was already applied.
+    const s = parseUrl('https://peakd.com/@Alice/My-Post', F);
+    expect([s.author, s.permlink, s.username]).toEqual(['alice', 'my-post', 'alice']);
+    expect(same('ECENCY', s.path, s.username, s.author, s.permlink))
+      .toBe('https://ecency.com/@alice/my-post');
   });
 });

@@ -156,7 +156,13 @@ export const FRONTENDS: FrontendConfig[] = [
     // component, which regex-matches /@user, /@user/wallet, /@user/posts|comments|replies|
     // feed, /@user/thread/:permlink and finally /@user/:permlink. So Ureka is condenser-
     // shaped after all; reading only the declared `path:` entries missed all of it.
-    sharesCondenserRoutes: true,
+    // NOT sharesCondenserRoutes. Its post, profile and wallet shapes match condenser,
+    // which is what was verified — but the flag means "serves /trending, /created,
+    // /communities, /witnesses, /proposals", and Ureka's bundle declares no /created and
+    // no /witnesses or /proposals route at all: it links those out to hivehub.dev. Setting
+    // it made a bare path carry across, so /witnesses arrived at a page that does not
+    // exist and /trending/hive-167922 rendered a tag feed for a community id. The
+    // linkStructure below still routes posts and profiles correctly without it.
     linkStructure: {
       post:      '/@{{author}}/{{permlink}}',
       profile:   '/@{{username}}',
@@ -443,7 +449,11 @@ export const DAPPS: DAppConfig[] = [
 ];
 
 export const GENERIC_HIVE_PATH_REGEX = /(\/@[a-z0-9.-]+(\/[a-z0-9-]+)?)|(\/created\/.+)|(\/trending\/.+)|(\/hot\/.+)/;
-export const USERNAME_REGEX = /\/@([a-z0-9.-]+)/;
+// Case-insensitive: Hive identities are lowercase on chain, but a URL can carry any
+// case and condenser frontends resolve it. Matching lowercase-only meant
+// peakd.com/@Alice/My-Post parsed to no username, no author and no permlink at all.
+// Callers lowercase the capture.
+export const USERNAME_REGEX = /\/@([a-zA-Z0-9.-]+)/;
 
 export const HIVE_RPC_NODES = [
   'https://api.hive.blog',

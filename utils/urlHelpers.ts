@@ -3,7 +3,7 @@ import { FRONTENDS, GENERIC_HIVE_PATH_REGEX, USERNAME_REGEX } from '../constants
 import { FrontendId, CurrentTabState, ActionMode, FrontendConfig } from '../types';
 
 // Regex to extract author and permlink from a Hive post URL (e.g., /@author/permlink)
-export const AUTHOR_PERMLINK_REGEX = /\/@([a-z0-9.-]+)\/([a-z0-9-]+)/;
+export const AUTHOR_PERMLINK_REGEX = /\/@([a-zA-Z0-9.-]+)\/([a-zA-Z0-9-]+)/;
 
 /**
  * The condenser post shape. A frontend whose linkStructure.post matches this is a mirror
@@ -167,14 +167,16 @@ export const parseUrl = (urlString: string, allFrontends: FrontendConfig[]): Cur
         username = userMatch ? userMatch[1] : null;
       }
     } else {
-      // Extract username if present (e.g. /@alice/...)
+      // Lowercased on the way out, the same as the template branch does. Hive identities
+      // are lowercase on chain, so a mixed-case URL has to be normalised rather than
+      // carried through — otherwise the target URL is built from a name that does not exist.
       const userMatch = url.pathname.match(USERNAME_REGEX);
-      username = userMatch ? userMatch[1] : null;
+      username = userMatch ? userMatch[1].toLowerCase() : null;
 
       // Extract author and permlink if present (e.g. /@author/permlink)
       const postMatch = url.pathname.match(AUTHOR_PERMLINK_REGEX);
-      author = postMatch ? postMatch[1] : null;
-      permlink = postMatch ? postMatch[2] : null;
+      author = postMatch ? postMatch[1].toLowerCase() : null;
+      permlink = postMatch ? postMatch[2].toLowerCase() : null;
 
       // Actifit uniquely serves @-less URLs (actifit.io/username and
       // actifit.io/author/permlink). Every other frontend needs the @, so recover the
@@ -333,7 +335,13 @@ export const getTargetUrl = (
             // Both ends must use the standard shape. Checking only the target meant a
             // non-standard SOURCE path rode along: slothbuzz.com/dashboard became
             // mirror.example/dashboard, a 404 where the old code sent people home.
-            finalPath = usesStandardPostPath(targetConfig.linkStructure.post) && sourceIsHive && sourceIsStandard
+            //
+            // The target test is frontendIsStandard, not usesStandardPostPath. The post
+            // shape only says posts live at /@author/permlink; it says nothing about
+            // /trending, /witnesses or /proposals. Ureka matches the post shape and serves
+            // none of the rest, so the weaker test carried bare paths onto pages that do
+            // not exist there.
+            finalPath = frontendIsStandard(targetConfig) && sourceIsHive && sourceIsStandard
               ? currentPath
               : '/';
         }
@@ -356,19 +364,22 @@ export const getTargetUrl = (
       } else if (username) {
         finalPath = `/@${username}`;
       } else {
-        // No post and no profile to carry over. Carry the source path only when it means
-        // something here: not from a non-Hive page, and not from a frontend with a
-        // different route scheme — slothbuzz.com/dashboard has no peakd.com counterpart.
-        // This branch previously ignored sourceIsStandard entirely, so the guard existed
-        // only for custom targets and the motivating example still produced a 404.
-        finalPath = sourceIsHive && sourceIsStandard ? currentPath : '/';
+        // No post and no profile to carry over. A bare path only means something on the
+        // other side if BOTH ends use condenser routes. Checking only the source was half
+        // a fix: peakd.com/trending/hive-167922 -> Actifit produced a live HTTP 500, and
+        // with autoRedirect on that is an automatic navigation into it. Same for HiveScan
+        // and Liketu. This is the exact failure sharesCondenserRoutes was added to stop.
+        finalPath = sourceIsHive && sourceIsStandard && frontendIsStandard(targetConfig)
+          ? currentPath : '/';
       }
     }
 
     // Special handling for Hive.blog's dedicated wallet subdomain
     if (targetConfig.id === FrontendId.HIVEBLOG) {
       const isWalletAction = mode === ActionMode.WALLET;
-      const isWalletPath = /\/@[\w.-]+\/(transfers|permissions|password|wallet)/.test(finalPath);
+      // Anchored: unanchored, an ordinary post whose permlink merely starts with one of
+      // these words — /@alice/wallet-update-2024 — was sent to the wallet subdomain.
+      const isWalletPath = /^\/@[\w.-]+\/(transfers|permissions|password|wallet)\/?$/.test(finalPath);
       
       if (isWalletAction || isWalletPath) {
         return `https://wallet.hive.blog${finalPath}`;

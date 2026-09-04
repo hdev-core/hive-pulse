@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "HivePulse",
-  "version": "1.13.3",
+  "version": "1.13.4",
   "description": "Your Hive blockchain dashboard: wallet, scam protection, chat, notifications, post SEO analysis, and instant frontend switching.",
   "icons": {
     "16": "icon.png",

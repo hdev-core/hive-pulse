@@ -235,37 +235,48 @@ describe('regressions found by review that the first suite missed', () => {
   });
 });
 
-describe('Ureka — routes taken from its own client router, not assumed', () => {
-  // ureka.social serves a byte-identical SPA shell on every path, so fetching a URL proves
-  // nothing; these come from the route table in its bundle (index-9d738bd6.js). It has
-  // /post/:author/:permlink, /create and /community/:name — and no /@user or wallet route
-  // at all, which is why it was previously sending profile and wallet links to dead paths.
+describe('Ureka — /@author/permlink, confirmed against a live post', () => {
+  // A first pass read only the declarative `path:` entries in Ureka's bundle, concluded it
+  // had no /@username and no wallet route, and reconfigured it onto /post/. It was wrong:
+  // the @-routes live inside the /* catch-all component, which regex-matches /@user,
+  // /@user/wallet, /@user/posts|comments|replies|feed, /@user/thread/:permlink and
+  // /@user/:permlink. /post/:author/:permlink is declared but dead — the bundle contains no
+  // `/post/` href at all, while every post link is built as `/@${author}/${permlink}`.
+  // Live proof: ureka.social/@yolimarag/lkt-mtmbgy8c-jei8a2oh renders a real post.
   const ureka = FRONTENDS.find(f => f.id === 'UREKA')!;
 
-  it('is not a standard condenser frontend', () => {
-    expect(frontendIsStandard(ureka)).toBe(false);
+  it('is a standard condenser frontend', () => {
+    expect(frontendIsStandard(ureka)).toBe(true);
   });
 
-  it('builds a post link on /post/, and round-trips back to a condenser frontend', () => {
-    expect(same('UREKA', '/x', null, 'oflyhigh', '4mf15k-and'))
-      .toBe('https://ureka.social/post/oflyhigh/4mf15k-and');
-    const s = parseUrl('https://ureka.social/post/oflyhigh/4mf15k-and', F);
-    expect([s.author, s.permlink]).toEqual(['oflyhigh', '4mf15k-and']);
+  it('builds post links on /@, and round-trips with a condenser frontend', () => {
+    expect(same('UREKA', '/x', null, 'yolimarag', 'lkt-mtmbgy8c-jei8a2oh'))
+      .toBe('https://ureka.social/@yolimarag/lkt-mtmbgy8c-jei8a2oh');
+    const s = parseUrl('https://ureka.social/@yolimarag/lkt-mtmbgy8c-jei8a2oh', F);
+    expect([s.author, s.permlink]).toEqual(['yolimarag', 'lkt-mtmbgy8c-jei8a2oh']);
     expect(same('PEAKD', s.path, s.username, s.author, s.permlink))
-      .toBe('https://peakd.com/@oflyhigh/4mf15k-and');
+      .toBe('https://peakd.com/@yolimarag/lkt-mtmbgy8c-jei8a2oh');
   });
 
-  it('sends profile and wallet home rather than to a route that does not exist', () => {
-    expect(same('UREKA', '/x', 'alice', null, null)).toBe('https://ureka.social/');
+  it('has the profile and wallet routes the first pass claimed it lacked', () => {
+    expect(same('UREKA', '/x', 'alice', null, null)).toBe('https://ureka.social/@alice');
     expect(getTargetUrl('UREKA', '/x', ActionMode.WALLET, 'alice', null, null, F))
+      .toBe('https://ureka.social/@alice/wallet');
+  });
+
+  it('sends a wallet click with no username home, not to the generic /wallet', () => {
+    // '/wallet' is walletPath's fallback but is not a Ureka route — it would hit the
+    // catch-all's not-found.
+    expect(getTargetUrl('UREKA', '/x', ActionMode.WALLET, null, null, null, F))
       .toBe('https://ureka.social/');
   });
 
-  it('does not carry a condenser path onto it', () => {
-    expect(same('UREKA', '/trending/hive-167922', null, null, null)).toBe('https://ureka.social/');
+  it('carries a condenser path across, since it shares the routes', () => {
+    expect(same('UREKA', '/trending/hive-167922', null, null, null))
+      .toBe('https://ureka.social/trending/hive-167922');
   });
 
-  it('opens its real composer', () => {
+  it('opens its real composer, which is /create and not /submit', () => {
     expect(getTargetUrl('UREKA', '/x', ActionMode.COMPOSE, null, null, null, F))
       .toBe('https://ureka.social/create');
   });

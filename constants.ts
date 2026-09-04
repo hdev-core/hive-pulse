@@ -145,17 +145,22 @@ export const FRONTENDS: FrontendConfig[] = [
     logoUrl: 'https://ureka.social/apple-touch-icon.png',
     paths: {
       compose: '/create',
-      wallet: () => '/'
+      // Wins over linkStructure.wallet, and only for the no-username case: '/wallet' is
+      // walletPath's generic fallback but is not a Ureka route, so it would land on the
+      // catch-all's not-found rather than anywhere useful.
+      wallet: (u?: string) => (u ? `/@${u}/wallet` : '/'),
     },
-    // Taken from Ureka's own client router, not assumed. Its complete route table has
-    // /post/:author/:permlink, /create and /community/:name/trending — and NO /@username
-    // route and NO wallet route at all, so profile and wallet resolve to the home page
-    // rather than to URLs that only hit the /* catch-all. It was previously configured
-    // exactly like a condenser, so every post link it produced was wrong.
+    // Ureka's declarative route table lists /post/:author/:permlink, but the app never
+    // links to it — there is not one `/post/` href in the bundle, while every post link is
+    // built as `/@${author}/${permlink}`. The @-routes live inside the /* catch-all
+    // component, which regex-matches /@user, /@user/wallet, /@user/posts|comments|replies|
+    // feed, /@user/thread/:permlink and finally /@user/:permlink. So Ureka is condenser-
+    // shaped after all; reading only the declared `path:` entries missed all of it.
+    sharesCondenserRoutes: true,
     linkStructure: {
-      post:      '/post/{{author}}/{{permlink}}',
-      profile:   '/',
-      wallet:    '/',
+      post:      '/@{{author}}/{{permlink}}',
+      profile:   '/@{{username}}',
+      wallet:    '/@{{username}}/wallet',
       community: '/community/{{name}}/trending',
     },
     active: true

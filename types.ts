@@ -337,6 +337,13 @@ export interface HiveNotification {
    * matching them needs the order id -- the sequence-based `id` differs between them.
    */
   orderid?: number;
+  /**
+   * Set when a closure row was classified without its neighbouring op — the oldest entry
+   * of a history page, whose predecessor lives in the next page. Cancel and expiry are
+   * indistinguishable there, so the row says only that the order closed, and dedupeHistory
+   * lets a later definite classification replace it.
+   */
+  closureUncertain?: boolean;
 }
 
 export interface HivePrices {

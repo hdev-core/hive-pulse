@@ -72,20 +72,38 @@ const CLOSURE_TYPES = new Set([
   HiveNotificationType.LIMIT_ORDER_EXPIRED,
 ]);
 
-function dedupeHistory(prev: HiveNotification[], incoming: HiveNotification[]): HiveNotification[] {
+/**
+ * Returns the incoming rows to append, and the ids of already-shown rows to drop.
+ *
+ * A closure row at a page edge is classified without its neighbouring op, so it says only
+ * "Order closed". The next (older) page carries the signed op that settles it. Keeping the
+ * first row seen would preserve the uncertain one forever, so an uncertain row yields to
+ * the definite one for the same order id.
+ */
+function dedupeHistory(
+  prev: HiveNotification[], incoming: HiveNotification[],
+): { add: HiveNotification[]; dropIds: Set<number> } {
   const seenIds = new Set(prev.map(n => n.id));
-  const seenOrders = new Set(
-    prev.filter(n => CLOSURE_TYPES.has(n.type) && n.orderid !== undefined).map(n => n.orderid)
-  );
-  return incoming.filter(n => {
+  const byOrder = new Map<number, HiveNotification>();
+  for (const n of prev) {
+    if (CLOSURE_TYPES.has(n.type) && n.orderid !== undefined) byOrder.set(n.orderid, n);
+  }
+  const dropIds = new Set<number>();
+  const add = incoming.filter(n => {
     if (seenIds.has(n.id)) return false;
     if (CLOSURE_TYPES.has(n.type) && n.orderid !== undefined) {
-      if (seenOrders.has(n.orderid)) return false;
-      seenOrders.add(n.orderid);
+      const existing = byOrder.get(n.orderid);
+      if (existing) {
+        // Replace only when the existing row was a guess and this one is not.
+        if (!existing.closureUncertain || n.closureUncertain) return false;
+        dropIds.add(existing.id);
+      }
+      byOrder.set(n.orderid, n);
     }
     seenIds.add(n.id);
     return true;
   });
+  return { add, dropIds };
 }
 
 // Group notifications by recency bucket
@@ -130,6 +148,8 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
   const [financeHasMore, setFinanceHasMore]         = useState(false);
   const [financeOldestSeq, setFinanceOldestSeq]     = useState<number | null>(null);
   const [loadingMoreFinance, setLoadingMoreFinance] = useState(false);
+  const [financeError, setFinanceError] = useState<string | null>(null);
+  const [refreshNonce, setRefreshNonce] = useState(0);
   const financeFetchedRef                           = useRef(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -192,19 +212,39 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
     if (financeFetchedRef.current || !username) return;
     financeFetchedRef.current = true;
     setFinanceLoading(true);
-    fetchAccountHistoryFinance(username, settings).then(({ items, hasMore, oldestSeq }) => {
+    setFinanceError(null);
+    fetchAccountHistoryFinance(username, settings).then(({ items, hasMore, oldestSeq, error: fetchError }) => {
+      // A failed first page used to be indistinguishable from "this account has never
+      // traded", and financeFetchedRef made it permanent for the life of the mount.
+      if (fetchError) {
+        setFinanceError(fetchError);
+        financeFetchedRef.current = false;
+        setFinanceLoading(false);
+        return;
+      }
       setFinanceHistory(items);
       setFinanceHasMore(hasMore);
       setFinanceOldestSeq(oldestSeq);
       setFinanceLoading(false);
     });
-  }, [username]);
+  }, [username, refreshNonce]);
 
   const loadMoreAccountHistory = useCallback(async () => {
     if (!username || financeOldestSeq === null || loadingMoreFinance) return;
     setLoadingMoreFinance(true);
-    const { items, hasMore, oldestSeq } = await fetchAccountHistoryFinance(username, settings, financeOldestSeq - 1);
-    setFinanceHistory(prev => [...prev, ...dedupeHistory(prev, items)]);
+    const { items, hasMore, oldestSeq, error: fetchError } =
+      await fetchAccountHistoryFinance(username, settings, financeOldestSeq - 1);
+    if (fetchError) {
+      // Keep the cursor so the same page can be retried; clearing it ended the feed.
+      setFinanceError(fetchError);
+      setLoadingMoreFinance(false);
+      return;
+    }
+    setFinanceError(null);
+    setFinanceHistory(prev => {
+      const { add, dropIds } = dedupeHistory(prev, items);
+      return [...(dropIds.size ? prev.filter(n => !dropIds.has(n.id)) : prev), ...add];
+    });
     setFinanceHasMore(hasMore);
     setFinanceOldestSeq(oldestSeq);
     setLoadingMoreFinance(false);
@@ -288,7 +328,17 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
           )}
         </div>
         <button
-          onClick={() => loadNotifications(true)}
+          onClick={() => {
+            // Refresh only re-fetched bridge notifications, so a failed account-history
+            // call left Finance and Market empty with no way back short of reopening.
+            financeFetchedRef.current = false;
+            setFinanceHistory([]);
+            setFinanceOldestSeq(null);
+            setFinanceHasMore(false);
+            setFinanceError(null);
+            setRefreshNonce(n => n + 1);
+            loadNotifications(true);
+          }}
           disabled={loading || loadingMore}
           className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-40"
           title="Refresh"
@@ -338,10 +388,44 @@ export const NotificationList: React.FC<NotificationListProps> = ({ username, se
           </div>
         ) : error ? (
           <div className="p-6 text-center text-xs text-red-400 bg-red-50/50">{error}</div>
+        ) : usesAccountHistory && financeError ? (
+          // Distinct from the empty state on purpose: a node that rejected the request and
+          // an account with no market activity used to render identically.
+          <div className="flex flex-col items-center justify-center gap-2 py-10 px-6 text-center">
+            <span className="text-xs text-red-400">Could not load account history</span>
+            <span className="text-[10px] text-slate-400 break-all">{financeError}</span>
+            <button
+              onClick={() => { financeFetchedRef.current = false; setFinanceError(null); setRefreshNonce(n => n + 1); }}
+              className="mt-1 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-lg border border-slate-200 transition-all"
+            >
+              Try again
+            </button>
+          </div>
         ) : visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-slate-400">
             <Bell size={24} className="opacity-20" />
-            <span className="text-xs">No notifications in this category</span>
+            {/* The account-history tabs read one 1000-op page at a time, and an account can
+                easily have none of these ops in its most recent page — an account with
+                millions of ops reliably has none. The load-older button used to live only
+                in the non-empty branch and scrolling is disabled on these tabs, so the
+                empty state was a dead end that read as "you have never traded". */}
+            <span className="text-xs">
+              {usesAccountHistory && financeHasMore
+                ? 'Nothing here in the most recent history yet'
+                : 'No notifications in this category'}
+            </span>
+            {usesAccountHistory && financeHasMore && (
+              <button
+                onClick={loadMoreAccountHistory}
+                disabled={loadingMoreFinance}
+                className="flex items-center gap-1.5 mt-1 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-lg border border-slate-200 transition-all disabled:opacity-40"
+              >
+                {loadingMoreFinance
+                  ? <><Loader size={13} className="animate-spin" /><span>Loading…</span></>
+                  : <><ChevronDown size={13} /><span>Search older history</span></>
+                }
+              </button>
+            )}
           </div>
         ) : (
           <>

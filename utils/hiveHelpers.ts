@@ -169,12 +169,23 @@ const withRate = (text: string, a?: string, b?: string): string => {
   return rate ? `${text} @ ${rate}` : text;
 };
 
-/** `{ base, quote }` price -> the quote amount implied by selling `base`. */
-function priceToReceive(rate: any): string | null {
+/**
+ * What `amountToSell` buys at `rate`.
+ *
+ * `exchange_rate` is a RATIO, not a total: limit_order_create2 carries `amount_to_sell`
+ * and `exchange_rate` separately, and the chain only requires that
+ * `exchange_rate.base.symbol === amount_to_sell.symbol` — the base AMOUNT is arbitrary,
+ * and by convention is a unit. Returning `quote` verbatim therefore reported the price of
+ * one unit as the proceeds of the whole order: selling 1000 HIVE at {base 1 HIVE,
+ * quote 0.3 HBD} read as "sell 1000.000 HIVE for 0.300 HBD", understating both the
+ * proceeds and the quoted rate by 1000x. Only base.amount === sell.amount was ever right.
+ */
+function priceToReceive(rate: any, amountToSell: any): string | null {
   const b = parseAsset(rate?.base);
   const q = parseAsset(rate?.quote);
-  if (!b || !q || b.amount === 0) return null;
-  return `${q.amount.toFixed(3)} ${q.symbol}`;
+  const sell = parseAsset(amountToSell);
+  if (!b || !q || !sell || b.amount === 0) return null;
+  return `${(sell.amount * q.amount / b.amount).toFixed(3)} ${q.symbol}`;
 }
 
 function normalizeAccountHistoryOp(
@@ -184,7 +195,9 @@ function normalizeAccountHistoryOp(
   timestamp: string,
   username: string,
   /** The op one sequence slot older, used only to classify `limit_order_cancelled`. */
-  prev?: [string, Record<string, any>]
+  prev?: [string, Record<string, any>],
+  /** False at the oldest op of a page, where `prev` is absent only because it is unread. */
+  prevKnown: boolean = true
 ): HiveNotification | null {
   const base = {
     id: seq,
@@ -251,7 +264,7 @@ function normalizeAccountHistoryOp(
       // Without it, the feed shows fills for orders it never showed being placed.
       const sell = opData.amount_to_sell;
       const receive = opType === 'limit_order_create2'
-        ? priceToReceive(opData.exchange_rate)
+        ? priceToReceive(opData.exchange_rate, sell)
         : opData.min_to_receive;
       if (!parseAsset(sell) || !parseAsset(receive)) return null;
       return {
@@ -280,6 +293,24 @@ function normalizeAccountHistoryOp(
       }
 
       const userCancelled = prevType === 'limit_order_cancel' && prevData?.orderid === orderid;
+
+      // `prev` is the op one sequence slot older. At the oldest entry of a page there is
+      // no such op IN THIS PAGE -- it is the first row of the next, older page -- so its
+      // absence says nothing. Reading that as "no cancel op, therefore an expiry" made
+      // every page boundary claim the chain expired an order the user had cancelled, and
+      // on an active trader real expiries are rarer than 1 in 1000, so essentially every
+      // "Expired" row was wrong. Say only what is known: the order closed.
+      if (!userCancelled && !prevKnown) {
+        return {
+          ...base,
+          type: HiveNotificationType.LIMIT_ORDER_CANCEL,
+          msg: `Order closed — ${opData.amount_back} returned`,
+          amount: opData.amount_back,
+          orderid,
+          closureUncertain: true,
+        };
+      }
+
       return {
         ...base,
         type: userCancelled
@@ -403,18 +434,40 @@ export const fetchAccountHistoryFinance = async (
   settings?: { hiveRpcNode?: string; customHiveRpcNodes?: string[]; autoSwitchHiveNode?: boolean },
   start: number = -1,
   limit: number = 1000,
-): Promise<{ items: HiveNotification[]; hasMore: boolean; oldestSeq: number | null }> => {
+): Promise<{ items: HiveNotification[]; hasMore: boolean; oldestSeq: number | null; error?: string }> => {
   try {
     const { primary, fallback, autoSwitch } = getHiveNodes(settings);
+    // condenser_api asserts `start >= limit - 1` for any start other than -1, so the final
+    // page of an account whose op count is not a multiple of `limit` cannot be requested at
+    // full width. Asking anyway returned an RPC error that read as "no more history", and
+    // the oldest up-to-999 operations were dropped silently. Clamp instead: start 499 with
+    // limit 500 satisfies the assert and returns exactly the remaining ops.
+    const effLimit = start >= 0 ? Math.min(limit, start + 1) : limit;
     const data = await rpcFetchWithFallback(
-      { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, start, limit], id: 1 },
+      { jsonrpc: '2.0', method: 'condenser_api.get_account_history', params: [username, start, effLimit], id: 1 },
       primary, fallback, autoSwitch
     );
-    const ops: [number, any][] = data.result || [];
+    // A JSON-RPC error body has no `result`. Treating that as an empty page made a failing
+    // node indistinguishable from the end of the feed: "End of Pulse" on a truncated list,
+    // the load-older button gone, and no way to retry.
+    if (data?.error) {
+      throw new Error(data.error.message || 'Hive node rejected the account-history request');
+    }
+    const ops: [number, any][] = Array.isArray(data?.result) ? data.result : [];
     const result: HiveNotification[] = [];
     for (let i = ops.length - 1; i >= 0; i--) {
-      const [seq, entry] = ops[i];
-      const [opType, opData] = entry.op;
+      // Destructuring is inside the try because it is the line most likely to throw: a
+      // null entry or one missing `.op` blew past the guard below straight to the outer
+      // catch, blanking every finance row and nulling oldestSeq for the session -- the
+      // exact failure the guard was written to prevent.
+      let seq: number, opType: string, opData: Record<string, any>, entry: any;
+      try {
+        [seq, entry] = ops[i];
+        [opType, opData] = entry.op;
+      } catch (err) {
+        console.warn('[HivePulse] Skipped malformed account-history entry', err);
+        continue;
+      }
       if (!ACCOUNT_HISTORY_FINANCE_OPS.has(opType)) continue;
 
       // Cancelling an order emits two ops: the signed `limit_order_cancel` and, in the
@@ -436,7 +489,10 @@ export const fetchAccountHistoryFinance = async (
       // throw here escaped to the outer catch and blanked every finance row.
       try {
         const prev = ops[i - 1]?.[1]?.op as [string, Record<string, any>] | undefined;
-        const notif = normalizeAccountHistoryOp(seq, opType, opData, entry.timestamp, username, prev);
+        // At i === 0 a missing `prev` means "not in this page", not "does not exist".
+        const notif = normalizeAccountHistoryOp(
+          seq, opType, opData, entry.timestamp, username, prev, i > 0,
+        );
         if (notif) result.push(notif);
       } catch (err) {
         console.warn(`[HivePulse] Skipped malformed ${opType} op at seq ${seq}`, err);
@@ -449,12 +505,19 @@ export const fetchAccountHistoryFinance = async (
       // `oldestSeq === 0` is the account's very first operation. Reporting hasMore there
       // would send the next page to `start: -1`, which condenser reads as "newest" and
       // re-appends the head page forever.
-      hasMore: ops.length >= limit && oldestSeq !== 0,
+      // oldestSeq === 0 is the account's first ever operation; anything below `effLimit`
+      // means the clamped request above already returned the whole tail.
+      hasMore: ops.length >= effLimit && oldestSeq !== null && oldestSeq > 0,
       oldestSeq,
     };
   } catch (e) {
     console.error('Failed to fetch account history finance ops', e);
-    return { items: [], hasMore: false, oldestSeq: null };
+    // oldestSeq stays null and the caller keeps its previous cursor, so a failed page can
+    // be retried rather than permanently ending the feed.
+    return {
+      items: [], hasMore: false, oldestSeq: null,
+      error: e instanceof Error ? e.message : 'Could not reach a Hive node',
+    };
   }
 };
 

@@ -1,3 +1,4 @@
+import { scanChipTags } from './utils/tagScan';
 export {};
 declare const chrome: any;
 
@@ -340,35 +341,10 @@ const getTags = (): string[] => {
     add(txt);
   }
 
-  // SlothBuzz renders chips as "# tag1 ×" with only Tailwind utility classes, so the scan
-  // above finds nothing there. Look around the tag input as a fallback — but ONLY accept a
-  // literal × or leading #. Matching on "contains a button" instead would pull in the editor
-  // toolbar toggles (Visual|Markdown, H1 H2 H3) as phantom tags.
-  //
-  // KNOWN GAP: SlothBuzz removes this input once its 10-tag cap is reached, so a fully
-  // tagged post reads as 0 tags. Three attempts to widen the search all made things worse —
-  // anchoring on the "N/10 tags" counter let post-body "#posh" hashtags in as phantom tags,
-  // and every ancestor denylist either missed a case or killed the fallback entirely. The
-  // shape of the bug is that this scrapes "#word" out of an arbitrary ancestor subtree with
-  // no allowlist, which cannot be made safe by extending a denylist. Fixing it needs the
-  // inverse: read only inside the anchor's own tag container, require a strict tag grammar
-  // and a sibling close-control, and land it with a committed DOM fixture. Tracked
-  // separately rather than patched again here.
-  const tagInput = document.querySelector<HTMLInputElement>('input[placeholder*="tag" i], input[class*="tag" i]');
-  if (!seen.size && tagInput) {
-    let node: Element | null = tagInput;
-    for (let up = 0; up < 2 && node && !seen.size; up++) {
-      node = node.parentElement;
-      if (!node) continue;
-      for (const el of node.querySelectorAll('*')) {
-        const raw = el.textContent || '';
-        if (!/[×✕✗✖]/.test(raw) && !/^\s*#\s*\S/.test(raw)) continue;
-        const txt = raw.replace(/[×✕✗✖]/g, '').replace(/^[#\s]+/, '').trim();
-        if (!txt || txt.includes(' ') || txt.length > 32) continue;
-        add(txt);
-      }
-    }
-  }
+  // Chips with no class-based signal (SlothBuzz). Runs only when the scan above came up
+  // empty, and reads shape rather than names — see utils/tagScan.ts for why a denylist
+  // could not work here.
+  if (!seen.size) scanChipTags(document, `#${PANEL_ID}`).forEach(add);
 
   for (const el of document.querySelectorAll<HTMLInputElement>('input[class*="tag" i], input[placeholder*="tag" i]')) {
     el.value.split(/[\s,]+/).forEach(add);

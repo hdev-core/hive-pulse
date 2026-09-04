@@ -1,7 +1,7 @@
 {
   "name": "hive-pulse",
   "private": true,
-  "version": "1.13.5",
+  "version": "1.13.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -28,6 +28,7 @@
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
     "concurrently": "^9.1.0",
+    "happy-dom": "^20.14.0",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",

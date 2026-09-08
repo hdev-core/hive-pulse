@@ -145,9 +145,9 @@ Update from [Chrome](https://chromewebstore.google.com/detail/hivepulse/hakcpohp
 
 Six rounds in, 46 posts scored on both axes. The pattern has not shifted: SEO scores cluster high because Hive creators already write decent titles and headings. GEO — whether an AI answer engine can lift a passage out of your post and cite it — is where the gap sits, and GEO is where week 6 separated 4th place from 9th.
 
-![Dumbbell chart of 39 scored Hive contest posts, each showing its SEO score in orange and its GEO score in green joined by a line, sorted with the widest gap at the top where one post scored 93 for SEO but only 60 for GEO; the correlation between the two measures is 0.60](PASTE_UPLOADED_CHART_URL_HERE)
+![Scatter plot of 39 scored Hive contest posts with SEO score on the horizontal axis and GEO score on the vertical axis. A dashed diagonal marks where the two scores would be equal. Most dots sit above or near the line in green, six sit well below it in orange, and one post scored 93 for SEO but only 60 for GEO. Of the 15 posts that scored 90 or more for SEO, GEO scores ranged from 60 to 100.](PASTE_UPLOADED_CHART_URL_HERE)
 
-Across every post we have scored, the correlation between the two measures is just **0.60** — SEO explains about a third of GEO. A high SEO score is not evidence that an AI engine will quote you. Those are two different jobs, and most entrants are already winning the first one.
+Fifteen of those posts scored **90 or more on SEO**. Their GEO scores ran from **60 to 100** — the full width of the range. Knowing a post did well on SEO tells you almost nothing about whether an AI engine will quote it, which is the same thing the correlation says more coldly: r = 0.60, so SEO explains about a third of GEO. Two different jobs, and most entrants are already winning the first one.
 
 1. **Open with the answer.** First 8–60 words, before any preamble. All three perfect scores did this.
 2. **Write self-contained sentences.** "This shows…" means nothing when quoted alone. Name the subject inside the sentence.

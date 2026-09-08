@@ -275,82 +275,106 @@ One entrant is the whole gap between 300 HIVE and 400. Bring someone with you �
 
 Post this **before** the Hive post, then paste tweet 1's URL into the two `⟦WEEK7_TWEET_URL⟧`
 spots above and into the Discord announcement. Lengths are X-weighted (a URL counts 23, an
-emoji 2) — re-check with `scripts/check_tweet_lengths.py` before posting.
+emoji 2) — re-check with `python scripts/check_tweet_lengths.py enhancements/seo-contest-week7-announcement.md`, which reads the fenced tweet blocks below.
+
+Each block is plain text with no blockquote markers, so it copies straight into X.
 
 **1/**
-> Week 6 of the HivePulse SEO Contest is settled.
->
-> 9 entries. 9 qualified. Three perfect 100/100 scores — a first.
->
-> 550 HIVE paid out.
->
-> And the field finished ONE entry short of the bigger pool. 🧵
+
+```tweet
+Week 6 of the HivePulse SEO Contest is settled.
+
+9 entries. 9 qualified. Three perfect 100/100 scores — a first.
+
+550 HIVE paid out.
+
+And the field finished ONE entry short of the bigger pool. 🧵
+```
 
 **2/**
-> 🥇 @wardah — 100/100
-> A cinema trip with her sister. No keyword hunting, no formula. Five images, every one properly described.
->
-> Proof that a perfect score doesn't need a technical topic. It needs a clear one.
+
+```tweet
+🥇 @wardah — 100/100
+A cinema trip with her sister. No keyword hunting, no formula. Five images, every one properly described.
+
+Proof that a perfect score doesn't need a technical topic. It needs a clear one.
+```
 
 **3/**
-> 🥈 @nabbas0786 — 100/100
-> Built an SEO vs GEO explainer on real numbers instead of vague claims. That's exactly what an AI engine can quote.
->
-> 🥉 @ahmedabbaci — 100/100
-> First ever entry. Landed a perfect score.
+
+```tweet
+🥈 @nabbas0786 — 100/100
+Built an SEO vs GEO explainer on real numbers instead of vague claims. That's exactly what an AI engine can quote.
+
+🥉 @ahmedabbaci — 100/100
+First ever entry. Landed a perfect score.
+```
 
 **4/**
-> The thing nobody expected: in 5 of the previous 6 rounds, someone wrote a great post, forgot the #hivepulse tag, and lost their entry.
->
-> This round: 9 entries, 9 tags, zero casualties.
+
+```tweet
+The thing nobody expected: in 5 of the previous 6 rounds, someone wrote a great post, forgot the #hivepulse tag, and lost their entry.
+
+This round: 9 entries, 9 tags, zero casualties.
+```
 
 **5/**
-> Week 7 is open now.
->
-> Write a post with HivePulse open, tag it #hivepulse, comment with the link + your panel screenshot.
->
-> 300 HIVE. 400 at ten entrants. 500 at twenty.
-> Closes 15 Sep, 12:00 UTC 👇
-> ⟦HIVE_POST_URL⟧
+
+```tweet
+Week 7 is open now.
+
+Write a post with HivePulse open, tag it #hivepulse, comment with the link + your panel screenshot.
+
+300 HIVE. 400 at ten entrants. 500 at twenty.
+Closes 15 Sep, 12:00 UTC 👇
+⟦HIVE_POST_URL⟧
+```
 
 **6/**
-> Also shipped: HivePulse 1.14.0.
->
-> If you write on SlothBuzz, your tags were scored as ZERO once you hit its 10-tag cap — exactly when you'd finished tagging properly.
->
-> Fixed. Plus market activity in Pulse, and an off switch for the analyzer.
+
+```tweet
+Also shipped: HivePulse 1.14.0.
+
+If you write on SlothBuzz, your tags were scored as ZERO once you hit its 10-tag cap — exactly when you'd finished tagging properly.
+
+Fixed. Plus market activity in Pulse, and an off switch for the analyzer.
+```
 
 **7/**
-> 50 HIVE for the quote-retweet of this thread with the most engagement.
->
-> Quote-retweet it — not a reply, not a standalone post. That distinction decided it this round.
->
-> No farming. We look before we pay.
->
-> #Hive #HivePulse #SEO
+
+```tweet
+50 HIVE for the quote-retweet of this thread with the most engagement.
+
+Quote-retweet it — not a reply, not a standalone post. That distinction decided it this round.
+
+No farming. We look before we pay.
+
+#Hive #HivePulse #SEO
+```
 
 ---
 
 ## Discord announcement
 
 **#announcements**
+```text
+**🏆 HivePulse SEO Contest — week 6 results, week 7 open**
 
-> **🏆 HivePulse SEO Contest — week 6 results, week 7 open**
->
-> **9 entries, 9 qualified, three perfect 100/100 scores — and 550 HIVE going out.**
->
-> 🥇 @wardah — 150 · 🥈 @nabbas0786 — 100 · 🥉 @ahmedabbaci — 50
-> 🐦 @les90 takes the 50 HIVE X prize
-> 🤝 200 HIVE in referral bonuses across four pairs
->
-> We finished **one entry short** of the 400 pool. One. The rule stands, so the pool stayed at 300 — and one more writer next round moves every prize up.
->
-> Also: nobody lost their entry to a missing tag this round. First time in six.
->
-> **Week 7 is live and runs to 15 September, 12:00 UTC.**
-> 300 HIVE · 400 at 10 entrants · 500 at 20 · 25 HIVE each for a referral · 50 HIVE for the most-engaged quote-RT
->
-> **And HivePulse 1.14.0 is out.** If you write on SlothBuzz, your tags were being scored as zero once you hit its 10-tag cap — fixed, along with market activity in Pulse and an off switch for the analyzer.
->
-> Full post: ⟦HIVE_POST_URL⟧
-> Update: <https://chromewebstore.google.com/detail/hivepulse/hakcpohpejoejmlhiphpkjobpjeckdlg>
+**9 entries, 9 qualified, three perfect 100/100 scores — and 550 HIVE going out.**
+
+🥇 @wardah — 150 · 🥈 @nabbas0786 — 100 · 🥉 @ahmedabbaci — 50
+🐦 @les90 takes the 50 HIVE X prize
+🤝 200 HIVE in referral bonuses across four pairs
+
+We finished **one entry short** of the 400 pool. One. The rule stands, so the pool stayed at 300 — and one more writer next round moves every prize up.
+
+Also: nobody lost their entry to a missing tag this round. First time in six.
+
+**Week 7 is live and runs to 15 September, 12:00 UTC.**
+300 HIVE · 400 at 10 entrants · 500 at 20 · 25 HIVE each for a referral · 50 HIVE for the most-engaged quote-RT
+
+**And HivePulse 1.14.0 is out.** If you write on SlothBuzz, your tags were being scored as zero once you hit its 10-tag cap — fixed, along with market activity in Pulse and an off switch for the analyzer.
+
+Full post: ⟦HIVE_POST_URL⟧
+Update: <https://chromewebstore.google.com/detail/hivepulse/hakcpohpejoejmlhiphpkjobpjeckdlg>
+```

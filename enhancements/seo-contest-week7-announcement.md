@@ -84,8 +84,11 @@ then pays in **two atomic transactions**, and detects anyone already paid.
       the prize figures have to be exactly right and a cover with a wrong number is
       permanent once it is on-chain. Checked visually — the first render still carried
       week 6's "Closes 8 September" footer.
-- [ ] Upload the cover via the editor — **drag the file, never paste** (pasting inflates it
-      5–8×) — and replace `PASTE_UPLOADED_COVER_URL_HERE`
+- [ ] Upload BOTH images via the editor — **drag the file, never paste** (pasting inflates
+      them 5–8×) — and replace `PASTE_UPLOADED_COVER_URL_HERE` and
+      `PASTE_UPLOADED_CHART_URL_HERE`
+      · cover: `enhancements/images/contest-week7-cover.jpg`
+      · chart: `enhancements/images/social/geo-vs-seo-week6.jpg`
 - [x] ~~X thread drafted~~ — all 7 tweets measured against X's weighted-length spec,
       max 240/280
 - [ ] Post the X thread first, then paste tweet 1's URL into the two `⟦WEEK7_TWEET_URL⟧` spots
@@ -109,21 +112,21 @@ then pays in **two atomic transactions**, and detects anyone already paid.
 > Meta description (paste into the preview-description field — 134 chars):
 > `HivePulse SEO Contest week 6: three perfect scores, 550 HIVE paid. Week 7 is open — 300 HIVE now, 400 at ten entrants, 500 at twenty.`
 
-**Title:** HivePulse SEO Contest: Week 7 Open (Up To 500 HIVE)
+**Title:** HivePulse SEO Contest: New Week 7 Round (Up To 500 HIVE)
 
 ---
 
 ![HivePulse SEO Contest week 7 cover: three prize tiers on a dark gold background reading 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 and 500 HIVE at 20 or more, above a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](PASTE_UPLOADED_COVER_URL_HERE)
 
-**Summary:** Week 6 is settled. Nine entries, nine qualified, **three perfect 100/100 scores**, and — for the first time in six rounds — nobody lost their entry to a missing tag. 550 HIVE is going out. And the field finished **one single entry short** of the 400 pool.
+**Summary:** Week 6 of the HivePulse SEO Contest is settled. Nine entries, nine qualified, **three perfect 100/100 scores**, and — for the first time in six rounds — nobody lost an entry to a missing tag. 550 HIVE is going out. The field finished **one single entry short** of the 400 pool.
 
-## One entry. That is how close it was.
+## One entry short of a bigger pool
 
 The rule was published before the round started, as it always is: under 10 valid entries pays 300 HIVE, 10 to 19 pays 400, 20 or more pays 500.
 
 Nine people entered. Every one of them qualified. And the pool stayed at 300, because that is what the rule says.
 
-Last round we were two short. This round, one. We are telling you this plainly for the same reason as last time — quietly paying 400 anyway would make the ladder meaningless, and a ladder nobody believes is worth nothing to the people climbing it.
+Last round the field was two short. Week 6 came up one short. We are telling you this plainly for the same reason as last time — quietly paying 400 anyway would make the ladder meaningless, and a ladder nobody believes is worth nothing to the people climbing it.
 
 **One more writer next round and every prize on the board goes up.**
 
@@ -133,15 +136,15 @@ Last round we were two short. This round, one. We are telling you this plainly f
 | 10 – 19 | **400 HIVE** | 200 · 100 · 60 · 40 |
 | 20+ | **500 HIVE** | 250 · 120 · 80 · 50 |
 
-## Week 6 winners
+## HivePulse SEO Contest week 6 winners
 
-Three posts finished on a perfect 200 out of 200 — 100 SEO and 100 GEO, all three. That has never happened before, and it made the top of the table a genuine dead heat.
+Three posts finished on a perfect 200 out of 200 — 100 SEO and 100 GEO, all three. No previous round has produced a single perfect score, let alone three, and the result was a genuine dead heat at the top of the table.
 
 ### 🥇 First place — @wardah (150 HIVE)
 
 [Best Spider Man Movie Trip: 2 Hours (of Joy) With My Sister](https://peakd.com/hive-155014/@wardah/best-spider-man-movie-trip-2-hours-of-joy-with-my-sister) — **SEO 100 · GEO 100**
 
-A cinema trip with her sister. No keywords hunted, no formula — just a day described properly, with five images that every one carry a real description instead of a filename. It opens with the answer in the first sentence, every heading is a real section, and the preview description is filled in. This is the post to study if you think a high score requires writing something technical: it does not. It requires writing something *clearly*.
+A cinema trip with her sister. No keywords hunted, no formula — just a day described properly, with five images every one of which carries a real description instead of a filename. The post opens with the answer in the first sentence, every heading marks a real section, and the preview description is filled in. Study this post if you assume a high score requires a technical subject. A high score requires a *clear* one.
 
 ### 🥈 Second place — @nabbas0786 (100 HIVE)
 
@@ -159,7 +162,7 @@ A first ever entry, and it landed on a perfect score. 1,361 words, seven images 
 
 Three posts, identical scores. The score could not separate them, so we read them, and gave first place to the one that reads most like a person talking to another person rather than to a search engine.
 
-That was a judgement call, and judgement calls are exactly what this contest is supposed to avoid. So here is the rule, from week 7 onward:
+Choosing on readability was a judgement call, and judgement calls are exactly what this contest exists to avoid. So here is the rule, from week 7 onward:
 
 **When two posts tie on SEO + GEO, the tiebreak order is: (1) higher GEO score, (2) higher word count, (3) earlier publication time.** All three are numbers you can check yourself before you publish. No taste, no debate.
 
@@ -181,7 +184,7 @@ Every score is re-derived from the post's on-chain content, not from the screens
 
 ## Nobody lost their entry to the tag this round
 
-In five of the previous six rounds, at least one person wrote a good post, forgot `#hivepulse`, and lost their entry over it. This round: nine entries, nine tags, zero casualties.
+In five of the previous six rounds, at least one person wrote a good post, forgot `#hivepulse`, and lost an entry over the omission. Week 6: nine entries, nine tags, zero casualties.
 
 Keep doing that.
 
@@ -197,7 +200,7 @@ One of those referrals was nearly missed. @aimet claimed it in Spanish — *"mi 
 
 **50 HIVE, paid.**
 
-One honest note. @nabbas0786 also posted about the tool on X — a genuinely good post, with a specific before-and-after and a screenshot. But it was a **reply** mentioning us rather than a quote-retweet of the announcement, so it did not qualify. That is a frustrating way to miss out and we are saying so publicly, because the format rule is the whole reason the prize is objective. Quote-retweet the announcement tweet, and you are in.
+One honest note. @nabbas0786 also posted about the tool on X — a genuinely good post, with a specific before-and-after and a screenshot. But it was a **reply** mentioning us rather than a quote-retweet of the announcement, so it did not qualify. Missing out on a format technicality is frustrating, and we are saying so publicly, because the format rule is the whole reason the prize is objective. Quote-retweet the announcement tweet, and you are in.
 
 ## 🚀 Week 7 — how to enter
 
@@ -213,7 +216,7 @@ One honest note. @nabbas0786 also posted about the tool on X — a genuinely goo
 
 The tool this contest is built around shipped a substantial update this week, and two changes matter directly to anyone entering.
 
-**If you write on SlothBuzz, your tags were being read as zero.** SlothBuzz hides its tag input once you hit its ten-tag limit — which is exactly when you have finished tagging properly — and the analyzer was anchored to that input. So a fully tagged post scored **0 out of 8 on Tags**, at the precise moment it deserved full marks. That is fixed. If your score ever looked lower than your post deserved, this may be why.
+**If you write on SlothBuzz, your tags were being read as zero.** SlothBuzz hides its tag input once you hit its ten-tag limit — which is exactly when you have finished tagging properly — and the analyzer was anchored to that input. So a fully tagged post scored **0 out of 8 on Tags**, at the precise moment full marks were deserved. Version 1.14.0 fixes the bug. If your score ever looked lower than your post deserved, the tag reader may be why.
 
 **The analyzer now has an off switch.** Settings → Post Analyzer. On by default, but if you would rather draft without a panel watching, it is one toggle.
 
@@ -233,7 +236,11 @@ Update from [Chrome](https://chromewebstore.google.com/detail/hivepulse/hakcpohp
 
 ## Where the points actually are
 
-Six rounds in, 46 posts scored on both axes. The pattern has not shifted: SEO scores cluster high because Hive creators already write decent titles and headings. GEO — whether an AI answer engine can lift a passage out of your post and cite it — is where the gap sits, and it is where this round separated 4th place from 9th.
+Six rounds in, 46 posts scored on both axes. The pattern has not shifted: SEO scores cluster high because Hive creators already write decent titles and headings. GEO — whether an AI answer engine can lift a passage out of your post and cite it — is where the gap sits, and GEO is where week 6 separated 4th place from 9th.
+
+![Dumbbell chart of 39 scored Hive contest posts, each showing its SEO score in orange and its GEO score in green joined by a line, sorted with the widest gap at the top where one post scored 93 for SEO but only 60 for GEO; the correlation between the two measures is 0.60](PASTE_UPLOADED_CHART_URL_HERE)
+
+Across every post we have scored, the correlation between the two measures is just **0.60** — SEO explains about a third of GEO. A high SEO score is not evidence that an AI engine will quote you. Those are two different jobs, and most entrants are already winning the first one.
 
 1. **Open with the answer.** First 8–60 words, before any preamble. All three perfect scores did this.
 2. **Write self-contained sentences.** "This shows…" means nothing when quoted alone. Name the subject inside the sentence.
@@ -247,7 +254,7 @@ And the cheapest points on the board: **fill in the preview description** — 10
 
 👉 **This is the tweet to quote:** ⟦WEEK7_TWEET_URL⟧
 
-It has to **quote-retweet that tweet** — not a reply, not a standalone post, not a quote of your own tweet. That distinction cost someone the prize this round. It has to be **your own words and your own experience**. **No engagement farming** — follow-for-follow, like-for-like, reply rings and bought engagement are disqualified, and we look before we pay. Counted at **15 September, 12:00 UTC**.
+Your post has to **quote-retweet that tweet** — not a reply, not a standalone post, not a quote of your own tweet. The difference between a quote-retweet and a reply cost someone the prize in week 6. Write **your own words about your own experience**. **No engagement farming** — follow-for-follow, like-for-like, reply rings and bought engagement are disqualified, and we look before we pay. Counted at **15 September, 12:00 UTC**.
 
 Four angles that travel, if you want a starting point: your score with the screenshot; the thing that surprised you; one sentence before and after; or what you would tell a Hive writer who has never heard of it.
 
@@ -258,7 +265,7 @@ Four angles that travel, if you want a starting point: your score with the scree
 - 🐦 **X:** https://x.com/HdevCore
 - 🧩 **Get HivePulse:** [Chrome](https://chromewebstore.google.com/detail/hivepulse/hakcpohpejoejmlhiphpkjobpjeckdlg) · [Firefox](https://addons.mozilla.org/en-US/firefox/addon/hivepulse/)
 
-One entrant. That is the gap between 300 HIVE and 400. Bring someone with you — it pays you both, and this round proves it works. 🚀
+One entrant is the whole gap between 300 HIVE and 400. Bring someone with you — the referral pays you both, and week 6 proves the mechanism works. 🚀
 
 *— The HivePulse Team (@hdev)*
 

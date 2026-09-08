@@ -89,8 +89,10 @@ then pays in **two atomic transactions**, and detects anyone already paid.
       `PASTE_UPLOADED_CHART_URL_HERE`
       · cover: `enhancements/images/contest-week7-cover.jpg`
       · chart: `enhancements/images/social/geo-vs-seo-week6.jpg`
-- [x] ~~X thread drafted~~ — all 7 tweets measured against X's weighted-length spec,
-      max 240/280
+- [x] ~~X thread drafted~~ — 8 tweets, all measured with
+      `python scripts/check_tweet_lengths.py enhancements/seo-contest-week7-announcement.md`,
+      max 271/280. Image plan is in the thread section: cover on 1/, chart on 5/,
+      the rest text-only.
 - [ ] Post the X thread first, then paste tweet 1's URL into the two `⟦WEEK7_TWEET_URL⟧` spots
 - [ ] Pay the sheet above; upvote + reblog the three winning posts
 - [ ] Post into **Hdev Contests** (`hive-177727`), tags: `hivepulse` `seo` `contest` `hive`
@@ -279,6 +281,16 @@ emoji 2) — re-check with `python scripts/check_tweet_lengths.py enhancements/s
 
 Each block is plain text with no blockquote markers, so it copies straight into X.
 
+**Images — attach these two, nothing else:**
+
+| Tweet | Image | Why there |
+|---|---|---|
+| **1/** | `enhancements/images/contest-week7-cover.jpg` | The anchor. This is the tweet people quote-retweet for the 50 HIVE prize, so it carries the prize ladder and has to look like something. |
+| **5/** | `enhancements/images/social/geo-vs-seo-week6.jpg` | The chart *is* that tweet's argument — the numbers in the text are the numbers on the chart. |
+
+Tweets 2, 3, 4, 6, 7 and 8 go out as text. Do not pad them with a repeat of the cover:
+X shows a thread's first image prominently and reusing it further down reads as filler.
+
 **1/**
 
 ```tweet
@@ -290,6 +302,8 @@ Week 6 of the HivePulse SEO Contest is settled.
 
 And the field finished ONE entry short of the bigger pool. 🧵
 ```
+
+📎 **Attach:** `enhancements/images/contest-week7-cover.jpg`
 
 **2/**
 
@@ -321,6 +335,18 @@ This round: 9 entries, 9 tags, zero casualties.
 **5/**
 
 ```tweet
+15 posts in this contest have scored 90 or more on SEO.
+
+Their GEO scores ran from 60 to 100.
+
+A strong SEO score tells you almost nothing about whether an AI engine will quote you. They are two different jobs — and GEO is the one nearly everyone is leaving on the table.
+```
+
+📎 **Attach:** `enhancements/images/social/geo-vs-seo-week6.jpg`
+
+**6/**
+
+```tweet
 Week 7 is open now.
 
 Write a post with HivePulse open, tag it #hivepulse, comment with the link + your panel screenshot.
@@ -330,7 +356,7 @@ Closes 15 Sep, 12:00 UTC 👇
 ⟦HIVE_POST_URL⟧
 ```
 
-**6/**
+**7/**
 
 ```tweet
 Also shipped: HivePulse 1.14.0.
@@ -340,7 +366,7 @@ If you write on SlothBuzz, your tags were scored as ZERO once you hit its 10-tag
 Fixed. Plus market activity in Pulse, and an off switch for the analyzer.
 ```
 
-**7/**
+**8/**
 
 ```tweet
 50 HIVE for the quote-retweet of this thread with the most engagement.
@@ -356,7 +382,10 @@ No farming. We look before we pay.
 
 ## Discord announcement
 
-**#announcements**
+**#announcements** — attach `enhancements/images/contest-week7-cover.jpg` to the message.
+Discord will also unfurl the Hive link into a preview card, so the cover is the image
+people actually see in the channel.
+
 ```text
 **🏆 HivePulse SEO Contest — week 6 results, week 7 open**
 

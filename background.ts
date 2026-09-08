@@ -1,5 +1,5 @@
 
-import { parseUrl, getTargetUrl } from './utils/urlHelpers';
+import { parseUrl, getTargetUrl, frontendIsStandard } from './utils/urlHelpers';
 import { fetchAccountStats, fetchAccountCard, fetchNotifications, fetchRcOperationCosts } from './utils/hiveHelpers';
 import { assessRecipient } from './utils/scamShield';
 import {
@@ -467,10 +467,15 @@ chrome.tabs.onUpdated.addListener(async (tabId: number, changeInfo: any, tab: an
         tabState.username,
         tabState.author,
         tabState.permlink,
-        allFrontends
+        allFrontends,
+        tabState.isHiveUrl,
+        frontendIsStandard(allFrontends.find(f => f.id === tabState.detectedFrontendId))
       );
 
-      if (newUrl && newUrl !== tab.url) {
+      // '#' is getTargetUrl's "no such frontend" answer — reachable whenever
+      // preferredFrontendId outlives its config (a removed custom frontend, settings
+      // carried over from another profile). Redirecting to it is never right.
+      if (newUrl && newUrl !== '#' && newUrl !== tab.url) {
         chrome.tabs.update(tabId, { url: newUrl });
       }
     }

@@ -22,6 +22,15 @@ export default defineConfig(({ mode }) => {
             copyFileSync(manifestSrc, `${outDir}/manifest.json`);
             if (existsSync('icon.svg')) copyFileSync('icon.svg', `${outDir}/icon.svg`);
             if (existsSync('icon.png')) copyFileSync('icon.png', `${outDir}/icon.png`);
+            // The manifests declare 16/32/48/128; shipping one 100x100 icon.png for all
+            // four made every declared size a lie — a blurry toolbar icon, and eight
+            // ICON_SIZE_INVALID warnings from AMO. icon.png stays because it is listed in
+            // notification icons in background.ts. It is NOT web-accessible: that entry
+            // was removed because nothing in a content script ever loaded it, and exposing
+            // it to <all_urls> let any page fingerprint the extension by its id.
+            for (const s of [16, 32, 48, 128]) {
+              if (existsSync(`icon-${s}.png`)) copyFileSync(`icon-${s}.png`, `${outDir}/icon-${s}.png`);
+            }
 
             if (existsSync('logos')) {
               cpSync('logos', `${outDir}/logos`, { recursive: true });

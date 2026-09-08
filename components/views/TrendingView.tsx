@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sparkles, RefreshCw, Loader, ExternalLink, Users, MessageSquare, ThumbsUp } from 'lucide-react';
-import { AppSettings, TrendingPost, TrendingCommunity } from '../../types';
+import { AppSettings, TrendingPost, TrendingCommunity, ActionMode } from '../../types';
+import { getTargetUrl, frontendIsStandard } from '../../utils/urlHelpers';
+
+// Only where a real community feed was confirmed. peakd/ecency/hive.blog are SSR and were
+// verified by content, not status. Dropped: actifit (HTTP 500), liketu and ureka (byte-
+// identical to their own homepage), hivescan (no /trending route in its manifest), inleo
+// and waivio (403 / indistinguishable — unverified is not the same as working). A frontend
+// with its own community template is handled separately and does not need listing.
+const COMMUNITY_OK = new Set(['peakd.com', 'ecency.com', 'hive.blog']);
 import { fetchTrendingPosts, fetchTrendingCommunities, fetchFypPosts } from '../../utils/hiveHelpers';
 
 interface TrendingViewProps {
@@ -55,10 +63,42 @@ export const TrendingView: React.FC<TrendingViewProps> = ({ settings, allFronten
   const fypUser = settings.ecencyUsername || settings.rcUser || '';
 
   const preferredFrontend = allFrontends.find(f => f.id === settings.preferredFrontendId);
-  const baseDomain = preferredFrontend?.domain ?? 'peakd.com';
+  const baseDomain = preferredFrontend?.customDomain ?? preferredFrontend?.domain ?? 'peakd.com';
 
-  const postUrl      = (author: string, permlink: string) => `https://${baseDomain}/@${author}/${permlink}`;
-  const communityUrl = (name: string) => `https://${baseDomain}/trending/${name}`;
+  // Route posts through getTargetUrl rather than assembling /@author/permlink here. Pasting
+  // that shape onto the preferred frontend's domain ignores every frontend whose posts do
+  // not live there: SlothBuzz (/post/...), 3Speak (/watch?v=...) and any custom frontend's
+  // linkStructure. Every trending row was a 404 for a SlothBuzz user.
+  // getTargetUrl returns '#' for an id it cannot resolve, which happens when a custom
+  // frontend is deleted without resetting preferredFrontendId. The old hand-built URL had a
+  // peakd fallback; routing through getTargetUrl removed it and every row became '#'.
+  const postUrl = (author: string, permlink: string) => {
+    const url = getTargetUrl(settings.preferredFrontendId, `/@${author}/${permlink}`,
+                             ActionMode.SAME_PAGE, null, author, permlink, allFrontends);
+    return url === '#' ? `https://${baseDomain}/@${author}/${permlink}` : url;
+  };
+
+  // There is no community template to resolve, so this is an explicit list rather than a
+  // guess. Using "has a linkStructure" as the discriminator was wrong in both directions:
+  // it sent every custom condenser mirror to its home page, while still handing Actifit a
+  // /trending/<community> URL that answers HTTP 500. Verified live per frontend; anything
+  // not listed falls back to the home page rather than a URL we have not checked.
+  // Confirmed to render a real community feed at /trending/<name>. liketu.com and
+  // hivescan.info were dropped after checking content rather than status: both answer 200
+  // for any path, but liketu returns its homepage byte-for-byte and hivescan has no
+  // /trending route at all. actifit.io answers 500. A custom frontend using the standard
+  // condenser shape is a mirror, so it qualifies too — keying on the domain alone sent
+  // every custom mirror to its home page, which is what the previous version got wrong.
+  // A declared template wins: Ureka serves communities at /community/<name>/trending, so
+  // handing it /trending/<name> hit its tag route instead.
+  const communityTpl = preferredFrontend?.linkStructure?.community;
+  const communitySupported =
+    COMMUNITY_OK.has(baseDomain) || (preferredFrontend?.isCustom === true
+      && frontendIsStandard(preferredFrontend));
+  const communityUrl = (name: string) =>
+    communityTpl ? `https://${baseDomain}${communityTpl.replace('{{name}}', name)}`
+    : communitySupported ? `https://${baseDomain}/trending/${name}`
+    : `https://${baseDomain}/`;
 
   const load = useCallback(async (force = false) => {
     const ts = lastFetched[sort];

@@ -1,6 +1,6 @@
 # HivePulse SEO Contest — Campaign Pack
 
-Real details wired in. Runs **15 July → 4 August 2026**. Only remaining placeholder: `[[contest post link]]` (fill into the X + Discord CTAs after you publish).
+Real details wired in. Runs **28 July → 4 August 2026**. Only remaining placeholder: `https://actifit.io/@hdev/get-your-hive-content-seen---the-hivepulse-seo-contest-300-hive-prize-pool` (fill into the X + Discord CTAs after you publish).
 
 - **Community:** Hdev Contests — `hive-177727` — https://peakd.com/c/hive-177727/created (post the announcement *into* this community)
 
@@ -42,7 +42,7 @@ Real details wired in. Runs **15 July → 4 August 2026**. Only remaining placeh
 - 🥉 3rd — **50 HIVE**
 - All three winners are **upvoted and reblogged** by @hdev (extra rewards + reach).
 
-**Timeline:** **15 July → 4 August 2026** (3 weeks). Winners announced within 5 days of close, in a follow-up post + on X and Discord.
+**Timeline:** **28 July → 4 August 2026** (1 week). Winners announced within 5 days of close, in a follow-up post + on X and Discord.
 
 > Optional tweak: if you want to guarantee a newcomer can win, earmark 🥉 3rd for "best before→after improvement." Keeps it welcoming without adding cost.
 
@@ -69,10 +69,26 @@ As you write, it scores your post on the two things that decide whether the worl
 **🔍 SEO — so search engines rank you.**
 Keyword placement, a click-worthy title, heading structure, internal links, readability, and live trending-tag suggestions pulled straight from Hive. Specific, actionable fixes — not vague advice.
 
+![image.png](https://usermedia.actifit.io/MS3OGBNJ0VITRT5QWEND9WBQ2LFFP7)
+
+![image.png](https://usermedia.actifit.io/MS3OKWBNN1FVA539KRBM3WRSTITXT)
+
 **🤖 GEO — so AI answer engines *quote* you.**
 This is the part almost nothing else does. When someone asks ChatGPT, Perplexity, or Google's AI a question, those tools pull sentences from across the web and cite them. HivePulse tells you whether *your* post is quotable: does it open with a clear hook? Do your sentences stand on their own? Are your subjects named clearly? Get it right and **your Hive post becomes a source the AI cites** — a brand-new front door to the blockchain.
 
+![image.png](https://usermedia.actifit.io/MS3OHIBBY51BVME74MBP7S7P9ON1IF)
+
 Every point you add is another reader who finds Hive instead of scrolling past it.
+
+## 🆕 Fresh in v1.11.0
+
+We just shipped an update — and part of it is timed perfectly for this contest:
+
+- **✍️ The analyzer now works on Ecency's new editor.** Ecency rebuilt its publish page as a two-step editor; we've fully restored title, body, tag, and description detection, and your score is kept across both steps. **InLeo scoring got sharper too** — headings, links, and images are now counted accurately.
+- **🛡️ Scam Shield, 16× bigger.** Before you send funds, HivePulse now checks the recipient against **~15,000 known scam & watchlisted accounts** (up from ~900), sourced from the community *watchmen* list — a hard block for confirmed scammers, a softer heads-up for watchlisted ones.
+- **🔎 Better detection everywhere** — headings, links, and images now register correctly in rich-text editors, so your score reflects your real post.
+
+Update from the store (or install fresh) and you're contest-ready. 👇
 
 ## The Contest
 
@@ -94,7 +110,7 @@ The challenge is simple:
 
 We'll judge on how well you optimize (SEO **and** GEO) *and* whether the post is genuinely worth reading — because great optimization should serve great content.
 
-**Runs 15 July → 4 August 2026.** Winners announced within 5 days.
+**Runs 28 July → 4 August 2026.** Winners announced within 5 days.
 
 ## Why this matters for Hive
 
@@ -141,9 +157,9 @@ Dead simple to enter:
 🥇 150 · 🥈 100 · 🥉 50 HIVE. Winners upvoted & reblogged.
 
 **4/ (CTA)**
-Runs 15 July → 4 August 2026.
+Runs 28 July → 4 August 2026.
 
-Full rules 👉 [[contest post link]]
+Full rules 👉 https://actifit.io/@hdev/get-your-hive-content-seen---the-hivepulse-seo-contest-300-hive-prize-pool
 Join the Discord 👉 https://discord.gg/wnpR8Rafcf
 Get HivePulse 👉 https://chromewebstore.google.com/detail/hivepulse/hakcpohpejoejmlhiphpkjobpjeckdlg
 
@@ -162,6 +178,6 @@ Let's get Hive content in front of the world. #Hive #HivePulse
 > 2️⃣ Write & publish a new Hive post using the analyzer
 > 3️⃣ Comment your post link + score screenshot on the contest post, tag **#hivepulse**
 >
-> 🗓️ Runs **15 July → 4 August 2026** · 📖 Full rules: [[contest post link]]
+> 🗓️ Runs **28 July → 4 August 2026** · 📖 Full rules: https://actifit.io/@hdev/get-your-hive-content-seen---the-hivepulse-seo-contest-300-hive-prize-pool
 >
 > Post your entries and scores in **#[[contest-channel]]** — we'll help you push for a high score. Let's flood Hive with discoverable content! 💪

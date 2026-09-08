@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { CurrentTabState, ActionMode, FrontendId, FrontendConfig } from '../../types';
 import { FRONTENDS } from '../../constants';
-import { getTargetUrl } from '../../utils/urlHelpers';
+import { getTargetUrl, frontendIsStandard } from '../../utils/urlHelpers';
 import { FrontendIcon } from '../FrontendIcon';
 import { Link as LinkIcon, Info, Copy, Check } from 'lucide-react';
 
@@ -50,7 +50,9 @@ export const ShareView: React.FC<ShareViewProps> = ({ tabState, allFrontends }) 
              tabState.username, 
              tabState.author, 
              tabState.permlink, 
-             allFrontends
+             allFrontends,
+             tabState.isHiveUrl,
+             frontendIsStandard(allFrontends.find(f => f.id === tabState.detectedFrontendId))
            );
            const isCopied = copiedLink === frontend.id;
            return (

@@ -1,22 +1,22 @@
 {
   "manifest_version": 3,
   "name": "HivePulse",
-  "version": "1.12.0",
-  "description": "The heartbeat of your Hive experience. Chat, Stats, and seamless Frontend Switching.",
+  "version": "1.14.0",
+  "description": "Your Hive blockchain dashboard: wallet, scam protection, chat, notifications, post SEO analysis, and instant frontend switching.",
   "icons": {
-    "16": "icon.png",
-    "32": "icon.png",
-    "48": "icon.png",
-    "128": "icon.png"
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
   },
   "action": {
     "default_popup": "index.html",
     "default_title": "HivePulse",
     "default_icon": {
-      "16": "icon.png",
-      "32": "icon.png",
-      "48": "icon.png",
-      "128": "icon.png"
+      "16": "icon-16.png",
+      "32": "icon-32.png",
+      "48": "icon-48.png",
+      "128": "icon-128.png"
     }
   },
   "side_panel": {
@@ -46,22 +46,13 @@
         "https://3speak.tv/*",
         "https://actifit.io/*",
         "https://slothbuzz.com/*",
-        "https://www.slothbuzz.com/*"
+        "https://www.slothbuzz.com/*",
+        "https://blog.suseona.com/*"
       ],
       "js": [
         "assets/compose.js"
       ],
       "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "icon.png"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
     }
   ],
   "permissions": [
@@ -88,10 +79,21 @@
     "https://api2.hive-engine.com/*",
     "https://api.coingecko.com/*",
     "https://images.hive.blog/*",
-    "https://files.peakd.com/*",
-    "https://s3.amazonaws.com/*",
     "https://ipfs.io/*",
     "https://slothbuzz.com/*",
-    "https://www.slothbuzz.com/*"
+    "https://www.slothbuzz.com/*",
+    "https://api.deathwing.me/*",
+    "https://api.openhive.network/*",
+    "https://hiveapi.actifit.io/*",
+    "https://techcoderx.com/*",
+    "https://api.syncad.com/*",
+    "https://rpc.mahdiyari.info/*",
+    "https://api.c0ff33a.uk/*",
+    "https://hive.atexoras.com/*",
+    "https://v6-he.atexoras.com/*",
+    "https://herpc.actifit.io/*",
+    "https://he.c0ff33a.uk/*",
+    "https://herpc.dtools.dev/*",
+    "https://blog.suseona.com/*"
   ]
 }

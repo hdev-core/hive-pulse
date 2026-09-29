@@ -26,4 +26,4 @@ The first tag on a Hive post is permanent, so it deserves a moment of thought. W
 
 A post that is long enough to be useful is easier to rank than a short one. Subheadings give a reader somewhere to stop and a search engine a sense of structure. Short sentences read faster than long ones and they score better for reading ease. Connectors such as however and for example hold two ideas together in a way readers follow. An image every few hundred words keeps a long piece from becoming a wall of text.
 
-The first tag on a Hive post is permanent, so it deserves a moment of thought. Writing for a person first and an algorithm second tends to satisfy both of them The bar should now.
+The first tag on a Hive post is permanent, so it deserves a moment of thought. Writing for a person first and an algorithm second tends to satisfy both of them, which is the point.

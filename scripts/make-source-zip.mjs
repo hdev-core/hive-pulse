@@ -33,8 +33,21 @@ const OUT = resolve(ROOT, `releases/hivepulse-${version}-source.zip`);
 // Anything matching these must never reach a store reviewer.
 const FORBIDDEN = [/(^|\/)\.env/i, /\.pem$/i, /\.key$/i, /id_rsa/i, /secret/i, /credentials/i];
 
+/**
+ * Tracked, but not a build input. The archive exists so a reviewer can rebuild dist-firefox;
+ * contest campaign packs and store screenshots cannot affect that build and are most of the
+ * repository's weight — 18.5 MB of cover art and charts at 1.14.1. Excluding them is safe
+ * precisely because the reproducibility check below rebuilds from this archive alone.
+ */
+const NOT_A_BUILD_INPUT = [
+  /^enhancements\//,   // weekly contest posts, X threads, generated cover images
+  /^screenshots\//,    // store listing screenshots
+  /^documentation\//,  // release notes and announcements
+];
+
 const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: ROOT, encoding: 'utf8' })
-  .split('\0').filter(Boolean);
+  .split('\0').filter(Boolean)
+  .filter(f => !NOT_A_BUILD_INPUT.some(re => re.test(f)));
 
 const leaks = tracked.filter(f => FORBIDDEN.some(re => re.test(f)));
 if (leaks.length) {

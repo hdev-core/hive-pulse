@@ -38,6 +38,31 @@ export const rpc = async (method, params, { nodes = HIVE_NODES, timeoutMs = 8000
   throw lastErr || new Error('all Hive nodes failed');
 };
 
+/**
+ * Some editors publish headings as setext underline — the heading text on one line and
+ * `---` (h2) or `===` (h1) on the next. The extension never sees that form: it scores the
+ * editor DOM, which serialises every <h2>/<h3> as `## `/`### ` (see compose.ts domToMarkdown).
+ * So an on-chain re-score that only matches ATX headings reads zero subheadings for a setext
+ * post and silently strips the entire structure block the author saw earned. Normalise setext
+ * back to ATX here, at the fetch boundary, so the re-score sees exactly what the panel saw.
+ *
+ * The guard keeps this from touching ATX headings, list items, blockquotes, code or ordered
+ * lists — a `---` after any of those is not a setext underline.
+ */
+const normalizeSetextHeadings = (md) => {
+  const lines = String(md).split('\n');
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const cur = lines[i].trim();
+    const next = lines[i + 1];
+    const prose = cur && !/^(?:#{1,6}\s|>|[-*+]\s|\d+\.\s|`)/.test(cur);
+    if (prose && next && /^={3,}\s*$/.test(next)) { out.push('# ' + cur); i++; continue; }
+    if (prose && next && /^-{3,}\s*$/.test(next)) { out.push('## ' + cur); i++; continue; }
+    out.push(lines[i]);
+  }
+  return out.join('\n');
+};
+
 /** Fetch a post and normalise the fields the scorer needs. */
 export const getPost = async (author, permlink, opts) => {
   const r = await rpc('condenser_api.get_content', [author, permlink], opts);
@@ -46,7 +71,7 @@ export const getPost = async (author, permlink, opts) => {
   try { meta = JSON.parse(r.json_metadata || '{}'); } catch { /* ignore */ }
   return {
     title: r.title || '',
-    body: r.body || '',
+    body: normalizeSetextHeadings(r.body || ''),
     tags: Array.isArray(meta.tags) ? meta.tags.map(t => String(t).toLowerCase()) : [],
     description: typeof meta.description === 'string' ? meta.description : '',
     created: Date.parse((r.created || '') + 'Z'),

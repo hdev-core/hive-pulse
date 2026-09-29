@@ -12,6 +12,21 @@ Chrome Extension (Manifest V3) — not a standard web app. The popup and side pa
 
 No test, lint, typecheck, or format commands exist. No CI pipeline.
 
+## Contest Judging
+
+The weekly SEO contest is judged with `scripts/judge-contest.mjs`. Before running it:
+
+1. Put one submitted Hive URL or `@author/permlink` per line in an entries file.
+2. Set `WINDOW_START` and `WINDOW_END` in the script to the contest's published UTC window.
+3. Run `node scripts/judge-contest.mjs entries-weekN.txt` from the repository root.
+4. Review `contest-results.csv`, then archive it as `contest-results-weekN.csv` before the next round.
+
+The judge fetches each post from Hive and uses the shared `scripts/lib/seo-score.mjs` engine. It
+uses the best title-derived keyword because the author's editor keyword is not stored on-chain.
+Verify tags, referrals, and any social-media prize requirements separately. Do not rerun an old
+round with the current script without restoring that round's date window; the script is rolled
+forward for the active contest.
+
 ## Build Architecture
 
 `vite.config.ts` defines a multi-entry Rollup build:

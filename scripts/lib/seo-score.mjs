@@ -15,12 +15,16 @@
 // normalise at the door. LF input is unaffected.
 const normalizeEol = (s) => String(s).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
+// ORDER MATTERS — the HTML strip must precede the punctuation pass, which replaces every
+// '>' with a space and would otherwise destroy each tag's closing bracket, leaving the tag
+// body (image URL and all) behind as prose. See the long note in compose.ts.
 const stripMd = (s) => s
+  .replace(/<\/?[a-zA-Z][^>]*>/g, ' ')
   .replace(/!\[.*?\]\(.*?\)/g, ' ')
   .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1 ')
+  .replace(/https?:\/\/\S+/g, ' ')
   .replace(/^#{1,6}\s+/gm, ' ')
-  .replace(/[*_`~>|#]/g, ' ')
-  .replace(/<[^>]+>/g, ' ');
+  .replace(/[*_`~>|#]/g, ' ');
 const reSafe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const toPermlink = (title) => title.toLowerCase().trim()
   .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -75,9 +79,26 @@ const isGenericAlt = (alt) => {
   return false;
 };
 
+// Both image syntaxes — PeakD writes `<img src alt>`, Ecency writes `![alt](src)`, and
+// scanning only the markdown form let every PeakD-authored post keep the alt points free.
+const MD_IMAGE   = /!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g;
+const HTML_IMAGE = /<img\b[^>]*>/gi;
+const IMG_ALT = /\salt\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i;
+const IMG_SRC = /\ssrc\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i;
+const attr = (tag, re) => {
+  const m = tag.match(re);
+  return m ? (m[2] ?? m[3] ?? m[4] ?? '') : null;
+};
+
 const missingAltImages = (content) => {
-  const out = []; const re = /!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g; let m;
-  while ((m = re.exec(content)) !== null) if (isGenericAlt(m[1])) out.push(m[2]);
+  const out = []; let m;
+  MD_IMAGE.lastIndex = 0;
+  while ((m = MD_IMAGE.exec(content)) !== null) if (isGenericAlt(m[1])) out.push(m[2]);
+  HTML_IMAGE.lastIndex = 0;
+  while ((m = HTML_IMAGE.exec(content)) !== null) {
+    // A missing alt attribute is worse than a generic one, and reads as empty here.
+    if (isGenericAlt(attr(m[0], IMG_ALT) ?? '')) out.push(attr(m[0], IMG_SRC) ?? 'image');
+  }
   return out;
 };
 

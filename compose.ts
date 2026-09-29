@@ -1,3 +1,4 @@
+import { BAR_MAX, BAR_TICKS, barFillPct, barTickPos } from './utils/wordBar';
 import { scanChipTags } from './utils/tagScan';
 export {};
 declare const chrome: any;
@@ -106,12 +107,26 @@ const suggestTags = (text: string, used: string[]): string[] => {
 };
 
 // ── Shared text helpers ──────────────────────────────────────────────────────
+// Reduces a draft to the prose a reader actually sees, for word count, readability and
+// keyword analysis.
+//
+// ORDER MATTERS. The HTML strip must run BEFORE the punctuation pass, because that pass
+// replaces every '>' with a space — which destroys each tag's closing bracket and leaves
+// the tag body behind as text. A PeakD-style `<img src="https://…/23wCbWaTEB….png" alt="…">`
+// then counted as ~12 words, one of them a 60-character URL with a dozen vowel groups and
+// no sentence terminator, so it wrecked both the word count and the Flesch score. The same
+// post written with markdown images scored ~4 points of reading ease higher for no reason
+// other than which editor produced it. Reported by @ahmedabbaci, 2026-09-29.
+//
+// `<\/?[a-zA-Z]` rather than `<[^>]+>` so ordinary prose like "5 < 10 and 20 > 15" survives.
+// Bare URLs go too: an unlinked https://… is not prose and must not reach the syllable counter.
 const stripMd = (s: string) => s
+  .replace(/<\/?[a-zA-Z][^>]*>/g, ' ')
   .replace(/!\[.*?\]\(.*?\)/g, ' ')
   .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1 ')
+  .replace(/https?:\/\/\S+/g, ' ')
   .replace(/^#{1,6}\s+/gm, ' ')
-  .replace(/[*_`~>|#]/g, ' ')
-  .replace(/<[^>]+>/g, ' ');
+  .replace(/[*_`~>|#]/g, ' ');
 
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -387,15 +402,33 @@ const isGenericAlt = (alt: string): boolean => {
   return false;
 };
 
+// Both image syntaxes are checked. PeakD's editor writes `<img src alt>` where Ecency's
+// writes `![alt](src)`, and scanning only the markdown form meant an entire post written on
+// PeakD could never lose the alt-text points, however bad its alt text was.
+const MD_IMAGE   = /!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g;
+const HTML_IMAGE = /<img\b[^>]*>/gi;
+const IMG_ALT = /\salt\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i;
+const IMG_SRC = /\ssrc\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i;
+const attr = (tag: string, re: RegExp): string | null => {
+  const m = tag.match(re);
+  return m ? (m[2] ?? m[3] ?? m[4] ?? '') : null;
+};
+
 const missingAltImages = (content: string): string[] => {
   const out: string[] = [];
-  const re = /!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g;
+  const shorten = (src: string) => {
+    const file = src.split('/').pop()?.split('?')[0] || src;
+    return file.length > 24 ? file.slice(0, 21) + '…' : file;
+  };
   let m: RegExpExecArray | null;
-  while ((m = re.exec(content)) !== null) {
-    if (isGenericAlt(m[1])) {
-      const file = m[2].split('/').pop()?.split('?')[0] || m[2];
-      out.push(file.length > 24 ? file.slice(0, 21) + '…' : file);
-    }
+  MD_IMAGE.lastIndex = 0;
+  while ((m = MD_IMAGE.exec(content)) !== null) {
+    if (isGenericAlt(m[1])) out.push(shorten(m[2]));
+  }
+  HTML_IMAGE.lastIndex = 0;
+  while ((m = HTML_IMAGE.exec(content)) !== null) {
+    // A missing alt attribute is worse than a generic one, and reads as empty here.
+    if (isGenericAlt(attr(m[0], IMG_ALT) ?? '')) out.push(shorten(attr(m[0], IMG_SRC) ?? 'image'));
   }
   return out;
 };
@@ -980,8 +1013,8 @@ const INFO: Record<string, { what: string; how: string }> = {
 // ── Shared top (pills + word bar) ────────────────────────────────────────────
 const renderShared = (body: HTMLElement, a: Analysis) => {
   const wc = a.wordCount, col = wcColor(wc);
-  const wlbl = wc >= 2500 ? 'Optimal' : wc >= 1500 ? 'Great' : wc >= 1000 ? 'Good' : wc >= 600 ? 'Building' : wc >= 300 ? 'Short' : 'Very short';
-  const pct = Math.min(100, (wc / 2500) * 100).toFixed(1);
+  const wlbl = wc >= BAR_MAX ? 'Optimal' : wc >= 1500 ? 'Great' : wc >= 1000 ? 'Good' : wc >= 600 ? 'Building' : wc >= 300 ? 'Short' : 'Very short';
+  const pct = barFillPct(wc).toFixed(1);
 
   const health = document.createElement('div');
   Object.assign(health.style, { display: 'flex', gap: '6px', marginBottom: '10px' });
@@ -990,21 +1023,31 @@ const renderShared = (body: HTMLElement, a: Analysis) => {
     `<div style="font-size:14px;font-weight:700;color:${c}">${val}</div>` +
     `<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">${sub}</div></div>`;
   health.innerHTML =
-    pill(wc >= 1000 ? `${(wc / 1000).toFixed(1)}k` : `${wc}`, 'words', col) +
+    // Exact count, not "1.0k" — a writer at 1,087 words was shown "1.0k" and reasonably
+    // read it as 1,000. The number is the thing being tracked; round it and it stops being one.
+    pill(wc.toLocaleString(), 'words', col) +
     pill(`~${a.readMinutes}m`, 'read', '#94a3b8') +
     pill(`${a.imageCount}`, 'imgs', a.imageCount > 0 ? '#94a3b8' : '#f87171');
   body.appendChild(health);
 
+  // Scale numbers are positioned at the point each one marks (utils/wordBar.ts), instead of
+  // being spread evenly by space-between — which put 1k at the halfway mark on a track where
+  // it belongs at 40%. The status word moves out of the row so nothing collides with 2.5k.
+  const tick = ([at, label]: readonly [number, string]) => {
+    const { left, shift } = barTickPos(at);
+    return `<span style="position:absolute;left:${left}%;transform:translateX(${shift})">${label}</span>`;
+  };
+
   const bar = document.createElement('div');
-  Object.assign(bar.style, { marginBottom: '12px' });
+  Object.assign(bar.style, { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' });
   bar.innerHTML = `
-    <div style="background:#0f172a;border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px;border:1px solid #334155">
-      <div style="height:100%;width:${pct}%;background:${col};border-radius:4px;transition:width .4s"></div>
+    <div style="flex:1;min-width:0">
+      <div style="background:#0f172a;border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px;border:1px solid #334155">
+        <div style="height:100%;width:${pct}%;background:${col};border-radius:4px;transition:width .4s"></div>
+      </div>
+      <div style="position:relative;height:11px;font-size:9px;color:#64748b">${BAR_TICKS.map(tick).join('')}</div>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:9px;color:#64748b">
-      <span>0</span><span>300</span><span>1k</span><span>2.5k</span>
-      <span style="color:${col};font-weight:700">${wlbl}</span>
-    </div>`;
+    <span style="font-size:9px;color:${col};font-weight:700;white-space:nowrap">${wlbl}</span>`;
   body.appendChild(bar);
 };
 

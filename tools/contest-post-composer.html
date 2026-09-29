@@ -19,27 +19,29 @@
 </head>
 <body>
 <main class="wrap">
-  <div class="row top"><div><h1>HivePulse Contest Post Composer</h1><p class="sub">Prepare and publish the Week 9 announcement with Hive Keychain.</p></div><span id="kc" class="pill">Checking Keychain...</span></div>
+  <div class="row top"><div><h1>HivePulse Contest Post Composer</h1><p class="sub">Prepare and publish the Week 10 announcement with Hive Keychain.</p></div><span id="kc" class="pill">Checking Keychain...</span></div>
   <div class="warn">Nothing is broadcast until you press Publish and confirm the complete operation in Keychain. Serve this page over HTTP; Keychain usually does not inject into <code>file://</code> pages.</div>
   <section class="panel">
     <label>Posting account<input id="account" value="hdev" autocomplete="off"></label>
     <div class="grid">
-      <label>Title<input id="title" value="HivePulse SEO Contest: Week 8 Results + Week 9 Open (Up To 500 HIVE)"></label>
-      <label>Permlink<input id="permlink" value="hivepulse-seo-contest-week-8-results-week-9-open"></label>
+      <label>Title<input id="title" value="HivePulse SEO Contest: New Week 10 Round (500 HIVE)"></label>
+      <label>Permlink<input id="permlink" value="hivepulse-seo-contest-week-9-results-week-10-open"></label>
     </div>
     <label>Community<input id="community" value="hive-177727"></label>
     <label>Tags (space-separated)<input id="tags" value="hivepulse seo contest hive writing"></label>
-    <label>Preview description<input id="description" value="HivePulse SEO Contest week 8 results: nine qualified entries, 400 HIVE paid, and Week 9 is open through 29 September at 12:00 UTC."></label>
+    <label>Preview description<input id="description" value="HivePulse SEO Contest week 9: three tied on a perfect 200, and three entries lost the tag. 400 HIVE paid. Week 10 is open, up to 500 HIVE."></label>
   </section>
   <div class="grid">
-    <section><h2>Post body</h2><div class="panel"><textarea id="body" spellcheck="false">Loading the prepared Week 9 announcement...</textarea><div class="row" style="margin-top:12px"><button class="ghost" id="reload">Reload prepared draft</button><button class="ghost" id="copy">Copy body</button></div></div></section>
+    <section><h2>Post body</h2><div class="panel"><textarea id="body" spellcheck="false">Loading the prepared Week 10 announcement...</textarea><div class="row" style="margin-top:12px"><button class="ghost" id="reload">Reload prepared draft</button><button class="ghost" id="copy">Copy body</button></div></div></section>
     <section><h2>Preview</h2><div class="panel"><div id="preview"><div class="preview-title"></div><div class="preview-body"></div></div></div></section>
   </div>
   <section class="panel"><div class="row"><button class="primary" id="publish">Publish with Keychain</button><span id="status" class="pill">Not published</span></div><div id="log">Ready.</div></section>
 </main>
 <script>
 const $ = id => document.getElementById(id);
-const DRAFT_URL = '../enhancements/seo-contest-week9-announcement.md';
+// Resolved relative to this page, so the server must be rooted at the REPO ROOT
+// (python -m http.server 8899 from the repo root), not at tools/.
+const DRAFT_URL = '../enhancements/seo-contest-week10-announcement.md';
 const RPC = 'https://api.hive.blog';
 const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function log(message){ $('log').textContent += '\n' + new Date().toISOString().slice(11,19) + ' ' + message; }
@@ -50,7 +52,7 @@ async function loadDraft(){
     const response = await fetch(DRAFT_URL, {cache:'no-store'});
     if (!response.ok) throw new Error('HTTP '+response.status);
     let draft = await response.text();
-    const bodyStart = draft.indexOf('![HivePulse SEO Contest Week 9 cover:');
+    const bodyStart = draft.indexOf('![HivePulse SEO Contest Week 10 cover:');
     if (bodyStart >= 0) draft = draft.slice(bodyStart);
     draft = draft.trim();
     $('body').value = draft;

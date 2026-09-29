@@ -24,8 +24,8 @@
  */
 
 // ── Contest config ────────────────────────────────────────────────────────────
-// Week 7: 8 → 15 September 2026. Results for earlier rounds are archived in
-// contest-results-week{1,2,4,5,6}.csv.
+// Week 8: 15 → 22 September 2026. Results for earlier rounds are archived in
+// contest-results-week{1,2,4,5,6,7}.csv.
 //
 // The start date deliberately overlaps the day the week-3 announcement publishes. In week 2
 // @angeluxx published a properly tagged post ~3h AFTER the announcement went live but ~2.5h
@@ -33,8 +33,8 @@
 // with week 1, too early to count for week 2. Starting the window on announcement day closes
 // that gap: anyone who reads the post and publishes the same day is in. Cross-check against the
 // previous round's archived CSV so a post can't be awarded twice.
-const WINDOW_START = Date.parse('2026-09-08T00:00:00Z');
-const WINDOW_END   = Date.parse('2026-09-15T12:00:00Z');   // week 7 closes 12:00 UTC, not 23:59
+const WINDOW_START = Date.parse('2026-09-29T00:00:00Z');
+const WINDOW_END   = Date.parse('2026-10-06T12:00:00Z');   // week 10 closes 12:00 UTC, not 23:59
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 
 // Scoring engine lives in ./lib/seo-score.mjs — shared with scripts/score-post.mjs so the
@@ -132,7 +132,9 @@ const main = async () => {
     });
   }
 
-  rows.sort((x, y) => (y.qualifies - x.qualifies) || (y.combined - x.combined) || (y.seoPct - x.seoPct));
+  rows.sort((x, y) => (y.qualifies - x.qualifies) || (y.combined - x.combined) ||
+    (y.geoScore - x.geoScore) || (y.wordCount - x.wordCount) || (x.created - y.created) ||
+    x.author.localeCompare(y.author) || x.permlink.localeCompare(y.permlink));
 
   const pad = (s, n) => String(s).padEnd(n);
   const padL = (s, n) => String(s).padStart(n);

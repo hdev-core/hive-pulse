@@ -1,0 +1,16 @@
+# HivePulse SEO Contest — week 9 entries (22 → 29 Sep 2026, 12:00 UTC)
+# From comments on @hdev/hivepulse-seo-contest-week-8-results-week-9-open
+#
+# All 8 are scored so the published table is complete. Three are DISQUALIFIED on the
+# tag rule and must not be ranked — verified by hand against json_metadata AND body:
+#   @nursejoe  tagged "hive pulse" (with a space) — not #hivepulse
+#   @les90     no hivepulse tag at all
+#   @mayt      no hivepulse tag at all
+https://ecency.com/@ekads/why-hive-grove-keeps-me
+https://ecency.com/@intishar/it-s-ridiculous-to-leave
+https://ecency.com/@nabbas0786/how-to-beat-extreme-sleep-debt-7-days-to-reset-clock
+https://peakd.com/hive-155014/@wardah/1500-pieces-puzzel-best-activity-for-mind-and-for-memories
+https://ecency.com/@ahmedabbaci/hivepulse-extension-guide-download-feed-and-features-2026
+https://ecency.com/@nursejoe/personal-growth-3-best-things
+https://ecency.com/@les90/remote-work-in-2026-best-way-to-work-but-not-for-all-jobs
+https://peakd.com/hive-140635/@mayt/harvest-day-3-best-garden-harvests-mother-in-laws-plot

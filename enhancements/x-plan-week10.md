@@ -1,8 +1,9 @@
 # HivePulse SEO Contest - Week 9 Results + Week 10 X Thread
 
-Post this thread before the Hive announcement. After publishing the Hive post, replace
-`⟦HIVE_POST_URL⟧` in tweet 5 with its URL, and paste tweet 1's URL into the
-`⟦WEEK10_TWEET_URL⟧` slot in `enhancements/seo-contest-week10-announcement.md`.
+Published thread: https://x.com/HdevCore/status/2104959729894318538
+Published Hive post: https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-9-results-week-10-open
+
+Both URLs are filled in below and in the announcement pack. Nothing left to substitute.
 
 Check lengths with:
 
@@ -76,7 +77,7 @@ Write a post with HivePulse open, tag it #hivepulse, comment with the link + you
 Min score 70. Any language.
 
 Closes 6 Oct, 12:00 UTC 👇
-⟦HIVE_POST_URL⟧
+https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-9-results-week-10-open
 ```
 
 ## 6/
@@ -113,5 +114,5 @@ All three podium posts tied on a perfect 200/200. The published tiebreak settled
 **Week 10 is live and runs to 6 October, 12:00 UTC.**
 300 HIVE · 400 at 10 entrants · 500 at 20 · 25 HIVE each for a referral · 50 HIVE for the most-engaged quote-RT
 
-Full post: ⟦HIVE_POST_URL⟧
+Full post: https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-9-results-week-10-open
 ```

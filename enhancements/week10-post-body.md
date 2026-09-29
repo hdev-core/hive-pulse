@@ -17,15 +17,15 @@
 
      ONE IMAGE — drag the file into the editor, never paste (pasting serialises a
      bitmap and inflates it 5-8x):
-       enhancements/images/contest-week10-cover.jpg -> replaces PASTE_UPLOADED_COVER_URL_HERE
+       enhancements/images/contest-week10-cover.jpg -> replaces https://usermedia.actifit.io/MUMUDX2V9DWE9SB4PN5ESJZR881NWU
 
-     STILL TO FILL: ⟦WEEK10_TWEET_URL⟧ — post the X thread first, then paste
+     STILL TO FILL: https://x.com/HdevCore/status/2104959729894318538 — post the X thread first, then paste
      tweet 1's URL here.
 
      Scored with scripts/score-post.mjs: SEO 99 / GEO 100 / combined 100.
      ───────────────────────────────────────────────────────────────────────── -->
 
-![HivePulse SEO Contest Week 10 cover: 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 entrants, 500 HIVE at 20 or more, plus a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](PASTE_UPLOADED_COVER_URL_HERE)
+![HivePulse SEO Contest Week 10 cover: 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 entrants, 500 HIVE at 20 or more, plus a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](https://usermedia.actifit.io/MUMUDX2V9DWE9SB4PN5ESJZR881NWU)
 
 **Summary:** Week 9 of the HivePulse SEO Contest is settled. Eight entries were submitted, five counted, and three podium posts tied on a perfect score. Three entries that scored high enough to win took nothing home, because each was missing a single tag. 400 HIVE is going out and Week 10 is open.
 
@@ -103,7 +103,7 @@ The minimum qualifying score is **SEO 70**. Any language is welcome. Every entry
 
 Quote-retweet the Week 10 announcement tweet with your own words about your HivePulse experience. The quote-retweet with the most likes, reposts, and replies combined at the close wins 50 HIVE. It must quote the announcement itself, not a reply or your own post. No engagement farming.
 
-👉 **This is the tweet to quote:** ⟦WEEK10_TWEET_URL⟧
+👉 **This is the tweet to quote:** https://x.com/HdevCore/status/2104959729894318538
 
 Good angles include your score and screenshot, the thing that surprised you, one sentence before and after using the analyzer, or what you would tell a Hive writer who has never tried it.
 

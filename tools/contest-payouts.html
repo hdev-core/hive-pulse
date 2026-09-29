@@ -126,6 +126,9 @@ const ROUND = {
   // 8 entries submitted, 3 disqualified on the tag rule -> 5 valid -> under-10 tier ->
   // 300 pool, + 50 for one valid referral pair, + 50 X prize.
   expectedTotal: 400,          // cross-checked against the transfers below
+  // Every memo below starts with this, so the already-paid check can tell THIS round's
+  // transfers from any other payment to the same person. Keep it in step with the memos.
+  memoTag: 'HivePulse SEO Contest week 9',
 };
 
 const CURATION = [
@@ -274,20 +277,35 @@ async function checkState(){
   // transfers already sent? scan recent outgoing history
   try {
     const hist = await rpc('condenser_api.get_account_history', [me, -1, 1000]);
-    const sent = new Map();
+
+    // Matched on the MEMO, not on recipient + amount. Keying on recipient + amount marked
+    // @ahmedabbaci "SENT" for week 9 because of a 150 HIVE *Vylor Launch Contest* prize a
+    // fortnight earlier — a different contest entirely. The podium amounts repeat every
+    // round, so that key false-positives on every returning winner, and a false "already
+    // paid" is the one error here that makes someone skip a real payment.
+    const sent = new Map();                     // recipient -> { amount, when }
     for (const [,entry] of hist){
       const [type, d] = entry.op;
       if (type !== 'transfer' || d.from !== me) continue;
-      const key = d.to + '|' + d.amount;
-      sent.set(key, entry.timestamp);
+      if (!String(d.memo || '').startsWith(ROUND.memoTag)) continue;
+      sent.set(d.to, { amount: d.amount, when: entry.timestamp });
     }
     PAYMENTS.forEach((p,i) => {
-      const key = p.to + '|' + fmt(p.amount) + ' HIVE';
-      const when = sent.get(key);
+      const hit = sent.get(p.to);
       const e = $('pay'+i);
-      e.className = 'pill ' + (when ? 'no' : 'idle');
-      e.textContent = when ? 'SENT ' + when.slice(0,10) : 'not sent';
-      if (when) log(`WARNING: @${p.to} already received ${fmt(p.amount)} HIVE on ${when.slice(0,10)}.`, 'warn');
+      if (!hit){ e.className = 'pill idle'; e.textContent = 'not sent'; return; }
+      const expected = fmt(p.amount) + ' HIVE';
+      const day = hit.when.slice(0,10);
+      if (hit.amount === expected){
+        e.className = 'pill no'; e.textContent = 'SENT ' + day;
+        log(`WARNING: @${p.to} already received ${expected} for ${ROUND.label} on ${day}.`, 'warn');
+      } else {
+        // Same round, different amount: a partial or corrected payment. Never silently
+        // treat that as done.
+        e.className = 'pill no'; e.textContent = 'AMOUNT DIFFERS';
+        log(`WARNING: @${p.to} received ${hit.amount} for ${ROUND.label} on ${day}, but this `
+            + `sheet says ${expected}. Reconcile before sending.`, 'err');
+      }
     });
   } catch(e){ log('History check failed: ' + e.message, 'warn'); }
 }

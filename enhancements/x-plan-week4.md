@@ -126,7 +126,7 @@ Publish today and you're in. Closes 25 Aug.
 > That is essentially the whole AI-quotability score. No tool required.
 
 ### Mon 24 Aug, 14:00 — the one hard CTA
-*Image: `enhancements/images/contest-week4-cover.jpg` — exists.*
+*Image: `enhancements/images/contest-week4-cover-1600.jpg` — exists.*
 
 > 24 hours left. 300 HIVE.
 >
@@ -152,7 +152,7 @@ Files live in `enhancements/images/social/` (day-topic naming, as in week 3).
 
 | File | Status | Carries |
 |---|---|---|
-| `contest-week4-cover.jpg` | **exists** (in `enhancements/images/`) | Contest CTA card for Mon 24. |
+| `contest-week4-cover-1600.jpg` | **exists** (in `enhancements/images/`) | Contest CTA card for Mon 24. |
 | `social/thu-correlation.jpg` | **must be created** | The dataset: 25 posts, SEO vs GEO, sorted by gap, with the 0.58 correlation legible at a glance. |
 | `social/fri-gap.jpg` | **must be created** | The 33-point gap — one post's two scores side by side, with the three failing habits named. Author not identified. |
 

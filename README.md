@@ -81,6 +81,25 @@ The Post Analyzer's SEO and GEO scores are **entirely custom** — built from sc
 
 **The honest caveat:** this is a transparent, explainable rules engine — every number is visible (which is why each row has an ⓘ explainer) — but it is **heuristic, not machine-learned or benchmarked** against real SERP or AI-citation outcomes. It reliably catches the obvious wins (missing meta, short title, no keyword in headings, thin content) and is genuinely useful for that, but it won't perfectly predict ranking, and the GEO checks especially are English-only and pattern-based. Realistic future upgrades would be swapping the syllable heuristic for a small syllable dictionary and calibrating the weights/thresholds against actual Hive post performance.
 
+### Weekly Contest Judging
+
+Use the repository judge to recalculate entries from their published Hive content:
+
+```bash
+node scripts/judge-contest.mjs entries-weekN.txt
+```
+
+The entries file contains one Hive URL or `@author/permlink` per line. The judge fetches each
+post on-chain, scores it with the shared `scripts/lib/seo-score.mjs` engine, and writes
+`contest-results.csv`. Set `WINDOW_START` and `WINDOW_END` in `scripts/judge-contest.mjs` to the
+published UTC window before each round, then archive the output as `contest-results-weekN.csv`.
+
+The contest score is the average of SEO percentage and GEO score; qualification requires SEO
+of at least 70. The judge's result is authoritative for the published on-chain post. Screenshots
+can confirm that an entrant used the analyzer but are not used as the final score. Verify the
+required contest tag, referrals, and social-media prizes separately, and do not reuse the active
+window when recalculating an archived round.
+
 ## Installation (Development)
 
 1.  **Initialize:**

@@ -5,7 +5,9 @@ import { FrontendIcon } from './FrontendIcon';
 interface FrontendCardProps {
   config: FrontendConfig;
   isActive: boolean;
-  onSwitch: (id: FrontendId) => void;
+  // Custom frontends carry a generated string id, not a FrontendId — matching
+  // FrontendConfig.id and every handler this is wired to.
+  onSwitch: (id: FrontendId | string) => void;
 }
 
 export const FrontendCard: React.FC<FrontendCardProps> = ({ config, isActive, onSwitch }) => {

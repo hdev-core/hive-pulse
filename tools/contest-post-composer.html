@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HivePulse Contest Post Composer</title>
+<style>
+  :root{--bg:#10151d;--panel:#18212d;--line:#304052;--ink:#edf3f7;--muted:#9cafbf;--gold:#f6bd4f;--red:#f47c7c;--green:#4ed39b}
+  *{box-sizing:border-box} body{margin:0;background:linear-gradient(135deg,#10151d,#1d2730);color:var(--ink);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+  .wrap{max-width:1280px;margin:auto;padding:28px 22px 70px} h1{margin:0 0 5px;font-size:27px} h2{font-size:17px;color:var(--gold);border-bottom:1px solid var(--line);padding-bottom:8px;margin:25px 0 12px}
+  .sub{color:var(--muted);margin:0 0 20px}.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}.panel{background:rgba(24,33,45,.94);border:1px solid var(--line);border-radius:10px;padding:16px}
+  label{display:block;color:var(--muted);font-size:13px;margin:0 0 12px} input,textarea{display:block;width:100%;margin-top:5px;background:#0e141c;border:1px solid var(--line);border-radius:7px;color:var(--ink);font:inherit;padding:10px} input:focus,textarea:focus{outline:2px solid rgba(246,189,79,.35);border-color:var(--gold)} textarea{min-height:560px;resize:vertical;line-height:1.5}
+  #preview{background:#f7f4ed;color:#25211b;border-radius:7px;padding:22px;min-height:560px;overflow:auto;white-space:pre-wrap;word-break:break-word}.preview-title{font:700 24px Georgia,serif;margin:0 0 15px}.preview-body{font-family:Georgia,serif}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.top{justify-content:space-between}.pill{display:inline-block;border-radius:99px;padding:3px 10px;background:#263342;color:var(--muted);font-size:12px}.ok{color:var(--green)}.bad{color:var(--red)}
+  button{border:0;border-radius:7px;padding:11px 17px;font:700 14px inherit;cursor:pointer}.primary{background:var(--gold);color:#241a09}.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}button:disabled{opacity:.45;cursor:not-allowed}
+  #log{margin-top:14px;background:#0b1017;border:1px solid var(--line);border-radius:7px;padding:11px;font:12px/1.5 Consolas,monospace;white-space:pre-wrap;color:var(--muted)}.warn{color:#f7d68b;background:rgba(246,189,79,.09);border:1px solid rgba(246,189,79,.35);padding:10px;border-radius:7px;margin-bottom:14px}
+  @media(max-width:850px){.grid{grid-template-columns:1fr}.wrap{padding:20px 14px}textarea,#preview{min-height:420px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="row top"><div><h1>HivePulse Contest Post Composer</h1><p class="sub">Prepare and publish the Week 10 announcement with Hive Keychain.</p></div><span id="kc" class="pill">Checking Keychain...</span></div>
+  <div class="warn">Nothing is broadcast until you press Publish and confirm the complete operation in Keychain. Serve this page over HTTP; Keychain usually does not inject into <code>file://</code> pages.</div>
+  <section class="panel">
+    <label>Posting account<input id="account" value="hdev" autocomplete="off"></label>
+    <div class="grid">
+      <label>Title<input id="title" value="HivePulse SEO Contest: New Week 10 Round (500 HIVE)"></label>
+      <label>Permlink<input id="permlink" value="hivepulse-seo-contest-week-9-results-week-10-open"></label>
+    </div>
+    <label>Community<input id="community" value="hive-177727"></label>
+    <label>Tags (space-separated)<input id="tags" value="hivepulse seo contest hive writing"></label>
+    <label>Preview description<input id="description" value="HivePulse SEO Contest week 9: three tied on a perfect 200, and three entries lost the tag. 400 HIVE paid. Week 10 is open, up to 500 HIVE."></label>
+  </section>
+  <div class="grid">
+    <section><h2>Post body</h2><div class="panel"><textarea id="body" spellcheck="false">Loading the prepared Week 10 announcement...</textarea><div class="row" style="margin-top:12px"><button class="ghost" id="reload">Reload prepared draft</button><button class="ghost" id="copy">Copy body</button></div></div></section>
+    <section><h2>Preview</h2><div class="panel"><div id="preview"><div class="preview-title"></div><div class="preview-body"></div></div></div></section>
+  </div>
+  <section class="panel"><div class="row"><button class="primary" id="publish">Publish with Keychain</button><span id="status" class="pill">Not published</span></div><div id="log">Ready.</div></section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+// Resolved relative to this page, so the server must be rooted at the REPO ROOT
+// (python -m http.server 8899 from the repo root), not at tools/.
+const DRAFT_URL = '../enhancements/seo-contest-week10-announcement.md';
+const RPC = 'https://api.hive.blog';
+const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function log(message){ $('log').textContent += '\n' + new Date().toISOString().slice(11,19) + ' ' + message; }
+function updatePreview(){ $('preview').querySelector('.preview-title').textContent = $('title').value; $('preview').querySelector('.preview-body').textContent = $('body').value; }
+function setStatus(text, cls){ $('status').textContent=text; $('status').className='pill '+(cls||''); }
+async function loadDraft(){
+  try {
+    const response = await fetch(DRAFT_URL, {cache:'no-store'});
+    if (!response.ok) throw new Error('HTTP '+response.status);
+    let draft = await response.text();
+    const bodyStart = draft.indexOf('![HivePulse SEO Contest Week 10 cover:');
+    if (bodyStart >= 0) draft = draft.slice(bodyStart);
+    draft = draft.trim();
+    $('body').value = draft;
+    log('Loaded '+DRAFT_URL);
+  } catch (error) { log('Draft load failed: '+error.message+'. Paste or edit the body manually.'); }
+  updatePreview();
+}
+function broadcast(account, operation){
+  return new Promise(resolve => {
+    if (!window.hive_keychain) return resolve({success:false,message:'Hive Keychain was not detected.'});
+    window.hive_keychain.requestBroadcast(account, [operation], 'Posting', resolve);
+  });
+}
+$('body').addEventListener('input', updatePreview); $('title').addEventListener('input', updatePreview);
+$('reload').onclick = loadDraft;
+$('copy').onclick = async () => { await navigator.clipboard.writeText($('body').value); log('Body copied to clipboard.'); };
+$('publish').onclick = async () => {
+  const account=$('account').value.trim().toLowerCase(), title=$('title').value.trim(), permlink=$('permlink').value.trim().toLowerCase(), community=$('community').value.trim().toLowerCase(), body=$('body').value.trim();
+  const tags=$('tags').value.trim().split(/\s+/).filter(Boolean);
+  if (!account||!title||!permlink||!community||!body||!tags.length) return alert('Account, title, permlink, community, tags, and body are required.');
+  if (!/^[a-z0-9][a-z0-9-]{2,254}$/.test(permlink)) return alert('Permlink must use lowercase letters, numbers, and hyphens.');
+  const metadata={app:'hivepulse/1.14.0',format:'markdown',description:$('description').value.trim(),tags};
+  const operation=['comment',{parent_author:'',parent_permlink:community,author:account,permlink,title,body,json_metadata:JSON.stringify(metadata)}];
+  if (!confirm('Publish this post as @'+account+'?\n\nTitle: '+title+'\nPermlink: '+permlink+'\nCommunity: '+community+'\nTags: '+tags.join(', ')+'\n\nKeychain will request your posting-key signature.')) return;
+  $('publish').disabled=true; setStatus('Waiting for Keychain...');
+  const result=await broadcast(account,operation);
+  $('publish').disabled=false;
+  if (result&&result.success){ setStatus('Published','ok'); log('Published successfully. Transaction: '+(result.result&&result.result.id||'confirmed')); }
+  else { setStatus('Not published','bad'); log('Publish failed: '+((result&&result.message)||'Keychain rejected the request.')); }
+};
+if (window.hive_keychain) {$('kc').textContent='Keychain ready';$('kc').className='pill ok';} else {$('kc').textContent='Keychain not found';$('kc').className='pill bad';}
+loadDraft(); updatePreview();
+</script>
+</body>
+</html>

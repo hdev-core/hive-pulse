@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ecencyRefreshToken: '',
   overrideBadgeWithUnreadMessages: true,
   usernameHoverCards: true,
+  postAnalyzerEnabled: true,
   hiveNotificationBadgeEnabled: true,
   hiveNotificationFilterTypes: [
     HiveNotificationType.REPLY,
@@ -28,7 +29,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
     HiveNotificationType.DELEGATIONS,
     HiveNotificationType.REBLOG,
   ],
-  activeFrontendIds: FRONTENDS.map(f => f.id),
+  // Only frontends marked active. Mapping every entry meant an entry added as active:false
+  // (a source-detection-only frontend) still showed up as a switch target on fresh installs.
+  activeFrontendIds: FRONTENDS.filter(f => f.active).map(f => f.id),
   customFrontends: [],
   hiveRpcNode: HIVE_RPC_NODES[0],
   heRpcNode: HIVE_ENGINE_RPC_NODES[0],

@@ -69,6 +69,24 @@ roughly 800 against those numbers.
 
 ---
 
+## E and F — links and subheadings (added in 1.14.2)
+
+`e-markdown-links-headings.md` and `f-html-links-headings.md` are again **the same post, word
+for word**. E writes its links as `[text](url)` and its headings as `## `; F writes them as
+`<a href="...">` and `<h2>`, which is what PeakD's toolbar produces.
+
+Set the title to `HivePulse Post Analyzer: Link and Heading Syntax Test [2026]`, keyword
+`post analyzer`, and the same tags as above. Both must score identically:
+
+| | SEO | Links | Structure |
+|---|---:|---:|---:|
+| **E** — markdown | 73 | 7/7 | 11/11 |
+| **F** — HTML | 73 | 7/7 | 11/11 |
+
+In 1.14.1, F scored **60** — `links 0/7` and `structure 5/11`. Thirteen points on these two
+fixtures, and **18** on a post that also uses HTML for every heading, lost for nothing but the
+editor it was written in.
+
 ## If you edit the prose
 
 The fixtures are fixed text, and A, B and C must stay word-for-word identical apart from their

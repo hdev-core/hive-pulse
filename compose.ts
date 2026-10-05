@@ -436,11 +436,22 @@ const missingAltImages = (content: string): string[] => {
 // Links classified as internal (Hive) vs external — both matter, differently.
 // Internal links keep readers on-chain and build topical authority; external
 // links are a citation/trust signal.
+// Links and headings, in BOTH syntaxes. Hive bodies are markdown, but PeakD's editor emits
+// raw HTML for anything inserted through its toolbar, so the same post written on two
+// frontends is the same post. Scanning only `[text](url)` and `# ` meant a PeakD author lost
+// all 7 link points and every subheading, for writing the identical article. Reported by
+// @ahmedabbaci, 2026-10-05 — the third report of this shape, after HTML images in 1.14.1.
+const MD_LINK   = /(?<!!)\[[^\]]+\]\(([^)\s]+)[^)]*\)/g;
+const HTML_LINK = /<a\b[^>]*?\shref\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi;
+
 const classifyLinks = (content: string): { internal: number; external: number } => {
-  const links = [...content.matchAll(/(?<!!)\[[^\]]+\]\(([^)\s]+)[^)]*\)/g)].map(m => m[1]);
+  const urls = [
+    ...[...content.matchAll(MD_LINK)].map(m => m[1]),
+    ...[...content.matchAll(HTML_LINK)].map(m => m[2] ?? m[3] ?? m[4] ?? ''),
+  ].filter(Boolean);
   const hiveHosts = /(peakd\.com|ecency\.com|hive\.blog|inleo\.io|leofinance\.io|3speak\.tv|actifit\.io|hive-engine)/i;
   let internal = 0, external = 0;
-  for (const url of links) {
+  for (const url of urls) {
     if (/^\/?@/.test(url) || /\/@[a-z0-9.\-]+/.test(url) || hiveHosts.test(url)) internal++;
     else if (/^https?:\/\//.test(url)) external++;
     else if (/^\//.test(url)) internal++;
@@ -448,10 +459,17 @@ const classifyLinks = (content: string): { internal: number; external: number } 
   return { internal, external };
 };
 
-// Heading hierarchy: the title is the page H1, so a `# ` in the body creates a
-// duplicate H1 (bad). Skipping levels (## → ####) also weakens structure.
+// Heading hierarchy: the title is the page H1, so a `# ` or an `<h1>` in the body creates a
+// duplicate H1 (bad). Skipping levels (## → ####) also weakens structure. The alternation
+// below matches in document order, so interleaved markdown and HTML headings still produce a
+// correct skip check.
+const ANY_HEADING = /^(#{1,6})\s+\S|<h([1-6])\b[^>]*>/gim;
+
+const headingLevels = (content: string): number[] =>
+  [...content.matchAll(ANY_HEADING)].map(m => (m[1] ? m[1].length : Number(m[2])));
+
 const headingHierarchy = (content: string): { hasH1: boolean; skips: boolean; count: number } => {
-  const levels = [...content.matchAll(/^(#{1,6})\s+\S/gm)].map(m => m[1].length);
+  const levels = headingLevels(content);
   let skips = false, prev = 1; // title counts as H1
   for (const lvl of levels) { if (lvl > prev + 1) skips = true; prev = lvl; }
   return { hasH1: levels.includes(1), skips, count: levels.filter(l => l >= 2).length };
@@ -676,9 +694,12 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
   const imageCount = getImageCount(content);
   const titleChars = title.length;
   const permlink = toPermlink(title);
-  const subheadings = (content.match(/^#{2,4}\s+.+/mg) || []).length +
-                      document.querySelectorAll('[contenteditable="true"] h2, [contenteditable="true"] h3').length;
   const hierarchy = headingHierarchy(content);
+  // Counted from the same both-syntax scan as the hierarchy check, so a `<h2>` written by
+  // PeakD's toolbar counts exactly as a `## ` does. The DOM query adds headings that exist
+  // only in a WYSIWYG surface and never reach the markdown source.
+  const subheadings = headingLevels(content).filter(l => l >= 2 && l <= 4).length +
+                      document.querySelectorAll('[contenteditable="true"] h2, [contenteditable="true"] h3').length;
   const { grade, ease } = wordCount > 20 ? readability(content) : { grade: 0, ease: 0 };
   const kw = analyzeKeyword(keyword, content, title, metaDesc);
   const links = classifyLinks(content);

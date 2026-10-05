@@ -102,11 +102,20 @@ const missingAltImages = (content) => {
   return out;
 };
 
+// Links and headings in BOTH syntaxes — PeakD's editor emits raw HTML for anything inserted
+// through its toolbar, so scanning only markdown cost a PeakD author all 7 link points and
+// every subheading for the identical article. See the long note in compose.ts.
+const MD_LINK   = /(?<!!)\[[^\]]+\]\(([^)\s]+)[^)]*\)/g;
+const HTML_LINK = /<a\b[^>]*?\shref\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi;
+
 const classifyLinks = (content) => {
-  const links = [...content.matchAll(/(?<!!)\[[^\]]+\]\(([^)\s]+)[^)]*\)/g)].map(m => m[1]);
+  const urls = [
+    ...[...content.matchAll(MD_LINK)].map(m => m[1]),
+    ...[...content.matchAll(HTML_LINK)].map(m => m[2] ?? m[3] ?? m[4] ?? ''),
+  ].filter(Boolean);
   const hiveHosts = /(peakd\.com|ecency\.com|hive\.blog|inleo\.io|leofinance\.io|3speak\.tv|actifit\.io|hive-engine)/i;
   let internal = 0, external = 0;
-  for (const url of links) {
+  for (const url of urls) {
     if (/^\/?@/.test(url) || /\/@[a-z0-9.\-]+/.test(url) || hiveHosts.test(url)) internal++;
     else if (/^https?:\/\//.test(url)) external++;
     else if (/^\//.test(url)) internal++;
@@ -114,8 +123,14 @@ const classifyLinks = (content) => {
   return { internal, external };
 };
 
+// Matches in document order, so interleaved markdown and HTML headings still skip-check right.
+const ANY_HEADING = /^(#{1,6})\s+\S|<h([1-6])\b[^>]*>/gim;
+
+const headingLevels = (content) =>
+  [...content.matchAll(ANY_HEADING)].map(m => (m[1] ? m[1].length : Number(m[2])));
+
 const headingHierarchy = (content) => {
-  const levels = [...content.matchAll(/^(#{1,6})\s+\S/gm)].map(m => m[1].length);
+  const levels = headingLevels(content);
   let skips = false, prev = 1;
   for (const lvl of levels) { if (lvl > prev + 1) skips = true; prev = lvl; }
   return { hasH1: levels.includes(1), skips, count: levels.filter(l => l >= 2).length };
@@ -243,7 +258,7 @@ const analyze = (rawContent, title, tags, metaDesc, keyword) => {
   const wordCount = plain.split(/\s+/).filter(w => w.length > 0).length;
   const imageCount = getImageCount(content);
   const titleChars = title.length;
-  const subheadings = (content.match(/^#{2,4}\s+.+/mg) || []).length;
+  const subheadings = headingLevels(content).filter(l => l >= 2 && l <= 4).length;
   const hierarchy = headingHierarchy(content);
   const { ease } = wordCount > 20 ? readability(content) : { ease: 0 };
   const kw = analyzeKeyword(keyword, content, title, metaDesc);
@@ -312,5 +327,5 @@ const analyze = (rawContent, title, tags, metaDesc, keyword) => {
 export {
   stripMd, reSafe, toPermlink, autoDetectKeyword, getImageCount, missingAltImages,
   classifyLinks, headingHierarchy, titleCtr, detectIntent, readability, transitionRatio,
-  analyzeKeyword, analyzeGeo, analyze, normalizeEol,
+  analyzeKeyword, analyzeGeo, analyze, normalizeEol, headingLevels,
 };

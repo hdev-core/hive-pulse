@@ -1,7 +1,9 @@
 # HivePulse SEO Contest - Week 10 Results + Week 11 X Thread
 
-Post this thread before the Hive announcement, then paste the tweet 1 URL into
-`PASTE_TWEET_URL_HERE` in the announcement pack and in tweet 5 below.
+Anchor tweet (tweet 1), already posted: https://x.com/HdevCore/status/2107524321367425064
+
+That URL is filled into tweet 5 below and into the announcement pack. Post tweets 2-6
+as replies to it, then publish the Hive post and fill the Discord link.
 
 Check lengths with:
 
@@ -67,7 +69,7 @@ Why this ends it: padding cannot move a ratio.
 Copy your post seven times — reading ease does not change at all. The only way up is to actually rewrite. Shorter sentences, plainer words.
 
 Week 11 is open now 👇
-PASTE_TWEET_URL_HERE
+https://x.com/HdevCore/status/2107524321367425064
 ```
 
 ## 6/

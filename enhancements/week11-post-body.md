@@ -93,7 +93,7 @@ Quote-retweet the Week 11 announcement tweet with your own words about your Hive
 
 **Paste the link to your quote-retweet in your entry comment.** Two people entered this prize in week 10 and we only found one of them by chance. If we cannot see it, we cannot count it.
 
-👉 **This is the tweet to quote:** PASTE_TWEET_URL_HERE
+👉 **This is the tweet to quote:** https://x.com/HdevCore/status/2107524321367425064
 
 Subscribe to [Hdev Contests](https://peakd.com/c/hive-177727/created) for each round. Questions and discussion are welcome in [Discord](https://discord.gg/wnpR8Rafcf), and HivePulse is also on [X](https://x.com/HdevCore).
 

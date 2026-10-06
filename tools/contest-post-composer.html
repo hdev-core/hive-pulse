@@ -55,14 +55,34 @@ const $ = id => document.getElementById(id);
    The form is now filled from this block, and publishing is refused outright if the
    permlink already exists on chain.
    ══════════════════════════════════════════════════════════════════════════════ */
-const ROUND = {
-  title:       'HivePulse SEO Contest: New Week 11 Round (500 HIVE)',
-  permlink:    'hivepulse-seo-contest-week-10-results-week-11-open',
-  community:   'hive-177727',
-  tags:        'hivepulse seo contest hive writing',
-  description: 'HivePulse SEO Contest week 10: five entries tied on a perfect 200. 350 HIVE paid. Week 11 changes how the podium is decided - word count is out.',
-  draft:       '../enhancements/week11-post-body.md',
+const PRESETS = {
+  // Publishing week 11. The normal case.
+  week11: {
+    title:       'HivePulse SEO Contest: New Week 11 Round (500 HIVE)',
+    permlink:    'hivepulse-seo-contest-week-10-results-week-11-open',
+    community:   'hive-177727',
+    tags:        'hivepulse seo contest hive writing',
+    description: 'HivePulse SEO Contest week 10: five entries tied on a perfect 200. 350 HIVE paid. Week 11 changes how the podium is decided - word count is out.',
+    draft:       '../enhancements/week11-post-body.md',
+  },
+  // One-off: put the week 10 announcement back the way it was. The body is the original,
+  // recovered from the creation op in @hdev's account history, and the title, tags and
+  // description below are byte-for-byte what that post already carries — so the edit
+  // changes the body back and touches nothing else. Requires the "Edit an existing post"
+  // checkbox, because the guard will otherwise refuse.
+  restoreWeek10: {
+    title:       'HivePulse SEO Contest: New Week 10 Round (500 HIVE)',
+    permlink:    'hivepulse-seo-contest-week-9-results-week-10-open',
+    community:   'hive-177727',
+    tags:        'hivepulse seo contest hive writing',
+    description: 'HivePulse SEO Contest week 9: three tied on a perfect 200, and three entries lost the tag. 400 HIVE paid. Week 10 is open, up to 500 HIVE.',
+    draft:       '../enhancements/week10-post-body-ONCHAIN-RESTORE.md',
+  },
 };
+
+// ⬇ THE ONLY LINE TO CHANGE between the two jobs.
+const ROUND = PRESETS.restoreWeek10;
+
 const DRAFT_URL = ROUND.draft;
 const RPC = 'https://api.hive.blog';
 const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

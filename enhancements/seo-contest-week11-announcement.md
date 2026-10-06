@@ -11,7 +11,7 @@ Publish date: **6 October 2026**, after the Week 10 close at 12:00 UTC. Posting 
 >
 > **Cover:** `enhancements/images/contest-week11-cover.jpg` - drag it into the editor, never paste, then replace the placeholder URL below.
 
-![HivePulse SEO Contest Week 11 cover: 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 entrants, 500 HIVE at 20 or more, a banner announcing that word count is retired and ties are now broken by the post closest to Reading Ease 60, plus a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](PASTE_COVER_URL_HERE)
+![HivePulse SEO Contest Week 11 cover: 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 entrants, 500 HIVE at 20 or more, a banner announcing that word count is retired and ties are now broken by the post closest to Reading Ease 60, plus a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](https://usermedia.actifit.io/MUWY64S3JGF29Q3EPE0HNW7VHU5LZ)
 
 **Summary:** Week 10 of the HivePulse SEO Contest is settled. Eight posts were submitted by seven writers, seven qualified, and five of them tied on a perfect score. 350 HIVE is going out. Week 11 is open, and it changes how a tie is broken - because word count has stopped measuring anything useful.
 

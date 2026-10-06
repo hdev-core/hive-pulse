@@ -8,12 +8,12 @@ Seven writers entered. **Seven qualified - every single entry cleared the bar, a
 
 | Place | Author | Post | SEO | GEO | Words | Prize |
 |---|---|---|---:|---:|---:|---:|
-| 1 | @nabbas0786 | [How 1 Decision Changed My Life: DAE to DHMS?](https://ecency.com/@nabbas0786/how-1-decision-changed-my-life-dae-to-dhms-engurdu) | 100 | 100 | 7,569 | 150 HIVE |
+| 1 | @nabbas0786 | [How 1 Decision Changed My Life: DAE to DHMS?](https://ecency.com/@nabbas0786/how-1-decision-changed-my-life-dae-to-dhms-engurdu) | 100 | 100 | 7,569 | 150 + 50 HIVE |
 | 2 | @wardah | [Crochet: The Best Activity Physio Can Do 2 Multiple Tasks](https://peakd.com/@wardah/crochet-the-best-activity-physio-can-do-2multiple-tasks) | 100 | 100 | 5,238 | 100 HIVE |
 | 3 | @ahmedabbaci | [7 Funniest Things I Believed as a Kid [Quick Long Stories]](https://peakd.com/@ahmedabbaci/7-funniest-things-i-believed-as-a-kid-quick-long-stories-1791141667200) | 100 | 100 | 3,308 | 50 HIVE |
 | 4 | @mayt | [5 Best Things I Discovered in a Garden [Surprise Lovebird]](https://peakd.com/@mayt/5-best-things-i-discovered-in-a-garden-surprise-lovebird) | 100 | 100 | 1,662 | - |
 | 5 | @nursejoe | [Daily Habits: 10 Simple Ways to Improve Your Life [Guide]](https://ecency.com/@nursejoe/daily-habits-10-simple-ways-to-improve-your-life-guide) | 100 | 100 | 1,107 | - |
-| 6 | @soyunasantacruz | [The Orphanage 2007: Neglect, Cruelty & the Best Lessons](https://ecency.com/@soyunasantacruz/the-orphanage-2007-neglect-cruelty-best-lesson-s-muodxqkl) | 96 | 100 | 1,394 | 50 HIVE (X) |
+| 6 | @soyunasantacruz | [The Orphanage 2007: Neglect, Cruelty & the Best Lessons](https://ecency.com/@soyunasantacruz/the-orphanage-2007-neglect-cruelty-best-lesson-s-muodxqkl) | 96 | 100 | 1,394 | - |
 | 7 | @josueelinfame | [Reporte de Crecimiento Semanal](https://ecency.com/@josueelinfame/reporte-de-crecimiento-semanal-weekly) | 82 | 100 | 470 | - |
 
 The scores are re-derived from each post's on-chain content with the same HivePulse scoring engine the extension uses. The screenshot is evidence of entry, not the score we award.
@@ -32,7 +32,11 @@ So from week 11 the podium is decided differently.
 
 ### The X engagement prize
 
-@soyunasantacruz posted the only valid quote-retweet of the announcement - 6 likes and 1 reply - and **wins 50 HIVE**. Their entry also qualified at SEO 96 / GEO 100, in their first round. Welcome.
+Two valid quote-retweets this round. **@nabbas_0786 wins 50 HIVE** with 9 likes and 5 replies, against @la_santacruz (@soyunasantacruz) on 6 and 1. That is his second X prize in two rounds, on top of first place.
+
+@soyunasantacruz entered for the first time this week, qualified at SEO 96 / GEO 100 and promoted the contest in Spanish. Welcome - and the prize was close.
+
+**One change for week 11: paste your quote-retweet link in your entry comment.** We found one of this round's two by accident. If we cannot see it, we cannot count it.
 
 ## Week 11 is open - up to 500 HIVE
 
@@ -78,6 +82,8 @@ Everything else stays: the score is still re-derived on chain, the tag is still 
 ### The 50 HIVE X prize
 
 Quote-retweet the Week 11 announcement tweet with your own words about your HivePulse experience. The quote-retweet with the most likes, reposts, and replies combined at the close wins 50 HIVE. It must quote the announcement itself, not a reply or your own post. No engagement farming.
+
+**Paste the link to your quote-retweet in your entry comment.** Two people entered this prize in week 10 and we only found one of them by chance. If we cannot see it, we cannot count it.
 
 👉 **This is the tweet to quote:** PASTE_TWEET_URL_HERE
 

@@ -2,8 +2,11 @@
 
 Anchor tweet (tweet 1), already posted: https://x.com/HdevCore/status/2107524321367425064
 
-That URL is filled into tweet 5 below and into the announcement pack. Post tweets 2-6
-as replies to it, then publish the Hive post and fill the Discord link.
+It is filled into the announcement pack as the tweet to quote for the 50 HIVE prize.
+
+ORDER: publish the Hive post next, then post tweets 2-6 as replies to the anchor. Tweet 5
+links the Hive post, so it cannot go out before the post exists. Tweet 5 must NOT link the
+anchor tweet - it is a reply to it, so that would be circular.
 
 Check lengths with:
 
@@ -66,10 +69,10 @@ It is the number HivePulse has shown you all along — the Readability row, "Eas
 ```tweet
 Why this ends it: padding cannot move a ratio.
 
-Copy your post seven times — reading ease does not change at all. The only way up is to actually rewrite. Shorter sentences, plainer words.
+Copy your post seven times — reading ease does not change at all. The only way up is to rewrite. Shorter sentences, plainer words.
 
-Week 11 is open now 👇
-https://x.com/HdevCore/status/2107524321367425064
+Week 11 is open 👇
+PASTE_HIVE_POST_URL_HERE
 ```
 
 ## 6/
@@ -77,7 +80,7 @@ https://x.com/HdevCore/status/2107524321367425064
 ```tweet
 300 HIVE under 10 entrants. 400 at ten. 500 at twenty.
 +25 for a referral, paid to both of you.
-50 HIVE for the most engaged quote-retweet of this thread.
+50 HIVE for the best quote-RT of tweet 1 — paste your link in your entry comment.
 
 Closes 13 Oct, 12:00 UTC. Tag #hivepulse.
 

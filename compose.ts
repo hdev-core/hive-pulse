@@ -624,6 +624,10 @@ interface GeoResult { informational: boolean; score: number; items: GeoItem[]; }
 const THIRD_PRON = /\b(it|this|that|these|those|they|them|their|theirs|he|she|him|her|hers|his|its)\b/gi;
 const START_PRON = /^(it|this|that|these|those|they|there|here)\b/i;
 
+// GEO rubric v2 — EFFECTIVE FROM CONTEST WEEK 12 (round opening 13 October 2026).
+// Announced in the week 11 results post before it took effect; weeks 1-11 were judged on
+// v1 and are not reopened. Thresholds are pinned by utils/geoRubric.test.ts, which also
+// checks this file and scripts/lib/seo-score.mjs still agree.
 const analyzeGeo = (content: string, intentType: IntentType): GeoResult => {
   const informational = intentType !== 'General / Personal';
   const plain = stripMd(content);

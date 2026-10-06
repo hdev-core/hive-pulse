@@ -31,8 +31,6 @@ Seven writers entered. **Seven qualified - every single entry cleared the bar, a
 
 The scores are re-derived from each post's on-chain content with the same HivePulse scoring engine the extension uses. The screenshot is evidence of entry, not the score we award.
 
-@nabbas0786 submitted two posts. The published rule is that your best tagged post counts, so it did.
-
 ### Five perfect scores, and a tiebreak that has stopped working
 
 @nabbas0786, @wardah, @ahmedabbaci, @mayt and @nursejoe all finished on 200/200. The published tiebreak settled the podium on word count, as it has since week 5, and the podium above is final under that rule.

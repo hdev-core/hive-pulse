@@ -4,9 +4,9 @@ Anchor tweet (tweet 1), already posted: https://x.com/HdevCore/status/2107524321
 
 It is filled into the announcement pack as the tweet to quote for the 50 HIVE prize.
 
-ORDER: publish the Hive post next, then post tweets 2-6 as replies to the anchor. Tweet 5
-links the Hive post, so it cannot go out before the post exists. Tweet 5 must NOT link the
-anchor tweet - it is a reply to it, so that would be circular.
+Hive post, published: https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-10-results-week-11-open
+
+Both URLs are filled in below. Post tweets 2-6 as replies to the anchor tweet.
 
 Check lengths with:
 
@@ -72,7 +72,7 @@ Why this ends it: padding cannot move a ratio.
 Copy your post seven times — reading ease does not change at all. The only way up is to rewrite. Shorter sentences, plainer words.
 
 Week 11 is open 👇
-PASTE_HIVE_POST_URL_HERE
+https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-10-results-week-11-open
 ```
 
 ## 6/
@@ -110,5 +110,5 @@ Closes 13 Oct, 12:00 UTC. Tag #hivepulse.
 
 One small ask: **paste your quote-RT link in your entry comment.** Two people entered the X prize last round and we only found one by chance.
 
-Full post: PASTE_HIVE_POST_URL_HERE
+Full post: https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-10-results-week-11-open
 ```

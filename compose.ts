@@ -437,21 +437,43 @@ const missingAltImages = (content: string): string[] => {
 // Internal links keep readers on-chain and build topical authority; external
 // links are a citation/trust signal.
 // Links and headings, in BOTH syntaxes. Hive bodies are markdown, but PeakD's editor emits
-// raw HTML for anything inserted through its toolbar, so the same post written on two
-// frontends is the same post. Scanning only `[text](url)` and `# ` meant a PeakD author lost
-// all 7 link points and every subheading, for writing the identical article. Reported by
-// @ahmedabbaci, 2026-10-05 — the third report of this shape, after HTML images in 1.14.1.
-const MD_LINK   = /(?<!!)\[[^\]]+\]\(([^)\s]+)[^)]*\)/g;
-const HTML_LINK = /<a\b[^>]*?\shref\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi;
+// raw HTML for anything inserted through its toolbar, and Ecency's WYSIWYG emits
+// `<h2 style="…">`. Scanning only `[text](url)` and `# ` meant the same article scored
+// differently depending on which editor typed it. Reported by @ahmedabbaci, 2026-10-05.
+//
+// EVERY heading check goes through scanHeadings(). An earlier pass converted only the
+// hierarchy and the subheading count, leaving keyword-in-heading, the GEO question-heading
+// check and the intent format check still markdown-only — together worth 7 SEO and 20 GEO,
+// more than the checks that had been fixed. One scanner, so that cannot happen again.
+//
+// Both patterns are written to be LINEAR. The first cut of the HTML link pattern was
+// `<a\b[^>]*?\shref\s*=\s*("([^"]*)"|…)[^>]*>`, whose three overlapping quantifiers made it
+// cubic: a 23 KB post of `<a href="…"` with no closing bracket took 45 seconds, and the
+// contest judge runs this ~44 times per post on arbitrary on-chain bodies. Matching the tag
+// first and reading its attributes separately — the shape missingAltImages already uses —
+// removes the nesting entirely.
+const MD_LINK   = /(?<!!)\[[^\]]+\]\(([^)]*)\)/g;
+const HTML_A    = /<a\b[^>]*>/gi;
+const A_HREF    = /\shref\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i;
+
+const linkUrls = (content: string): string[] => [
+  // A markdown destination may carry a title — `(url "title")`. Take the first token.
+  ...[...content.matchAll(MD_LINK)].map(m => m[1].trim().split(/\s/)[0]),
+  ...[...content.matchAll(HTML_A)].map(tag => {
+    const m = tag[0].match(A_HREF);
+    return m ? (m[2] ?? m[3] ?? m[4] ?? '') : '';
+  }),
+].filter(Boolean);
 
 const classifyLinks = (content: string): { internal: number; external: number } => {
-  const urls = [
-    ...[...content.matchAll(MD_LINK)].map(m => m[1]),
-    ...[...content.matchAll(HTML_LINK)].map(m => m[2] ?? m[3] ?? m[4] ?? ''),
-  ].filter(Boolean);
   const hiveHosts = /(peakd\.com|ecency\.com|hive\.blog|inleo\.io|leofinance\.io|3speak\.tv|actifit\.io|hive-engine)/i;
+  // An anchor wrapping an image is a lightbox, not a citation — `<a href="…/photo.jpg">`
+  // around an `<img>` is the standard Hive gallery pattern and was scoring +4 link points
+  // on photo posts with no real links at all.
+  const IMAGE_HREF = /\.(png|jpe?g|gif|webp|svg|bmp|avif)(\?|#|$)/i;
   let internal = 0, external = 0;
-  for (const url of urls) {
+  for (const url of linkUrls(content)) {
+    if (IMAGE_HREF.test(url)) continue;
     if (/^\/?@/.test(url) || /\/@[a-z0-9.\-]+/.test(url) || hiveHosts.test(url)) internal++;
     else if (/^https?:\/\//.test(url)) external++;
     else if (/^\//.test(url)) internal++;
@@ -459,15 +481,29 @@ const classifyLinks = (content: string): { internal: number; external: number } 
   return { internal, external };
 };
 
+// One ordered pass over both heading syntaxes. The alternation means matchAll returns them
+// in document order, so a `## ` followed by an `<h4>` is still caught as a skipped level.
+// The HTML branch reads only plain text inside the tag; a heading wrapped in `<b>` yields an
+// empty title, which costs a keyword match but never a level.
+const ANY_HEADING = /^(#{1,6})[ \t]+(.+)$|<h([1-6])\b[^>]*>([^<]*)/gim;
+
+interface Heading { level: number; text: string }
+
+const scanHeadings = (content: string): Heading[] =>
+  [...content.matchAll(ANY_HEADING)].map(m => ({
+    level: m[1] ? m[1].length : Number(m[3]),
+    // Trailing `###` closers and any inline markup are not part of the title.
+    text: (m[1] ? m[2] : m[4] || '').replace(/<[^>]*>/g, '').replace(/\s*#+\s*$/, '').trim(),
+  }));
+
+const headingLevels = (content: string): number[] => scanHeadings(content).map(h => h.level);
+
+// Body headings the analyzer scores: h2 to h4. h1 duplicates the post title, h5/h6 are noise.
+const bodyHeadings = (content: string): Heading[] =>
+  scanHeadings(content).filter(h => h.level >= 2 && h.level <= 4);
+
 // Heading hierarchy: the title is the page H1, so a `# ` or an `<h1>` in the body creates a
-// duplicate H1 (bad). Skipping levels (## → ####) also weakens structure. The alternation
-// below matches in document order, so interleaved markdown and HTML headings still produce a
-// correct skip check.
-const ANY_HEADING = /^(#{1,6})\s+\S|<h([1-6])\b[^>]*>/gim;
-
-const headingLevels = (content: string): number[] =>
-  [...content.matchAll(ANY_HEADING)].map(m => (m[1] ? m[1].length : Number(m[2])));
-
+// duplicate H1 (bad). Skipping levels (## → ####) also weakens structure.
 const headingHierarchy = (content: string): { hasH1: boolean; skips: boolean; count: number } => {
   const levels = headingLevels(content);
   let skips = false, prev = 1; // title counts as H1
@@ -494,7 +530,7 @@ const detectIntent = (title: string, content: string): { type: IntentType; match
   const t = title.toLowerCase();
   if (/^how to|^how i|\bguide\b|\btutorial\b|step[- ]by[- ]step/.test(t)) {
     const steps = (content.match(/^(?:\d+\.|[-*])\s+/gm) || []).length;
-    const heads = (content.match(/^#{2,4}\s+/gm) || []).length;
+    const heads = bodyHeadings(content).length;
     const ok = steps >= 3 || heads >= 2;
     return { type: 'How-to / Guide', matched: ok, hint: ok ? 'Has clear steps/sections' : 'Add numbered steps or step subheadings' };
   }
@@ -563,8 +599,7 @@ const analyzeKeyword = (kw: string, content: string, title: string, metaDesc: st
   const plain = stripMd(content);
   const inFirst100 = plain.split(/\s+/).slice(0, 100).join(' ').toLowerCase().includes(k);
 
-  const mdHeads = content.match(/^#{2,4}\s+.+/mg) || [];
-  let inHeading = mdHeads.some(h => h.toLowerCase().includes(k));
+  let inHeading = bodyHeadings(content).some(h => h.text.toLowerCase().includes(k));
   if (!inHeading) {
     document.querySelectorAll('[contenteditable="true"] h2, [contenteditable="true"] h3')
       .forEach(h => { if (h.textContent?.toLowerCase().includes(k)) inHeading = true; });
@@ -639,9 +674,10 @@ const analyzeGeo = (content: string, intentType: IntentType): GeoResult => {
     add('Clear subjects', entScore01,  10, entHint,  'Retrieval systems index named entities. Naming them — not "it/they" — makes your facts citable.');
 
     // Q&A / answerable structure
-    const qHeads = (content.match(/^#{2,4}\s+.*\?\s*$/mg) || []).length;
+    const heads2 = bodyHeadings(content);
+    const qHeads = heads2.filter(h => h.text.endsWith('?')).length;
     const faqMark = /\bfaq\b|^\s*q[:.]/im.test(content);
-    let qa01 = qHeads >= 1 || faqMark ? 1 : (content.match(/^#{2,4}\s+/gm) || []).length >= 2 ? 0.5 : 0;
+    let qa01 = qHeads >= 1 || faqMark ? 1 : heads2.length >= 2 ? 0.5 : 0;
     add('Answerable structure', qa01, 20,
       qa01 === 1 ? 'Has question-style headings' : qa01 === 0.5 ? 'Turn some headings into the questions readers ask' : 'Add question-style headings (e.g. "How does X work?") — AI matches these to user queries',
       'AI answer engines map content to the questions people ask. Headings phrased as questions get matched and surfaced directly.');

@@ -25,11 +25,12 @@
     <label>Posting account<input id="account" value="hdev" autocomplete="off"></label>
     <div class="grid">
       <label>Title<input id="title" value="HivePulse SEO Contest: New Week 10 Round (500 HIVE)"></label>
-      <label>Permlink<input id="permlink" value="hivepulse-seo-contest-week-9-results-week-10-open"></label>
+      <label>Permlink<input id="permlink" value=""> <span id="permstate" class="pill">checking…</span></label>
     </div>
     <label>Community<input id="community" value="hive-177727"></label>
     <label>Tags (space-separated)<input id="tags" value="hivepulse seo contest hive writing"></label>
-    <label>Preview description<input id="description" value="HivePulse SEO Contest week 9: three tied on a perfect 200, and three entries lost the tag. 400 HIVE paid. Week 10 is open, up to 500 HIVE."></label>
+    <label>Preview description<input id="description" value=""></label>
+    <label class="row" style="gap:7px"><input type="checkbox" id="allowEdit" style="width:auto"> <span>Edit an existing post on purpose (required to overwrite a permlink that already exists)</span></label>
   </section>
   <div class="grid">
     <section><h2>Post body</h2><div class="panel"><textarea id="body" spellcheck="false">Loading the prepared Week 10 announcement...</textarea><div class="row" style="margin-top:12px"><button class="ghost" id="reload">Reload prepared draft</button><button class="ghost" id="copy">Copy body</button></div></div></section>
@@ -41,7 +42,28 @@
 const $ = id => document.getElementById(id);
 // Resolved relative to this page, so the server must be rooted at the REPO ROOT
 // (python -m http.server 8899 from the repo root), not at tools/.
-const DRAFT_URL = '../enhancements/week11-post-body.md';
+/* ══════════════════════════════════════════════════════════════════════════════
+   ROUND — the only block to edit between rounds.
+
+   On 2026-10-06 the draft was retargeted to week 11 but the title and permlink were
+   left at week 10's, so the composer published the week 11 body under the WEEK 10
+   PERMLINK. Hive treats a repeat author+permlink as an EDIT, so instead of creating
+   a post it silently overwrote the live week 10 announcement — the one carrying 194
+   votes and 39 entry comments. Nothing warned, because as far as Hive was concerned
+   nothing was wrong.
+
+   The form is now filled from this block, and publishing is refused outright if the
+   permlink already exists on chain.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const ROUND = {
+  title:       'HivePulse SEO Contest: New Week 11 Round (500 HIVE)',
+  permlink:    'hivepulse-seo-contest-week-10-results-week-11-open',
+  community:   'hive-177727',
+  tags:        'hivepulse seo contest hive writing',
+  description: 'HivePulse SEO Contest week 10: five entries tied on a perfect 200. 350 HIVE paid. Week 11 changes how the podium is decided - word count is out.',
+  draft:       '../enhancements/week11-post-body.md',
+};
+const DRAFT_URL = ROUND.draft;
 const RPC = 'https://api.hive.blog';
 const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function log(message){ $('log').textContent += '\n' + new Date().toISOString().slice(11,19) + ' ' + message; }
@@ -60,6 +82,45 @@ async function loadDraft(){
   } catch (error) { log('Draft load failed: '+error.message+'. Paste or edit the body manually.'); }
   updatePreview();
 }
+// Fill the form from ROUND, so the draft and its destination cannot drift apart.
+function applyRound(){
+  $('title').value = ROUND.title;
+  $('permlink').value = ROUND.permlink;
+  $('community').value = ROUND.community;
+  $('tags').value = ROUND.tags;
+  $('description').value = ROUND.description;
+}
+
+// A comment op whose author+permlink already exist is an EDIT, and Hive reports it as a
+// clean success either way. Ask the chain before broadcasting.
+async function permlinkExists(account, permlink){
+  try {
+    const r = await fetch(RPC, {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({jsonrpc:'2.0', method:'condenser_api.get_content',
+                            params:[account, permlink], id:1})});
+    const c = (await r.json()).result;
+    return c && c.author ? c : null;
+  } catch { return null; }   // a failed lookup must not block publishing
+}
+
+async function checkPermlink(){
+  const account = $('account').value.trim().toLowerCase();
+  const permlink = $('permlink').value.trim().toLowerCase();
+  const el = $('permstate');
+  if (!account || !permlink) { el.className = 'pill'; el.textContent = ''; return; }
+  const existing = await permlinkExists(account, permlink);
+  if (existing) {
+    el.className = 'pill bad';
+    el.textContent = 'TAKEN — publishing would EDIT it';
+    log('WARNING: @' + account + '/' + permlink + ' already exists (created ' + existing.created +
+        ', ' + (existing.active_votes || []).length + ' votes, ' + existing.children +
+        ' comments). Publishing would overwrite its body.');
+  } else {
+    el.className = 'pill ok';
+    el.textContent = 'free — creates a new post';
+  }
+}
+
 function broadcast(account, operation){
   return new Promise(resolve => {
     if (!window.hive_keychain) return resolve({success:false,message:'Hive Keychain was not detected.'});
@@ -74,6 +135,21 @@ $('publish').onclick = async () => {
   const tags=$('tags').value.trim().split(/\s+/).filter(Boolean);
   if (!account||!title||!permlink||!community||!body||!tags.length) return alert('Account, title, permlink, community, tags, and body are required.');
   if (!/^[a-z0-9][a-z0-9-]{2,254}$/.test(permlink)) return alert('Permlink must use lowercase letters, numbers, and hyphens.');
+  const existing = await permlinkExists(account, permlink);
+  if (existing && !$('allowEdit').checked) {
+    const votes = (existing.active_votes || []).length;
+    return alert(
+      'REFUSING TO PUBLISH.\n\n' +
+      '@' + account + '/' + permlink + ' already exists.\n' +
+      'Created ' + existing.created + ' — ' + votes + ' votes, ' + existing.children + ' comments.\n\n' +
+      'A comment op on an existing permlink is an EDIT, not a new post, so this would ' +
+      'overwrite that post’s body. Change the permlink in the ROUND block at the top of ' +
+      'this file — or tick "Edit an existing post on purpose" if overwriting is what you want.');
+  }
+  if (existing && $('allowEdit').checked &&
+      !confirm('This will OVERWRITE the body of an existing post.\n\n' +
+               '@' + account + '/' + permlink + '\ncreated ' + existing.created + '\n\n' +
+               'Continue?')) return;
   const metadata={app:'hivepulse/1.14.0',format:'markdown',description:$('description').value.trim(),tags};
   const operation=['comment',{parent_author:'',parent_permlink:community,author:account,permlink,title,body,json_metadata:JSON.stringify(metadata)}];
   if (!confirm('Publish this post as @'+account+'?\n\nTitle: '+title+'\nPermlink: '+permlink+'\nCommunity: '+community+'\nTags: '+tags.join(', ')+'\n\nKeychain will request your posting-key signature.')) return;
@@ -84,7 +160,9 @@ $('publish').onclick = async () => {
   else { setStatus('Not published','bad'); log('Publish failed: '+((result&&result.message)||'Keychain rejected the request.')); }
 };
 if (window.hive_keychain) {$('kc').textContent='Keychain ready';$('kc').className='pill ok';} else {$('kc').textContent='Keychain not found';$('kc').className='pill bad';}
-loadDraft(); updatePreview();
+$('permlink').addEventListener('change', checkPermlink);
+$('account').addEventListener('change', checkPermlink);
+applyRound(); loadDraft(); updatePreview(); checkPermlink();
 </script>
 </body>
 </html>

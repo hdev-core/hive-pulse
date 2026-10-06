@@ -41,7 +41,7 @@
 const $ = id => document.getElementById(id);
 // Resolved relative to this page, so the server must be rooted at the REPO ROOT
 // (python -m http.server 8899 from the repo root), not at tools/.
-const DRAFT_URL = '../enhancements/seo-contest-week10-announcement.md';
+const DRAFT_URL = '../enhancements/week11-post-body.md';
 const RPC = 'https://api.hive.blog';
 const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function log(message){ $('log').textContent += '\n' + new Date().toISOString().slice(11,19) + ' ' + message; }

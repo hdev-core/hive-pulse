@@ -120,46 +120,43 @@
    if the stated total does not match the sum of the transfers.
    ══════════════════════════════════════════════════════════════════════════════ */
 const ROUND = {
-  label:  'Week 9',
-  window: '22 – 29 September 2026, closed 12:00 UTC',
-  post:   'https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-8-results-week-9-open',
-  // 8 entries submitted, 3 disqualified on the tag rule -> 5 valid -> under-10 tier ->
-  // 300 pool, + 50 for one valid referral pair, + 50 X prize.
-  expectedTotal: 400,          // cross-checked against the transfers below
+  label:  'Week 10',
+  window: '29 September – 6 October 2026, closed 12:00 UTC',
+  post:   'https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-9-results-week-10-open',
+  // 8 posts submitted by 7 people. @nabbas0786 entered twice and his best counts, so the
+  // field is 7 valid entrants -> under-10 tier -> 300 pool, + 50 X prize. No referrals
+  // were declared this round.
+  expectedTotal: 350,          // cross-checked against the transfers below
   // Every memo below starts with this, so the already-paid check can tell THIS round's
   // transfers from any other payment to the same person. Keep it in step with the memos.
-  memoTag: 'HivePulse SEO Contest week 9',
+  memoTag: 'HivePulse SEO Contest week 10',
 };
 
 const CURATION = [
-  { author:'ahmedabbaci', permlink:'hivepulse-extension-guide-download-feed-and-features-2026',
+  { author:'nabbas0786', permlink:'how-1-decision-changed-my-life-dae-to-dhms-engurdu',
     place:'1st', seo:100, geo:100 },
-  { author:'nabbas0786',  permlink:'how-to-beat-extreme-sleep-debt-7-days-to-reset-clock',
+  { author:'wardah',     permlink:'crochet-the-best-activity-physio-can-do-2multiple-tasks',
     place:'2nd', seo:100, geo:100 },
-  { author:'wardah',      permlink:'1500-pieces-puzzel-best-activity-for-mind-and-for-memories',
+  { author:'ahmedabbaci', permlink:'7-funniest-things-i-believed-as-a-kid-quick-long-stories-1791141667200',
     place:'3rd', seo:100, geo:100 },
 ];
 
 const PAYMENTS = [
-  { to:'ahmedabbaci', amount:150,
-    parts:[['1st place — SEO 100 / GEO 100, 3,332 words', 150]],
-    memo:'HivePulse SEO Contest week 9: 1st place (SEO 100 / GEO 100) = 150 HIVE. Three entries tied on a perfect 200/200 and the published tiebreak settled it on word count - yours was the longest at 3,332. Congratulations!' },
-
   { to:'nabbas0786', amount:150,
-    parts:[['2nd place — SEO 100 / GEO 100, 2,326 words', 100], ['X quote-retweet prize — most engagement', 50]],
-    memo:'HivePulse SEO Contest week 9: 2nd place (SEO 100 / GEO 100) = 100 HIVE, plus 50 HIVE for the winning quote-retweet - the most engaged of the round. Total 150 HIVE. Second perfect score in two weeks. Congratulations!' },
+    parts:[['1st place — SEO 100 / GEO 100, 7,569 words', 150]],
+    memo:'HivePulse SEO Contest week 10: 1st place (SEO 100 / GEO 100) = 150 HIVE. Five entries tied on a perfect 200/200 and the published tiebreak settled it on word count - yours was the longest at 7,569. Second win in two rounds. Congratulations!' },
 
-  { to:'wardah', amount:50,
-    parts:[['3rd place — SEO 100 / GEO 100, 1,295 words', 50]],
-    memo:'HivePulse SEO Contest week 9: 3rd place (SEO 100 / GEO 100) = 50 HIVE. Three entries tied on a perfect 200/200 and the published tiebreak settled the podium on word count. Congratulations!' },
+  { to:'wardah', amount:100,
+    parts:[['2nd place — SEO 100 / GEO 100, 5,238 words', 100]],
+    memo:'HivePulse SEO Contest week 10: 2nd place (SEO 100 / GEO 100) = 100 HIVE. Five entries tied on a perfect 200/200 and the published tiebreak settled the podium on word count, where yours came second at 5,238. Up from third last round. Congratulations!' },
 
-  { to:'les90', amount:25,
-    parts:[['Referral bonus — brought @intishar', 25]],
-    memo:'HivePulse SEO Contest week 9: 25 HIVE referral bonus for bringing @intishar, a new entrant whose post qualified. Note your own entry could not be ranked this round - it was missing the #hivepulse tag. Please tag it next round, it is the one enforced rule!' },
+  { to:'ahmedabbaci', amount:50,
+    parts:[['3rd place — SEO 100 / GEO 100, 3,308 words', 50]],
+    memo:'HivePulse SEO Contest week 10: 3rd place (SEO 100 / GEO 100) = 50 HIVE. Five perfect scores this round and the tiebreak ran on word count. Thank you also for the two bug reports - the analyzer now reads PeakD HTML the same as Ecency markdown because of you. Congratulations!' },
 
-  { to:'intishar', amount:25,
-    parts:[['Referral bonus — referred by @les90', 25]],
-    memo:'HivePulse SEO Contest week 9: 25 HIVE referral bonus (referred by @les90). Your first entry qualified at SEO 80 / GEO 78. Welcome, and see you in week 10!' },
+  { to:'soyunasantacruz', amount:50,
+    parts:[['X quote-retweet prize — most engagement', 50]],
+    memo:'HivePulse SEO Contest week 10: 50 HIVE for the winning quote-retweet (6 likes, 1 reply), the only valid quote-RT of the announcement this round. Your entry also qualified at SEO 96 / GEO 100. Welcome, and see you in week 11!' },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════════════ */

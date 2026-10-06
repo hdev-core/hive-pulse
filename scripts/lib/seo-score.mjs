@@ -244,6 +244,21 @@ const analyzeKeyword = (kw, content, title, metaDesc) => {
 const THIRD_PRON = /\b(it|this|that|these|those|they|them|their|theirs|he|she|him|her|hers|his|its)\b/gi;
 const START_PRON = /^(it|this|that|these|those|they|there|here)\b/i;
 
+/* GEO - will an AI engine quote this?
+ *
+ * Recalibrated after the rubric stopped discriminating. Measured across all 70 contest
+ * entries ever scored, 57% held a perfect 100 and every individual gate was maxed by
+ * 77-91% of posts - both branches equally, so this was never about the personal branch
+ * having fewer checks. A score that 57% of a self-selecting field maxes is not measuring.
+ *
+ * Same six ideas, same labels, harder top bands, plus one new gate for personal posts.
+ * On the same 70 entries: 9% at 100, median 79, range 45-100. Perfect stays reachable -
+ * six posts still get there - but it has to be earned.
+ *
+ * Every band below was fitted against that corpus, not chosen by eye. The first attempt
+ * put NOBODY at 100 and a median of 67, which is as useless as 57% at 100 in the other
+ * direction; these are the numbers after retuning.
+ */
 const analyzeGeo = (rawContent, intentType) => {
   const content = normalizeEol(rawContent);
   const informational = intentType !== 'General / Personal';
@@ -254,39 +269,55 @@ const analyzeGeo = (rawContent, intentType) => {
   const explicitSummary = /\b(tl;?dr|in summary|in short|summary:|key takeaway|overview)\b/i.test(head);
   const firstPara = content.split(/\n{2,}/).map(p => stripMd(p).trim()).find(p => p.length > 30) || '';
   const fpWords = firstPara.split(/\s+/).filter(Boolean).length;
-  let hookScore01 = 0;
-  if (explicitSummary || (fpWords >= 8 && fpWords <= 60)) hookScore01 = 1;
-  else if (fpWords > 60 && fpWords <= 100) hookScore01 = 0.5;
+
+  // An AI lifts the opening paragraph, so reward one that stands alone as an answer.
+  // 8-60 words used to be full marks, which is almost any paragraph anyone writes.
+  const hookScore01 = explicitSummary || (fpWords >= 12 && fpWords <= 45) ? 1
+                    : fpWords >= 8 && fpWords <= 75 ? 0.7 : 0.3;
+
   const startPron = sentences.filter(s => START_PRON.test(s)).length;
   const startRatio = sentences.length ? startPron / sentences.length : 0;
-  let scScore01 = startRatio < 0.1 ? 1 : startRatio < 0.2 ? 0.8 : startRatio < 0.3 ? 0.5 : 0.2;
-  if (sentences.length < 3) scScore01 = 1;
+  let scScore01 = startRatio < 0.08 ? 1 : startRatio < 0.16 ? 0.75 : startRatio < 0.26 ? 0.45 : 0.2;
+  if (sentences.length < 3) scScore01 = 0.5;   // too short to have shown anything
+
   const pronTotal = (plain.match(THIRD_PRON) || []).length;
   const pronRatio = words.length ? pronTotal / words.length : 0;
-  let entScore01 = pronRatio < 0.04 ? 1 : pronRatio < 0.07 ? 0.7 : 0.4;
-  if (words.length < 40) entScore01 = 1;
+  let entScore01 = pronRatio < 0.03 ? 1 : pronRatio < 0.05 ? 0.75 : pronRatio < 0.08 ? 0.45 : 0.2;
+  if (words.length < 40) entScore01 = 0.5;
+
+  const nums = (plain.match(/\b\d+(?:[.,]\d+)?%?\b/g) || []).length;
+  // Use the same external-link count the extension uses, rather than a second
+  // domain-counting routine that could drift away from it.
+  const { external } = classifyLinks(content);
 
   let score = 0;
-  // `parts` is additive diagnostic detail for scripts/score-post.mjs; it does not affect
-  // `score`, so judge-contest.mjs results are unchanged.
   const parts = [];
-  const add = (s01, max, label) => { score += Math.round(s01 * max); if (label) parts.push({ label, got: Math.round(s01 * max), max }); };
+  const add = (s01, max, label) => { const got = Math.round(s01 * max); score += got; parts.push({ label, got, max }); };
+
   if (!informational) {
-    add(hookScore01, 40, 'Opening hook'); add(scScore01, 35, 'Self-contained sentences'); add(entScore01, 25, 'Clear subjects');
+    add(hookScore01, 35, 'Opening hook');
+    add(scScore01, 30, 'Self-contained sentences');
+    add(entScore01, 20, 'Clear subjects');
+    // New. A personal post used to clear three easy gates and take 100, which is why half
+    // the field sat there. A story an AI can quote names things - people, places, numbers,
+    // dates. Pure generalities are not quotable however well written.
+    const properNouns = (plain.match(/\b[A-Z][a-z]{2,}\b/g) || []).length;
+    const specificity = words.length ? (nums + properNouns) / words.length : 0;
+    add(specificity >= 0.075 ? 1 : specificity >= 0.045 ? 0.7 : specificity >= 0.02 ? 0.4 : 0.1,
+        15, 'Concrete detail');
   } else {
-    add(hookScore01, 20, 'Opening hook'); add(scScore01, 15, 'Self-contained sentences'); add(entScore01, 10, 'Clear subjects');
-    const heads2 = bodyHeadings(content);
-    const qHeads = heads2.filter(h => h.text.endsWith('?')).length;
+    add(hookScore01, 20, 'Opening hook');
+    add(scScore01, 15, 'Self-contained sentences');
+    add(entScore01, 10, 'Clear subjects');
+    const heads = bodyHeadings(content);
+    const qHeads = heads.filter(h => h.text.endsWith('?')).length;
     const faqMark = /\bfaq\b|^\s*q[:.]/im.test(content);
-    const qa01 = qHeads >= 1 || faqMark ? 1 : heads2.length >= 2 ? 0.5 : 0;
-    add(qa01, 20, 'Q&A structure');
+    add(qHeads >= 2 ? 1 : qHeads === 1 ? 0.6 : faqMark ? 0.5 : heads.length >= 3 ? 0.3 : 0,
+        20, 'Q&A structure');
     const defs = (plain.match(/\b[A-Za-z][\w-]+ (?:is|are|refers to|means|is defined as) (?:a|an|the|when|where|the process|any)\b/gi) || []).length;
-    add(defs >= 2 ? 1 : defs === 1 ? 0.5 : 0, 15, 'Definitions');
-    const nums = (plain.match(/\b\d+(?:[.,]\d+)?%?\b/g) || []).length;
-    const { external } = classifyLinks(content);
-    let data01 = 0;
-    if (nums >= 3 && external > 0) data01 = 1; else if (nums >= 3) data01 = 0.7; else if (nums >= 1) data01 = 0.4;
-    add(data01, 20, 'Data & citations');
+    add(defs >= 3 ? 1 : defs === 2 ? 0.7 : defs === 1 ? 0.4 : 0, 15, 'Definitions');
+    add(nums >= 5 && external > 0 ? 1 : nums >= 3 && external > 0 ? 0.75
+      : nums >= 3 ? 0.5 : nums >= 1 ? 0.25 : 0, 20, 'Data & citations');
   }
   return { informational, score, parts };
 };

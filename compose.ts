@@ -635,27 +635,27 @@ const analyzeGeo = (content: string, intentType: IntentType): GeoResult => {
   const explicitSummary = /\b(tl;?dr|in summary|in short|summary:|key takeaway|overview)\b/i.test(head);
   const firstPara = content.split(/\n{2,}/).map(p => stripMd(p).trim()).find(p => p.length > 30) || '';
   const fpWords = firstPara.split(/\s+/).filter(Boolean).length;
-  let hookScore01 = 0;
-  if (explicitSummary || (fpWords >= 8 && fpWords <= 60)) hookScore01 = 1;
-  else if (fpWords > 60 && fpWords <= 100) hookScore01 = 0.5;
+  // 8-60 words used to take full marks, which is almost any paragraph anyone writes.
+  const hookScore01 = explicitSummary || (fpWords >= 12 && fpWords <= 45) ? 1
+                    : fpWords >= 8 && fpWords <= 75 ? 0.7 : 0.3;
   const hookHint = hookScore01 === 1 ? 'Clear opening summary' :
-    hookScore01 === 0.5 ? 'Opening paragraph is long — tighten it to a 1–2 sentence hook' :
+    hookScore01 === 0.7 ? 'Tighten the opening to 12–45 words — that is the chunk AI quotes' :
     'Open with a 1–2 sentence summary (or a TL;DR) of what the post covers';
 
   // Self-contained statements — sentences shouldn't open with a bare pronoun
   const startPron = sentences.filter(s => START_PRON.test(s)).length;
   const startRatio = sentences.length ? startPron / sentences.length : 0;
-  let scScore01 = startRatio < 0.1 ? 1 : startRatio < 0.2 ? 0.8 : startRatio < 0.3 ? 0.5 : 0.2;
-  if (sentences.length < 3) scScore01 = 1;
-  const scHint = scScore01 >= 0.8 ? 'Sentences stand on their own' :
+  let scScore01 = startRatio < 0.08 ? 1 : startRatio < 0.16 ? 0.75 : startRatio < 0.26 ? 0.45 : 0.2;
+  if (sentences.length < 3) scScore01 = 0.5;   // too short to have demonstrated anything
+  const scHint = scScore01 >= 0.75 ? 'Sentences stand on their own' :
     `${Math.round(startRatio * 100)}% of sentences start with "it/this/that" — name the subject instead so AI can quote them`;
 
   // Clear entity naming — overall third-person pronoun density
   const pronTotal = (plain.match(THIRD_PRON) || []).length;
   const pronRatio = words.length ? pronTotal / words.length : 0;
-  let entScore01 = pronRatio < 0.04 ? 1 : pronRatio < 0.07 ? 0.7 : 0.4;
-  if (words.length < 40) entScore01 = 1;
-  const entHint = entScore01 >= 0.7 ? 'Subjects are named clearly' :
+  let entScore01 = pronRatio < 0.03 ? 1 : pronRatio < 0.05 ? 0.75 : pronRatio < 0.08 ? 0.45 : 0.2;
+  if (words.length < 40) entScore01 = 0.5;
+  const entHint = entScore01 >= 0.75 ? 'Subjects are named clearly' :
     'Repeat key names/terms instead of "it/they" — AI engines extract named entities, not pronouns';
 
   const items: GeoItem[] = [];
@@ -664,9 +664,20 @@ const analyzeGeo = (content: string, intentType: IntentType): GeoResult => {
 
   if (!informational) {
     // Personal / creative — 3 universal checks total 100
-    add('Opening hook',      hookScore01, 40, hookHint, 'AI assistants and previews lead with your first lines. A clear opening sentence makes your post quotable and shareable — even for a personal story.');
-    add('Self-contained',    scScore01,   35, scHint,   'AI pulls individual sentences out of context. Sentences that start with "it/this" lose their meaning when quoted alone.');
-    add('Clear subjects',    entScore01,  25, entHint,  'Retrieval systems index named entities (people, places, things). Naming them — instead of "it/they" — makes your post findable and citable.');
+    add('Opening hook',      hookScore01, 35, hookHint, 'AI assistants and previews lead with your first lines. A clear opening sentence makes your post quotable and shareable — even for a personal story.');
+    add('Self-contained',    scScore01,   30, scHint,   'AI pulls individual sentences out of context. Sentences that start with "it/this" lose their meaning when quoted alone.');
+    add('Clear subjects',    entScore01,  20, entHint,  'Retrieval systems index named entities (people, places, things). Naming them — instead of "it/they" — makes your post findable and citable.');
+    // A personal post used to clear three easy gates and take 100, which is why half the
+    // field sat there. A story an AI can quote names things.
+    const pNums = (plain.match(/\b\d+(?:[.,]\d+)?%?\b/g) || []).length;
+    const properNouns = (plain.match(/\b[A-Z][a-z]{2,}\b/g) || []).length;
+    const specificity = words.length ? (pNums + properNouns) / words.length : 0;
+    const spec01 = specificity >= 0.075 ? 1 : specificity >= 0.045 ? 0.7 : specificity >= 0.02 ? 0.4 : 0.1;
+    add('Concrete detail', spec01, 15,
+      spec01 === 1 ? 'Named people, places and numbers' :
+      spec01 >= 0.4 ? 'Name more specifics — people, places, dates, numbers' :
+      'Too general to quote. Name the people, places and numbers in your story',
+      'An AI quotes what is specific. "My friend helped me" is unquotable; "Ahmed walked me through it on Discord for four hours" is a fact an engine can lift and attribute.');
   } else {
     // Informational — universal (45) + boosters (55)
     add('Opening hook',   hookScore01, 20, hookHint, 'AI answer engines lead with a summary. A TL;DR or tight opening paragraph is the chunk most likely to be cited.');
@@ -677,25 +688,23 @@ const analyzeGeo = (content: string, intentType: IntentType): GeoResult => {
     const heads2 = bodyHeadings(content);
     const qHeads = heads2.filter(h => h.text.endsWith('?')).length;
     const faqMark = /\bfaq\b|^\s*q[:.]/im.test(content);
-    let qa01 = qHeads >= 1 || faqMark ? 1 : heads2.length >= 2 ? 0.5 : 0;
+    const qa01 = qHeads >= 2 ? 1 : qHeads === 1 ? 0.6 : faqMark ? 0.5 : heads2.length >= 3 ? 0.3 : 0;
     add('Answerable structure', qa01, 20,
-      qa01 === 1 ? 'Has question-style headings' : qa01 === 0.5 ? 'Turn some headings into the questions readers ask' : 'Add question-style headings (e.g. "How does X work?") — AI matches these to user queries',
+      qa01 === 1 ? 'Has question-style headings' : qa01 >= 0.3 ? 'Turn more headings into the questions readers ask' : 'Add question-style headings (e.g. "How does X work?") — AI matches these to user queries',
       'AI answer engines map content to the questions people ask. Headings phrased as questions get matched and surfaced directly.');
 
     // Definitional clarity
     const defs = (plain.match(/\b[A-Za-z][\w-]+ (?:is|are|refers to|means|is defined as) (?:a|an|the|when|where|the process|any)\b/gi) || []).length;
-    const def01 = defs >= 2 ? 1 : defs === 1 ? 0.5 : 0;
+    const def01 = defs >= 3 ? 1 : defs === 2 ? 0.7 : defs === 1 ? 0.4 : 0;
     add('Definitional clarity', def01, 15,
-      def01 === 1 ? 'Contains clear definitions' : def01 === 0.5 ? 'Add one more plain "X is …" definition' : 'State key terms plainly ("X is …") — AI extracts definitions verbatim',
+      def01 === 1 ? 'Contains clear definitions' : def01 >= 0.4 ? 'Add another plain "X is …" definition' : 'State key terms plainly ("X is …") — AI extracts definitions verbatim',
       'Generative engines love clean definitional sentences ("A permlink is …"). They get quoted directly in AI answers.');
 
     // Concrete data / specifics
     const nums = (plain.match(/\b\d+(?:[.,]\d+)?%?\b/g) || []).length;
     const { external } = classifyLinks(content);
-    let data01 = 0;
-    if (nums >= 3 && external > 0) data01 = 1;
-    else if (nums >= 3) data01 = 0.7;
-    else if (nums >= 1) data01 = 0.4;
+    const data01 = nums >= 5 && external > 0 ? 1 : nums >= 3 && external > 0 ? 0.75
+                 : nums >= 3 ? 0.5 : nums >= 1 ? 0.25 : 0;
     add('Concrete data', data01, 20,
       data01 === 1 ? 'Specific figures with sources' : data01 >= 0.4 ? 'Add a source link next to your figures' : 'Add specific numbers/dates/stats — AI cites concrete facts over vague claims',
       'AI answers prefer specific, verifiable facts (numbers, dates, stats) — ideally with a source link. Vague claims rarely get cited.');

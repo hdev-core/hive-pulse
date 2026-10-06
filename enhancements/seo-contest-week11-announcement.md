@@ -7,7 +7,7 @@ Publish date: **6 October 2026**, after the Week 10 close at 12:00 UTC. Posting 
 > **Focus keyword:** `hivepulse seo contest`
 >
 > **Preview description** (paste into PeakD's "Short preview description" / Ecency's Story preview step):
-> `HivePulse SEO Contest week 10: five entries tied on a perfect 200. 350 HIVE paid. Week 11 changes how the podium is decided - word count is out.`
+> `HivePulse SEO Contest week 10: five entries tied on a perfect 200. 400 HIVE paid. Week 11 changes how the podium is decided - word count is out.`
 >
 > **Cover:** `enhancements/images/contest-week11-cover.jpg` - drag it into the editor, never paste, then replace the placeholder URL below.
 

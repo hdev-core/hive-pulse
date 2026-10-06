@@ -37,9 +37,21 @@ const WINDOW_START = Date.parse('2026-09-29T00:00:00Z');
 const WINDOW_END   = Date.parse('2026-10-06T12:00:00Z');   // week 10 closes 12:00 UTC, not 23:59
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 
+// Tiebreak target, from week 11. The engine's own readability check stops caring once a post
+// clears Flesch reading ease 60 - every entry that tied at 100/100 in weeks 9 and 10 had an
+// identical SEO breakdown including a maxed 8/8 readability block. So the tiebreak reads the
+// same number at full resolution: closest to 60 wins.
+//
+// It replaces word count, which was unbounded and had turned the contest into a length race -
+// winning posts ran 1,730 then 3,217 then 7,569 words over three rounds. Ease has a finish
+// line: at 60 there is nothing further to gain, and padding does not move it at all, because
+// it is a ratio of words per sentence and syllables per word. Back-tested over weeks 6-10,
+// 21 tied entries, it separated every field with no collisions.
+const EASE_TARGET = 60;
+
 // Scoring engine lives in ./lib/seo-score.mjs — shared with scripts/score-post.mjs so the
 // two tools can never disagree. Keep that file in sync with compose.ts.
-import { analyze, autoDetectKeyword } from './lib/seo-score.mjs';
+import { analyze, autoDetectKeyword, readability } from './lib/seo-score.mjs';
 import { getPost } from './lib/hive-rpc.mjs';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -124,29 +136,31 @@ const main = async () => {
     const inWindow = post.created >= WINDOW_START && post.created <= WINDOW_END;
     const qualifies = inWindow && seoPct >= MIN_SEO_QUALIFY;
 
+    const { ease } = readability(post.body);
     rows.push({
       author: post.author, permlink: post.permlink, created: post.created,
       seoScore: a.seoScore, seoMax: a.seoMax, seoPct, geoScore: a.geoScore, combined,
-      wordCount: a.wordCount, keyword, autoKeyword, inWindow, qualifies,
+      wordCount: a.wordCount, ease, easeGap: Math.abs(ease - EASE_TARGET),
+      keyword, autoKeyword, inWindow, qualifies,
       geoType: a.geoInformational ? 'info' : 'personal', breakdown: a.breakdown,
     });
   }
 
   rows.sort((x, y) => (y.qualifies - x.qualifies) || (y.combined - x.combined) ||
-    (y.geoScore - x.geoScore) || (y.wordCount - x.wordCount) || (x.created - y.created) ||
+    (y.geoScore - x.geoScore) || (x.easeGap - y.easeGap) || (x.created - y.created) ||
     x.author.localeCompare(y.author) || x.permlink.localeCompare(y.permlink));
 
   const pad = (s, n) => String(s).padEnd(n);
   const padL = (s, n) => String(s).padStart(n);
   console.log('\n══ HivePulse SEO Contest — objective re-score ══');
   console.log(`window ${fmtDate(WINDOW_START)} → ${fmtDate(WINDOW_END)} · qualify: SEO ≥ ${MIN_SEO_QUALIFY}% · ranked by combined (SEO+GEO)/2\n`);
-  console.log(`${pad('#', 3)} ${pad('author/permlink', 42)} ${padL('SEO', 7)} ${padL('GEO', 4)} ${padL('COMB', 5)} ${padL('words', 6)} ${pad('  date', 12)} ok`);
+  console.log(`${pad('#', 3)} ${pad('author/permlink', 42)} ${padL('SEO', 7)} ${padL('GEO', 4)} ${padL('COMB', 5)} ${padL('ease', 5)} ${padL('words', 6)} ${pad('  date', 12)} ok`);
   console.log('─'.repeat(92));
   rows.forEach((r, i) => {
     const id = `@${r.author}/${r.permlink}`;
     const seo = `${r.seoScore}/${r.seoMax}(${r.seoPct}%)`;
     const flag = r.qualifies ? '✓' : (!r.inWindow ? '⌛' : '✗');
-    console.log(`${pad(i + 1, 3)} ${pad(id.length > 42 ? id.slice(0, 41) + '…' : id, 42)} ${padL(seo, 7)} ${padL(r.geoScore, 4)} ${padL(r.combined, 5)} ${padL(r.wordCount, 6)} ${pad(fmtDate(r.created), 12)} ${flag}`);
+    console.log(`${pad(i + 1, 3)} ${pad(id.length > 42 ? id.slice(0, 41) + '…' : id, 42)} ${padL(seo, 7)} ${padL(r.geoScore, 4)} ${padL(r.combined, 5)} ${padL(r.ease, 5)} ${padL(r.wordCount, 6)} ${pad(fmtDate(r.created), 12)} ${flag}`);
   });
 
   const winners = rows.filter(r => r.qualifies).slice(0, 3);
@@ -162,8 +176,8 @@ const main = async () => {
   if (problems.length) { console.log('\n⚠ Problems:'); problems.forEach(p => console.log('  - ' + p)); }
 
   // CSV alongside
-  const csv = ['author,permlink,created,seo_score,seo_max,seo_pct,geo_score,combined,word_count,in_window,qualifies,keyword,auto_keyword']
-    .concat(rows.map(r => `${r.author},${r.permlink},${fmtDate(r.created)},${r.seoScore},${r.seoMax},${r.seoPct},${r.geoScore},${r.combined},${r.wordCount},${r.inWindow},${r.qualifies},"${r.keyword}","${r.autoKeyword}"`))
+  const csv = ['author,permlink,created,seo_score,seo_max,seo_pct,geo_score,combined,ease,ease_gap,word_count,in_window,qualifies,keyword,auto_keyword']
+    .concat(rows.map(r => `${r.author},${r.permlink},${fmtDate(r.created)},${r.seoScore},${r.seoMax},${r.seoPct},${r.geoScore},${r.combined},${r.ease},${r.easeGap},${r.wordCount},${r.inWindow},${r.qualifies},"${r.keyword}","${r.autoKeyword}"`))
     .join('\n');
   fs.writeFileSync('contest-results.csv', csv);
   console.log('\n📄 Full results written to contest-results.csv');

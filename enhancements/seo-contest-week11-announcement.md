@@ -74,23 +74,31 @@ Seven valid entries this round. **Three more people and the pool moves to 400.**
 
 The minimum qualifying score is **SEO 70**. Any language is welcome. Every entry is re-scored on-chain after the round closes.
 
-### What changes in week 11: the Craft Index
+### What changes in week 11: word count is retired
 
-**The score now decides who qualifies. A second number decides who wins.**
+**If two or more entries tie on SEO + GEO, the podium goes to the post whose Reading Ease is closest to 60.**
 
-Hit SEO 70 and you are in the running, exactly as before. Among everyone who qualifies, the podium is ordered by a **Craft Index out of 100**, measured from your published post. Every part of it is a number you can check before you publish, and none of it is anybody's opinion.
+The rule is one number, and HivePulse has always shown it to you.
 
-| What it measures | Points | How to do well |
-|---|---:|---|
-| **Information density** | 25 | Unique ideas per word. Say five things once, not one thing five times. **This replaces word count** |
-| **Substantive sections** | 25 | Subheadings with real content under them - 150+ words each, up to 8. Not heading spam |
-| **Image alt text** | 20 | Distinct images with a real description, 20+ characters, up to 6 |
-| **Citations** | 20 | Distinct Hive posts you link to (up to 3) and distinct outside sources (up to 2) |
-| **Genuine discussion** | 10 | Different people leaving a real reply on your post. Smallest weight on purpose |
+Open the SEO tab and look at the Readability row. The hint underneath reads something like `Ease 68/100 · 33% transitions`. **That is the number.** Reading Ease is a standard Flesch measure of how hard your sentences are to read, taken from sentence length and syllables per word. You can watch the figure move while you type.
 
-**Padding will now cost you.** A long post that repeats itself scores worse than a shorter one that does not. Two of this round's top three would place differently under the Craft Index, and one 5,000-word entry scores zero on density.
+Here is the part nobody noticed. The analyzer stops caring once you pass 60: clear it and you get the full 8/8 for readability, whether you land on 60 or on 86. Every single entry that tied on a perfect score in weeks 9 and 10 had an identical scorecard, right down to that maxed-out 8/8. So the tiebreak simply reads the same number at full resolution.
 
-Everything else stays: the score is still re-derived on chain, the tag is still the one enforced rule, and **the Index is published here before the round opens and will not change mid-round.**
+**60 is the target, not the starting line.**
+
+| Round | Winning word count |
+|---|---:|
+| Week 8 | 1,730 |
+| Week 9 | 3,217 |
+| Week 10 | **7,569** |
+
+Word count had to go. Word count is unbounded, so there is always more to gain by writing more, and such a race has no finish. Reading Ease has a finish line: at 60 there is nothing further to gain, and going past it costs you.
+
+**Padding does nothing here.** Reading Ease is a ratio — words per sentence, syllables per word. Copy your post seven times and the number does not move at all. The only way to improve it is to actually rewrite: shorter sentences, plainer words.
+
+Applied to week 10, the 5,238-word entry that placed second drops to last at ease 86, and the tightest post in the field — 1,107 words, landing on exactly 60 — takes first. Week 10 stands as it was paid, under the rule published at the time. **This applies from week 11 onward.**
+
+If two posts somehow tie on that too, the earlier publication time wins, exactly as before.
 
 ### The 50 HIVE X prize
 

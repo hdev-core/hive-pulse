@@ -120,40 +120,30 @@
    if the stated total does not match the sum of the transfers.
    ══════════════════════════════════════════════════════════════════════════════ */
 const ROUND = {
-  label:  'Week 10',
+  label:  'Week 10 — referral top-up',
   window: '29 September – 6 October 2026, closed 12:00 UTC',
-  post:   'https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-9-results-week-10-open',
-  // 8 posts submitted by 7 people. @nabbas0786 entered twice and his best counts, so the
-  // field is 7 valid entrants -> under-10 tier -> 300 pool, + 50 X prize. No referrals
-  // were declared this round.
-  expectedTotal: 350,          // cross-checked against the transfers below
-  // Every memo below starts with this, so the already-paid check can tell THIS round's
-  // transfers from any other payment to the same person. Keep it in step with the memos.
-  memoTag: 'HivePulse SEO Contest week 10',
+  post:   'https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-10-results-week-11-open',
+  // The podium and X prize (350 HIVE) were paid on 6 October. This pays the referral pair
+  // that was missed: @soyunasantacruz declared "Referrad by @ahmedabbaci" and the scanner
+  // was matching the exact spelling "referred by", so it passed straight over her. She is
+  // new to the contest and her entry qualified at SEO 96 / GEO 100, so the bonus is owed.
+  expectedTotal: 50,
+  // Distinct from the week 10 tag, so the already-paid check does not confuse this with
+  // the podium transfers that already went out under 'HivePulse SEO Contest week 10'.
+  memoTag: 'HivePulse SEO Contest week 10 referral',
 };
 
-const CURATION = [
-  { author:'nabbas0786', permlink:'how-1-decision-changed-my-life-dae-to-dhms-engurdu',
-    place:'1st', seo:100, geo:100 },
-  { author:'wardah',     permlink:'crochet-the-best-activity-physio-can-do-2multiple-tasks',
-    place:'2nd', seo:100, geo:100 },
-  { author:'ahmedabbaci', permlink:'7-funniest-things-i-believed-as-a-kid-quick-long-stories-1791141667200',
-    place:'3rd', seo:100, geo:100 },
-];
+// Already voted and reblogged with the podium payout on 6 October. Nothing to curate here.
+const CURATION = [];
 
 const PAYMENTS = [
-  { to:'nabbas0786', amount:200,
-    parts:[['1st place — SEO 100 / GEO 100, 7,569 words', 150], ['X quote-retweet prize — most engagement', 50]],
-    memo:'HivePulse SEO Contest week 10: 1st place (SEO 100 / GEO 100) = 150 HIVE, plus 50 HIVE for the winning quote-retweet (9 likes, 5 replies against 6 and 1). Total 200 HIVE. Five entries tied on a perfect 200/200 and the published tiebreak settled it on word count - yours was the longest at 7,569. Congratulations!' },
+  { to:'soyunasantacruz', amount:25,
+    parts:[['Referral bonus — referred by @ahmedabbaci', 25]],
+    memo:'HivePulse SEO Contest week 10 referral: 25 HIVE for being referred by @ahmedabbaci. Your first entry qualified at SEO 96 / GEO 100. We missed this when the results went out - you wrote "Referrad by" and our check was looking for the exact spelling, which is our bug, not your mistake. Sorry for the delay, and welcome!' },
 
-  { to:'wardah', amount:100,
-    parts:[['2nd place — SEO 100 / GEO 100, 5,238 words', 100]],
-    memo:'HivePulse SEO Contest week 10: 2nd place (SEO 100 / GEO 100) = 100 HIVE. Five entries tied on a perfect 200/200 and the published tiebreak settled the podium on word count, where yours came second at 5,238. Up from third last round. Congratulations!' },
-
-  { to:'ahmedabbaci', amount:50,
-    parts:[['3rd place — SEO 100 / GEO 100, 3,308 words', 50]],
-    memo:'HivePulse SEO Contest week 10: 3rd place (SEO 100 / GEO 100) = 50 HIVE. Five perfect scores this round and the tiebreak ran on word count. Thank you also for the two bug reports - the analyzer now reads PeakD HTML the same as Ecency markdown because of you. Congratulations!' },
-
+  { to:'ahmedabbaci', amount:25,
+    parts:[['Referral bonus — brought @soyunasantacruz', 25]],
+    memo:'HivePulse SEO Contest week 10 referral: 25 HIVE for bringing @soyunasantacruz, whose first entry qualified at SEO 96 / GEO 100. We missed this when the results went out because of a spelling check on our side, not anything either of you did. Thank you for bringing people in - this is the second round running.' },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════════════ */

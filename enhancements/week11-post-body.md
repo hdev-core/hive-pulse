@@ -1,10 +1,10 @@
 ![HivePulse SEO Contest Week 11 cover: 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 entrants, 500 HIVE at 20 or more, a banner announcing that word count is retired and ties are now broken by the post closest to Reading Ease 60, plus a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](https://usermedia.actifit.io/MUWY64S3JGF29Q3EPE0HNW7VHU5LZ)
 
-**Summary:** Week 10 of the HivePulse SEO Contest is settled. Eight posts were submitted by seven writers, seven qualified, and five of them tied on a perfect score. 350 HIVE is going out. Week 11 is open, and it changes how a tie is broken - because word count has stopped measuring anything useful.
+**Summary:** Week 10 of the HivePulse SEO Contest is settled. Seven writers entered, all seven qualified, and five of them tied on a perfect score. 400 HIVE is going out. Week 11 is open, and it changes how a tie is broken - because word count has stopped measuring anything useful.
 
 ## HivePulse SEO Contest week 10 results
 
-Seven writers entered. **Seven qualified - every single entry cleared the bar, and every single one carried the tag.** After three rounds of losing good posts to a missing `#hivepulse`, nobody lost one this week. Five entries tied on a perfect 200/200. Seven valid entrants put the round in the under-10 tier, so the podium pool is 300 HIVE, plus the 50 HIVE X prize. **350 HIVE is going out.**
+Seven writers entered. **Seven qualified - every single entry cleared the bar, and every single one carried the tag.** After three rounds of losing good posts to a missing `#hivepulse`, nobody lost one this week. Five entries tied on a perfect 200/200. Seven valid entrants put the round in the under-10 tier, so the podium pool is 300 HIVE, plus the 50 HIVE X prize and a 50 HIVE referral pair. **400 HIVE is going out.**
 
 | Place | Author | Post | SEO | GEO | Words | Prize |
 |---|---|---|---:|---:|---:|---:|
@@ -27,6 +27,12 @@ But look at what the rule is now rewarding. The winning post is **7,569 words**.
 Three rounds ago, no entry in this contest had ever scored a perfect 100 on SEO. This round, five did. **The score has done its job - it taught the checklist, and the checklist works.** What it can no longer do is tell the difference between the five people who have learned it.
 
 So from week 11 the podium is decided differently.
+
+### Referral bonus - corrected after publishing
+
+@soyunasantacruz was referred by @ahmedabbaci, declared it in her entry comment, and her first entry qualified at SEO 96 / GEO 100. **Both receive 25 HIVE.**
+
+We missed this when the results first went out. She wrote "Referrad by" rather than "referred by", and the check that finds referrals was looking for the exact spelling, so it passed straight over her. That is our error, not hers - the rule exists so we can find the declaration, not to test anyone's spelling. The payment went out as soon as we spotted it, and the check now accepts any reasonable spelling.
 
 ### The X engagement prize
 
@@ -83,7 +89,11 @@ Word count had to go. Word count is unbounded, so there is always more to gain b
 
 Applied to week 10, the 5,238-word entry that placed second drops to last at ease 86, and the tightest post in the field — 1,107 words, landing on exactly 60 — takes first. Week 10 stands as it was paid, under the rule published at the time. **This applies from week 11 onward.**
 
-If two posts somehow tie on that too, the earlier publication time wins, exactly as before.
+**Your score does not change.** Reading ease 60 or above still earns the full 8/8 for readability - 60, 70 and 86 all score exactly the same. Writing above 60 costs you nothing. The tiebreak only ever comes into play when two posts finish level on the total, and if nobody ties it never applies at all.
+
+**And you cannot drop below 60 to get closer to it.** Under 60 the readability block falls from 8/8 to 7/8, your SEO lands short of 100, and you are no longer in the tie. Every perfect score this contest has recorded sits at 60 or above, and the lowest was exactly 60.
+
+So nothing to control, and nothing new to chase: reach 60 the way you always have. Among posts that all scored 100, the one nearest 60 - the tightest writing - takes the higher place. If two tie on that as well, the earlier publication time wins, exactly as before.
 
 ### The 50 HIVE X prize
 

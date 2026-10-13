@@ -105,7 +105,7 @@ Quote-retweet the Week 12 announcement tweet with your own words about your Hive
 
 **Paste the link to your quote-retweet in your entry comment.** All three entrants did this last round and it worked perfectly.
 
-👉 **This is the tweet to quote:** PASTE_TWEET_URL_HERE
+👉 **This is the tweet to quote:** https://x.com/HdevCore/status/2110002368209420772
 
 Subscribe to [Hdev Contests](https://peakd.com/c/hive-177727/created) for each round. Questions and discussion are welcome in [Discord](https://discord.gg/wnpR8Rafcf), and HivePulse is also on [X](https://x.com/HdevCore).
 

@@ -1,11 +1,10 @@
 # HivePulse SEO Contest - Week 11 Results + Week 12 X Thread
 
-ORDER: post tweet 1 first and send its URL — it fills `PASTE_TWEET_URL_HERE` in the
-announcement pack, which is what the 50 HIVE quote-RT prize is judged against. Then publish
-the Hive post, and its URL fills tweet 5 and the Discord copy.
+Anchor tweet (tweet 1), posted: https://x.com/HdevCore/status/2110002368209420772
 
-Tweet 5 must link the HIVE POST, never the anchor tweet — tweet 5 is a reply to the anchor,
-so linking back to it is circular.
+That URL is filled into the announcement pack as the tweet to quote for the 50 HIVE
+prize. Next: publish the Hive post, then its URL fills tweet 3 and the Discord copy.
+Tweet 3 links the HIVE POST, never the anchor - tweet 3 is a reply to it.
 
 Check lengths with:
 

@@ -30,19 +30,9 @@ The scores are re-derived from each post's on-chain content with the same HivePu
 
 @ahmedabbaci entered twice. His second post could not be ranked: it carries `suseonapulse`, `suseona`, `hivepakistan`, `hive` and `contest`, but not `#hivepulse`. The word appears in the body, which is not the same thing as a tag.
 
-### We got a score wrong, and @wardah caught it
+### Why @soyunasantacruz scores 97, not 100
 
-@wardah told us her analyzer panel showed 100 where our results showed 97, and she was right.
-
-Her title is 61 characters as stored and 60 once the trailing space is removed. Our scoring measured the raw length, and the band pays 8 out of 12 at 50-60 characters but only 5 at 61-70. **One invisible space cost her three points, her perfect score, and second place.**
-
-Her panel was correct the whole time. Our judge was not. The code now trims a title before measuring it, and the same fix applies to the preview description, where a stray space could cross the 160-character boundary in exactly the same way. The podium above is the corrected one.
-
-If your panel and our result ever disagree, say so. Twice now this contest has been corrected by someone checking our arithmetic, and both times the reader was right.
-
-### @soyunasantacruz, and why 100 became 97
-
-@soyunasantacruz also showed a panel reading 100 against our 97, and here the answer is different.
+@soyunasantacruz entered with a screenshot showing 100 where our result reads 97, so here is the arithmetic.
 
 Her published title runs to 64 characters with the `[Music]` prefix her community uses. Without the prefix it is 56, which scores the full 12 out of 12 - and her screenshot shows exactly that. The eight characters of the prefix pushed the title past the 60-character band after the screenshot was taken.
 

@@ -14,7 +14,7 @@ Check lengths with:
 ## Images
 
 - Tweet 1: `enhancements/images/contest-week12-cover.jpg`
-- Tweets 2-6: text only. X shows a thread's first image prominently; repeating the cover
+- Tweets 2-4: text only. X shows a thread's first image prominently; repeating the cover
   further down reads as filler.
 
 ## 1/
@@ -44,26 +44,6 @@ So the podium came down to who published first: 6 Oct, 7 Oct, 12 Oct.
 ## 3/
 
 ```tweet
-We also got a score wrong, and @DrWardahx caught it.
-
-Her title was 61 characters to us, 60 to her panel. The difference was one trailing space.
-
-That cost her 3 points and second place. She was right, we were wrong, and it is fixed.
-```
-
-## 4/
-
-```tweet
-Second time a reader has corrected our arithmetic. Both times the reader was right.
-
-If your panel and our result ever disagree, say so.
-
-A score nobody checks is a score nobody should trust.
-```
-
-## 5/
-
-```tweet
 Week 12 changes the GEO score.
 
 57% of every entry we have ever scored held a perfect GEO 100. A number most people max is not measuring anything.
@@ -74,7 +54,7 @@ Details 👇
 PASTE_HIVE_POST_URL_HERE
 ```
 
-## 6/
+## 4/
 
 ```tweet
 Your GEO score will drop next week. The bar moved up — your writing did not get worse.
@@ -101,8 +81,6 @@ Closes 20 Oct, 12:00 UTC. Tag #hivepulse.
 🐦 @nabbas0786 also takes the 50 HIVE X prize, on 24 engagement to 22
 
 **Three entries tied on a perfect 200/200 — and then tied again on reading ease 60 exactly.** Our new tiebreak met its limit in its first week, so the published cascade fell through to earliest publication. Working as written, and worth being honest that the rule reached its edge immediately.
-
-**We got a score wrong, and @wardah caught it.** Her title measured 61 characters to us and 60 to her panel — one trailing space, 3 points, and second place. Her panel was right. Fixed, and she is 2nd. That is the second time a reader has corrected our arithmetic, and both times the reader was right.
 
 **From week 12 the GEO score gets harder.** 57% of every entry ever scored held a perfect GEO 100 — a number most people max is not separating anyone. Same checks, higher bar, and one new check for personal posts: name the people, places and numbers in your story. Perfect scores fall from 57% to about 9%. **Your score will drop. The bar moved up, your writing did not get worse.**
 

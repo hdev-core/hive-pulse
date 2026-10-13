@@ -17,13 +17,15 @@ The scores are re-derived from each post's on-chain content with the same HivePu
 
 @ahmedabbaci entered twice. His second post could not be ranked: it carries `suseonapulse`, `suseona`, `hivepakistan`, `hive` and `contest`, but not `#hivepulse`. The word appears in the body, which is not the same thing as a tag.
 
-### Why @soyunasantacruz scores 97, not 100
+### @soyunasantacruz got a 100 in the panel, and deserves the credit for it
 
-@soyunasantacruz entered with a screenshot showing 100 where our result reads 97, so here is the arithmetic.
+@soyunasantacruz entered with a screenshot showing a perfect 100, and the screenshot is real. Here is what happened between screenshot and published post.
 
-Her published title runs to 64 characters with the `[Music]` prefix her community uses. Without the prefix it is 56, which scores the full 12 out of 12 - and her screenshot shows exactly that. The eight characters of the prefix pushed the title past the 60-character band after the screenshot was taken.
+The title runs to 56 characters on its own, which earns the full 12 out of 12 - exactly what the panel showed. Published into Scrobble.life, the title carries that community's `[Music]` prefix, and those eight characters nudge the length past the 60-character band. We re-score from what was published, so the result reads 97.
 
-The rule is that every entry is re-scored from what was published, so 97 stands. Worth saying plainly though: @soyunasantacruz lost three points to a title convention, not to her writing. At fourth place on combined score the gap changed nothing this round.
+**Three points to a title convention, and not one to the writing.** @soyunasantacruz hit a perfect score on merit, in a second round, in a second language, after telling us she nearly gave up installing the extension at all. That is the part worth remembering.
+
+@soyunasantacruz, you already know how to do this. Drop the prefix, or shorten the rest of the title to make room, and the 100 is yours on the board as well as in the panel. See you in week 12.
 
 ### The tiebreak met its limit in week one
 

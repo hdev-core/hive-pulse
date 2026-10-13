@@ -96,7 +96,11 @@ describe('the two copies of the engine', () => {
     const block = src.indexOf('\n};', at);
     const line = src.indexOf(';\n', at);
     const end = block !== -1 && block < line ? block + 3 : line + 1;
-    return normalise(src.slice(at, end));
+    const out = normalise(src.slice(at, end));
+    // An empty slice means the boundaries did not match and the comparison would be
+    // vacuous. Fail loudly instead of passing on nothing.
+    expect(out.length, `${name} sliced to nothing — check the declaration boundaries`).toBeGreaterThan(10);
+    return out;
   };
 
   // Every function that reads post text and feeds a score.
@@ -106,10 +110,14 @@ describe('the two copies of the engine', () => {
     'headingHierarchy', 'stripMd',
   ];
 
-  const read = () => [
-    readFileSync(resolve(root, 'compose.ts'), 'utf8'),
-    readFileSync(resolve(root, 'scripts/lib/seo-score.mjs'), 'utf8'),
-  ] as const;
+  // Normalise line endings at the door. Git checks these files out with CRLF on
+  // Windows, and the ';' + newline lookup below silently returned -1 against a CRLF
+  // file — which made every slice empty, so this whole block compared '' to '' and
+  // passed on nothing. Only the guard-the-guard test below caught it.
+  const slurp = (f: string) =>
+    readFileSync(resolve(root, f), 'utf8').split('\r\n').join('\n');
+
+  const read = () => [slurp('compose.ts'), slurp('scripts/lib/seo-score.mjs')] as const;
 
   it('define every shared text-scanning function identically', () => {
     const [ts, mjs] = read();

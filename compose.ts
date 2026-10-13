@@ -728,7 +728,8 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
   const wordCount = words.length;
   const readMinutes = Math.max(1, Math.round(wordCount / 200));
   const imageCount = getImageCount(content);
-  const titleChars = title.length;
+  // Trim first — a trailing space is invisible to the author and must not cost points.
+  const titleChars = title.trim().length;
   const permlink = toPermlink(title);
   const hierarchy = headingHierarchy(content);
   // Counted from the same both-syntax scan as the hierarchy check, so a `<h2>` written by
@@ -782,7 +783,7 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
   if (title && ctrScore < 2) titleHint += ' · add a number or power word for clicks';
 
   // Meta — 10
-  const metaLen = metaDesc.length;
+  const metaLen = metaDesc.trim().length;
   let metaScore = 0, metaHint = '';
   if (!metaDesc)           { metaHint = 'Fill the preview description — Google shows it as your SERP snippet'; }
   else if (metaLen < 50)   { metaScore = 4;  metaHint = `${metaLen} chars — too short, aim 120–160`; }

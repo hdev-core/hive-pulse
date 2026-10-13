@@ -211,3 +211,41 @@ describe('anchors that are not citations', () => {
     expect(classifyLinks('<a href="https://peakd.com/@me/my-post">my post</a>').internal).toBe(1);
   });
 });
+
+describe('whitespace must not cost points', () => {
+  // @wardah's week 11 title was 61 characters with a trailing space and 60 without. The
+  // length band drops from 8/12 to 5/12 at 61, so one invisible character took her SEO
+  // from 100 to 97 and moved her off the podium. Her analyzer panel showed 100 and was
+  // right; the judge was wrong.
+  const BODY = ('The post analyzer scores a Hive draft while Ahmed writes it in Lahore. '
+    .repeat(20)) + '\n\n## A section\n\n' + 'Plain words keep the reading ease near sixty here. '.repeat(20);
+  const TAGS = ['hivepulse', 'seo', 'test', 'hive', 'writing'];
+  const T60 = '3 (Best) Friends @ Oru: Creating Countless Memories Togeth';   // 58 chars
+
+  const seo = (title: string, desc = 'A preview description of a reasonable length that sits inside the hundred and twenty to hundred and sixty band.') => {
+    const a = analyze(BODY, title, TAGS, desc, 'post analyzer');
+    return a.breakdown.title;
+  };
+
+  it('scores a title the same with or without a trailing space', () => {
+    expect(seo(T60 + ' ')).toBe(seo(T60));
+  });
+
+  it('scores a title the same with leading whitespace', () => {
+    expect(seo('  ' + T60)).toBe(seo(T60));
+  });
+
+  it('still penalises a title that is genuinely too long', () => {
+    // 64 real characters is over the band and must keep costing points — that was the
+    // other week 11 case, and it was scored correctly.
+    const long = T60 + 'er Now';
+    expect(long.trim().length).toBeGreaterThan(60);
+    expect(seo(long)).toBeLessThan(seo(T60));
+  });
+
+  it('applies the same trimming to the preview description', () => {
+    const d = 'A preview description sitting comfortably inside the hundred and twenty to hundred and sixty character band for Google.';
+    const a = (desc: string) => analyze(BODY, T60, TAGS, desc, 'post analyzer').breakdown.meta;
+    expect(a(d + '   ')).toBe(a(d));
+  });
+});

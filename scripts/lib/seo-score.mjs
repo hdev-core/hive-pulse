@@ -296,7 +296,11 @@ const analyze = (rawContent, title, tags, metaDesc, keyword) => {
   const plain = stripMd(content);
   const wordCount = plain.split(/\s+/).filter(w => w.length > 0).length;
   const imageCount = getImageCount(content);
-  const titleChars = title.length;
+  // Trim first. A trailing space is invisible to the author and must not cost points:
+  // @wardah's week 11 title was 61 characters with one, 60 without, which dropped the
+  // length band from 8/12 to 5/12 and her SEO from 100 to 97. Her panel showed 100 and
+  // was right. Same for the preview description, where a stray space could cross 160.
+  const titleChars = title.trim().length;
   const subheadings = headingLevels(content).filter(l => l >= 2 && l <= 4).length;
   const hierarchy = headingHierarchy(content);
   const { ease } = wordCount > 20 ? readability(content) : { ease: 0 };
@@ -322,7 +326,7 @@ const analyze = (rawContent, title, tags, metaDesc, keyword) => {
   const ctrScore = Math.min(4, (ctr.hasNumber ? 2 : 0) + (ctr.hasPower ? 1 : 0) + (ctr.hasBracket ? 1 : 0));
   const titleScore = title ? titleLen + ctrScore : 0;
 
-  const metaLen = metaDesc.length;
+  const metaLen = metaDesc.trim().length;
   let metaScore = 0;
   if (!metaDesc) metaScore = 0;
   else if (metaLen < 50) metaScore = 4;

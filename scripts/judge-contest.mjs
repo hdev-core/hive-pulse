@@ -33,8 +33,8 @@
 // with week 1, too early to count for week 2. Starting the window on announcement day closes
 // that gap: anyone who reads the post and publishes the same day is in. Cross-check against the
 // previous round's archived CSV so a post can't be awarded twice.
-const WINDOW_START = Date.parse('2026-09-29T00:00:00Z');
-const WINDOW_END   = Date.parse('2026-10-06T12:00:00Z');   // week 10 closes 12:00 UTC, not 23:59
+const WINDOW_START = Date.parse('2026-10-06T00:00:00Z');
+const WINDOW_END   = Date.parse('2026-10-13T12:00:00Z');   // week 11 closes 12:00 UTC, not 23:59
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 
 // Tiebreak target, from week 11. The engine's own readability check stops caring once a post

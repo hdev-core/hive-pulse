@@ -1,0 +1,14 @@
+# HivePulse SEO Contest — week 11 entries (6 → 13 Oct 2026, 12:00 UTC)
+# Collected with scripts/collect-entries.mjs from comments on
+# @hdev/hivepulse-seo-contest-week-10-results-week-11-open
+#
+# First round judged on the Reading Ease tiebreak (closest to 60) instead of word count.
+# @ahmedabbaci entered twice; his best TAGGED post counts. His second post carries no
+# #hivepulse tag, so it cannot rank — listed so the result is auditable.
+# No referrals declared.
+
+@ahmedabbaci/the-overthinking-trap-action-vs-analysis-3-best-tips
+@ahmedabbaci/simple-journey-that-i-still-remember-even-after-12-years-1791744467130
+@nabbas0786/how-did-2-intense-overs-change-this-evening-engurdu
+@soyunasantacruz/shakira-s-latest-concert-my-experience-4-best-facts-muueihlj
+@wardah/3-best-friends--oru-creating-countless-memories-together

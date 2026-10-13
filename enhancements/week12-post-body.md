@@ -1,4 +1,4 @@
-![HivePulse SEO Contest Week 12 cover: 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 entrants, 500 HIVE at 20 or more, a banner announcing that the GEO score gets harder from week 12, plus a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](PASTE_COVER_URL_HERE)
+![HivePulse SEO Contest Week 12 cover: 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 entrants, 500 HIVE at 20 or more, a banner announcing that the GEO score gets harder from week 12, plus a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](https://usermedia.actifit.io/MV6Q0S9E2XD74OX50QOGCJ4VKSCK09)
 
 **Summary:** Week 11 of the HivePulse SEO Contest is settled. Four writers entered and three of them tied on a perfect score *and* on the new reading-ease tiebreak, so the podium came down to who published first. 350 HIVE is going out. Week 12 is open, and the GEO score gets harder.
 

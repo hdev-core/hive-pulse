@@ -436,11 +436,44 @@ const missingAltImages = (content: string): string[] => {
 // Links classified as internal (Hive) vs external — both matter, differently.
 // Internal links keep readers on-chain and build topical authority; external
 // links are a citation/trust signal.
+// Links and headings, in BOTH syntaxes. Hive bodies are markdown, but PeakD's editor emits
+// raw HTML for anything inserted through its toolbar, and Ecency's WYSIWYG emits
+// `<h2 style="…">`. Scanning only `[text](url)` and `# ` meant the same article scored
+// differently depending on which editor typed it. Reported by @ahmedabbaci, 2026-10-05.
+//
+// EVERY heading check goes through scanHeadings(). An earlier pass converted only the
+// hierarchy and the subheading count, leaving keyword-in-heading, the GEO question-heading
+// check and the intent format check still markdown-only — together worth 7 SEO and 20 GEO,
+// more than the checks that had been fixed. One scanner, so that cannot happen again.
+//
+// Both patterns are written to be LINEAR. The first cut of the HTML link pattern was
+// `<a\b[^>]*?\shref\s*=\s*("([^"]*)"|…)[^>]*>`, whose three overlapping quantifiers made it
+// cubic: a 23 KB post of `<a href="…"` with no closing bracket took 45 seconds, and the
+// contest judge runs this ~44 times per post on arbitrary on-chain bodies. Matching the tag
+// first and reading its attributes separately — the shape missingAltImages already uses —
+// removes the nesting entirely.
+const MD_LINK   = /(?<!!)\[[^\]]+\]\(([^)]*)\)/g;
+const HTML_A    = /<a\b[^>]*>/gi;
+const A_HREF    = /\shref\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i;
+
+const linkUrls = (content: string): string[] => [
+  // A markdown destination may carry a title — `(url "title")`. Take the first token.
+  ...[...content.matchAll(MD_LINK)].map(m => m[1].trim().split(/\s/)[0]),
+  ...[...content.matchAll(HTML_A)].map(tag => {
+    const m = tag[0].match(A_HREF);
+    return m ? (m[2] ?? m[3] ?? m[4] ?? '') : '';
+  }),
+].filter(Boolean);
+
 const classifyLinks = (content: string): { internal: number; external: number } => {
-  const links = [...content.matchAll(/(?<!!)\[[^\]]+\]\(([^)\s]+)[^)]*\)/g)].map(m => m[1]);
   const hiveHosts = /(peakd\.com|ecency\.com|hive\.blog|inleo\.io|leofinance\.io|3speak\.tv|actifit\.io|hive-engine)/i;
+  // An anchor wrapping an image is a lightbox, not a citation — `<a href="…/photo.jpg">`
+  // around an `<img>` is the standard Hive gallery pattern and was scoring +4 link points
+  // on photo posts with no real links at all.
+  const IMAGE_HREF = /\.(png|jpe?g|gif|webp|svg|bmp|avif)(\?|#|$)/i;
   let internal = 0, external = 0;
-  for (const url of links) {
+  for (const url of linkUrls(content)) {
+    if (IMAGE_HREF.test(url)) continue;
     if (/^\/?@/.test(url) || /\/@[a-z0-9.\-]+/.test(url) || hiveHosts.test(url)) internal++;
     else if (/^https?:\/\//.test(url)) external++;
     else if (/^\//.test(url)) internal++;
@@ -448,10 +481,31 @@ const classifyLinks = (content: string): { internal: number; external: number } 
   return { internal, external };
 };
 
-// Heading hierarchy: the title is the page H1, so a `# ` in the body creates a
+// One ordered pass over both heading syntaxes. The alternation means matchAll returns them
+// in document order, so a `## ` followed by an `<h4>` is still caught as a skipped level.
+// The HTML branch reads only plain text inside the tag; a heading wrapped in `<b>` yields an
+// empty title, which costs a keyword match but never a level.
+const ANY_HEADING = /^(#{1,6})[ \t]+(.+)$|<h([1-6])\b[^>]*>([^<]*)/gim;
+
+interface Heading { level: number; text: string }
+
+const scanHeadings = (content: string): Heading[] =>
+  [...content.matchAll(ANY_HEADING)].map(m => ({
+    level: m[1] ? m[1].length : Number(m[3]),
+    // Trailing `###` closers and any inline markup are not part of the title.
+    text: (m[1] ? m[2] : m[4] || '').replace(/<[^>]*>/g, '').replace(/\s*#+\s*$/, '').trim(),
+  }));
+
+const headingLevels = (content: string): number[] => scanHeadings(content).map(h => h.level);
+
+// Body headings the analyzer scores: h2 to h4. h1 duplicates the post title, h5/h6 are noise.
+const bodyHeadings = (content: string): Heading[] =>
+  scanHeadings(content).filter(h => h.level >= 2 && h.level <= 4);
+
+// Heading hierarchy: the title is the page H1, so a `# ` or an `<h1>` in the body creates a
 // duplicate H1 (bad). Skipping levels (## → ####) also weakens structure.
 const headingHierarchy = (content: string): { hasH1: boolean; skips: boolean; count: number } => {
-  const levels = [...content.matchAll(/^(#{1,6})\s+\S/gm)].map(m => m[1].length);
+  const levels = headingLevels(content);
   let skips = false, prev = 1; // title counts as H1
   for (const lvl of levels) { if (lvl > prev + 1) skips = true; prev = lvl; }
   return { hasH1: levels.includes(1), skips, count: levels.filter(l => l >= 2).length };
@@ -476,7 +530,7 @@ const detectIntent = (title: string, content: string): { type: IntentType; match
   const t = title.toLowerCase();
   if (/^how to|^how i|\bguide\b|\btutorial\b|step[- ]by[- ]step/.test(t)) {
     const steps = (content.match(/^(?:\d+\.|[-*])\s+/gm) || []).length;
-    const heads = (content.match(/^#{2,4}\s+/gm) || []).length;
+    const heads = bodyHeadings(content).length;
     const ok = steps >= 3 || heads >= 2;
     return { type: 'How-to / Guide', matched: ok, hint: ok ? 'Has clear steps/sections' : 'Add numbered steps or step subheadings' };
   }
@@ -545,8 +599,7 @@ const analyzeKeyword = (kw: string, content: string, title: string, metaDesc: st
   const plain = stripMd(content);
   const inFirst100 = plain.split(/\s+/).slice(0, 100).join(' ').toLowerCase().includes(k);
 
-  const mdHeads = content.match(/^#{2,4}\s+.+/mg) || [];
-  let inHeading = mdHeads.some(h => h.toLowerCase().includes(k));
+  let inHeading = bodyHeadings(content).some(h => h.text.toLowerCase().includes(k));
   if (!inHeading) {
     document.querySelectorAll('[contenteditable="true"] h2, [contenteditable="true"] h3')
       .forEach(h => { if (h.textContent?.toLowerCase().includes(k)) inHeading = true; });
@@ -571,6 +624,10 @@ interface GeoResult { informational: boolean; score: number; items: GeoItem[]; }
 const THIRD_PRON = /\b(it|this|that|these|those|they|them|their|theirs|he|she|him|her|hers|his|its)\b/gi;
 const START_PRON = /^(it|this|that|these|those|they|there|here)\b/i;
 
+// GEO rubric v2 — EFFECTIVE FROM CONTEST WEEK 12 (round opening 13 October 2026).
+// Announced in the week 11 results post before it took effect; weeks 1-11 were judged on
+// v1 and are not reopened. Thresholds are pinned by utils/geoRubric.test.ts, which also
+// checks this file and scripts/lib/seo-score.mjs still agree.
 const analyzeGeo = (content: string, intentType: IntentType): GeoResult => {
   const informational = intentType !== 'General / Personal';
   const plain = stripMd(content);
@@ -582,27 +639,27 @@ const analyzeGeo = (content: string, intentType: IntentType): GeoResult => {
   const explicitSummary = /\b(tl;?dr|in summary|in short|summary:|key takeaway|overview)\b/i.test(head);
   const firstPara = content.split(/\n{2,}/).map(p => stripMd(p).trim()).find(p => p.length > 30) || '';
   const fpWords = firstPara.split(/\s+/).filter(Boolean).length;
-  let hookScore01 = 0;
-  if (explicitSummary || (fpWords >= 8 && fpWords <= 60)) hookScore01 = 1;
-  else if (fpWords > 60 && fpWords <= 100) hookScore01 = 0.5;
+  // 8-60 words used to take full marks, which is almost any paragraph anyone writes.
+  const hookScore01 = explicitSummary || (fpWords >= 12 && fpWords <= 45) ? 1
+                    : fpWords >= 8 && fpWords <= 75 ? 0.7 : 0.3;
   const hookHint = hookScore01 === 1 ? 'Clear opening summary' :
-    hookScore01 === 0.5 ? 'Opening paragraph is long — tighten it to a 1–2 sentence hook' :
+    hookScore01 === 0.7 ? 'Tighten the opening to 12–45 words — that is the chunk AI quotes' :
     'Open with a 1–2 sentence summary (or a TL;DR) of what the post covers';
 
   // Self-contained statements — sentences shouldn't open with a bare pronoun
   const startPron = sentences.filter(s => START_PRON.test(s)).length;
   const startRatio = sentences.length ? startPron / sentences.length : 0;
-  let scScore01 = startRatio < 0.1 ? 1 : startRatio < 0.2 ? 0.8 : startRatio < 0.3 ? 0.5 : 0.2;
-  if (sentences.length < 3) scScore01 = 1;
-  const scHint = scScore01 >= 0.8 ? 'Sentences stand on their own' :
+  let scScore01 = startRatio < 0.08 ? 1 : startRatio < 0.16 ? 0.75 : startRatio < 0.26 ? 0.45 : 0.2;
+  if (sentences.length < 3) scScore01 = 0.5;   // too short to have demonstrated anything
+  const scHint = scScore01 >= 0.75 ? 'Sentences stand on their own' :
     `${Math.round(startRatio * 100)}% of sentences start with "it/this/that" — name the subject instead so AI can quote them`;
 
   // Clear entity naming — overall third-person pronoun density
   const pronTotal = (plain.match(THIRD_PRON) || []).length;
   const pronRatio = words.length ? pronTotal / words.length : 0;
-  let entScore01 = pronRatio < 0.04 ? 1 : pronRatio < 0.07 ? 0.7 : 0.4;
-  if (words.length < 40) entScore01 = 1;
-  const entHint = entScore01 >= 0.7 ? 'Subjects are named clearly' :
+  let entScore01 = pronRatio < 0.03 ? 1 : pronRatio < 0.05 ? 0.75 : pronRatio < 0.08 ? 0.45 : 0.2;
+  if (words.length < 40) entScore01 = 0.5;
+  const entHint = entScore01 >= 0.75 ? 'Subjects are named clearly' :
     'Repeat key names/terms instead of "it/they" — AI engines extract named entities, not pronouns';
 
   const items: GeoItem[] = [];
@@ -611,9 +668,20 @@ const analyzeGeo = (content: string, intentType: IntentType): GeoResult => {
 
   if (!informational) {
     // Personal / creative — 3 universal checks total 100
-    add('Opening hook',      hookScore01, 40, hookHint, 'AI assistants and previews lead with your first lines. A clear opening sentence makes your post quotable and shareable — even for a personal story.');
-    add('Self-contained',    scScore01,   35, scHint,   'AI pulls individual sentences out of context. Sentences that start with "it/this" lose their meaning when quoted alone.');
-    add('Clear subjects',    entScore01,  25, entHint,  'Retrieval systems index named entities (people, places, things). Naming them — instead of "it/they" — makes your post findable and citable.');
+    add('Opening hook',      hookScore01, 35, hookHint, 'AI assistants and previews lead with your first lines. A clear opening sentence makes your post quotable and shareable — even for a personal story.');
+    add('Self-contained',    scScore01,   30, scHint,   'AI pulls individual sentences out of context. Sentences that start with "it/this" lose their meaning when quoted alone.');
+    add('Clear subjects',    entScore01,  20, entHint,  'Retrieval systems index named entities (people, places, things). Naming them — instead of "it/they" — makes your post findable and citable.');
+    // A personal post used to clear three easy gates and take 100, which is why half the
+    // field sat there. A story an AI can quote names things.
+    const pNums = (plain.match(/\b\d+(?:[.,]\d+)?%?\b/g) || []).length;
+    const properNouns = (plain.match(/\b[A-Z][a-z]{2,}\b/g) || []).length;
+    const specificity = words.length ? (pNums + properNouns) / words.length : 0;
+    const spec01 = specificity >= 0.075 ? 1 : specificity >= 0.045 ? 0.7 : specificity >= 0.02 ? 0.4 : 0.1;
+    add('Concrete detail', spec01, 15,
+      spec01 === 1 ? 'Named people, places and numbers' :
+      spec01 >= 0.4 ? 'Name more specifics — people, places, dates, numbers' :
+      'Too general to quote. Name the people, places and numbers in your story',
+      'An AI quotes what is specific. "My friend helped me" is unquotable; "Ahmed walked me through it on Discord for four hours" is a fact an engine can lift and attribute.');
   } else {
     // Informational — universal (45) + boosters (55)
     add('Opening hook',   hookScore01, 20, hookHint, 'AI answer engines lead with a summary. A TL;DR or tight opening paragraph is the chunk most likely to be cited.');
@@ -621,27 +689,26 @@ const analyzeGeo = (content: string, intentType: IntentType): GeoResult => {
     add('Clear subjects', entScore01,  10, entHint,  'Retrieval systems index named entities. Naming them — not "it/they" — makes your facts citable.');
 
     // Q&A / answerable structure
-    const qHeads = (content.match(/^#{2,4}\s+.*\?\s*$/mg) || []).length;
+    const heads2 = bodyHeadings(content);
+    const qHeads = heads2.filter(h => h.text.endsWith('?')).length;
     const faqMark = /\bfaq\b|^\s*q[:.]/im.test(content);
-    let qa01 = qHeads >= 1 || faqMark ? 1 : (content.match(/^#{2,4}\s+/gm) || []).length >= 2 ? 0.5 : 0;
+    const qa01 = qHeads >= 2 ? 1 : qHeads === 1 ? 0.6 : faqMark ? 0.5 : heads2.length >= 3 ? 0.3 : 0;
     add('Answerable structure', qa01, 20,
-      qa01 === 1 ? 'Has question-style headings' : qa01 === 0.5 ? 'Turn some headings into the questions readers ask' : 'Add question-style headings (e.g. "How does X work?") — AI matches these to user queries',
+      qa01 === 1 ? 'Has question-style headings' : qa01 >= 0.3 ? 'Turn more headings into the questions readers ask' : 'Add question-style headings (e.g. "How does X work?") — AI matches these to user queries',
       'AI answer engines map content to the questions people ask. Headings phrased as questions get matched and surfaced directly.');
 
     // Definitional clarity
     const defs = (plain.match(/\b[A-Za-z][\w-]+ (?:is|are|refers to|means|is defined as) (?:a|an|the|when|where|the process|any)\b/gi) || []).length;
-    const def01 = defs >= 2 ? 1 : defs === 1 ? 0.5 : 0;
+    const def01 = defs >= 3 ? 1 : defs === 2 ? 0.7 : defs === 1 ? 0.4 : 0;
     add('Definitional clarity', def01, 15,
-      def01 === 1 ? 'Contains clear definitions' : def01 === 0.5 ? 'Add one more plain "X is …" definition' : 'State key terms plainly ("X is …") — AI extracts definitions verbatim',
+      def01 === 1 ? 'Contains clear definitions' : def01 >= 0.4 ? 'Add another plain "X is …" definition' : 'State key terms plainly ("X is …") — AI extracts definitions verbatim',
       'Generative engines love clean definitional sentences ("A permlink is …"). They get quoted directly in AI answers.');
 
     // Concrete data / specifics
     const nums = (plain.match(/\b\d+(?:[.,]\d+)?%?\b/g) || []).length;
     const { external } = classifyLinks(content);
-    let data01 = 0;
-    if (nums >= 3 && external > 0) data01 = 1;
-    else if (nums >= 3) data01 = 0.7;
-    else if (nums >= 1) data01 = 0.4;
+    const data01 = nums >= 5 && external > 0 ? 1 : nums >= 3 && external > 0 ? 0.75
+                 : nums >= 3 ? 0.5 : nums >= 1 ? 0.25 : 0;
     add('Concrete data', data01, 20,
       data01 === 1 ? 'Specific figures with sources' : data01 >= 0.4 ? 'Add a source link next to your figures' : 'Add specific numbers/dates/stats — AI cites concrete facts over vague claims',
       'AI answers prefer specific, verifiable facts (numbers, dates, stats) — ideally with a source link. Vague claims rarely get cited.');
@@ -674,11 +741,15 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
   const wordCount = words.length;
   const readMinutes = Math.max(1, Math.round(wordCount / 200));
   const imageCount = getImageCount(content);
-  const titleChars = title.length;
+  // Trim first — a trailing space is invisible to the author and must not cost points.
+  const titleChars = title.trim().length;
   const permlink = toPermlink(title);
-  const subheadings = (content.match(/^#{2,4}\s+.+/mg) || []).length +
-                      document.querySelectorAll('[contenteditable="true"] h2, [contenteditable="true"] h3').length;
   const hierarchy = headingHierarchy(content);
+  // Counted from the same both-syntax scan as the hierarchy check, so a `<h2>` written by
+  // PeakD's toolbar counts exactly as a `## ` does. The DOM query adds headings that exist
+  // only in a WYSIWYG surface and never reach the markdown source.
+  const subheadings = headingLevels(content).filter(l => l >= 2 && l <= 4).length +
+                      document.querySelectorAll('[contenteditable="true"] h2, [contenteditable="true"] h3').length;
   const { grade, ease } = wordCount > 20 ? readability(content) : { grade: 0, ease: 0 };
   const kw = analyzeKeyword(keyword, content, title, metaDesc);
   const links = classifyLinks(content);
@@ -725,7 +796,7 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
   if (title && ctrScore < 2) titleHint += ' · add a number or power word for clicks';
 
   // Meta — 10
-  const metaLen = metaDesc.length;
+  const metaLen = metaDesc.trim().length;
   let metaScore = 0, metaHint = '';
   if (!metaDesc)           { metaHint = 'Fill the preview description — Google shows it as your SERP snippet'; }
   else if (metaLen < 50)   { metaScore = 4;  metaHint = `${metaLen} chars — too short, aim 120–160`; }

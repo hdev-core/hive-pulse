@@ -102,11 +102,44 @@ const missingAltImages = (content) => {
   return out;
 };
 
+// Links and headings in BOTH syntaxes. Hive bodies are markdown, but PeakD's editor emits
+// raw HTML for anything inserted through its toolbar, and Ecency's WYSIWYG emits
+// `<h2 style="…">`. Scanning only `[text](url)` and `# ` meant the same article scored
+// differently depending on which editor typed it. Reported by @ahmedabbaci, 2026-10-05.
+//
+// EVERY heading check goes through scanHeadings(). An earlier pass converted only the
+// hierarchy and the subheading count, leaving keyword-in-heading, the GEO question-heading
+// check and the intent format check still markdown-only — together worth 7 SEO and 20 GEO,
+// more than the checks that had been fixed. One scanner, so that cannot happen again.
+//
+// Both patterns are written to be LINEAR. The first cut of the HTML link pattern was
+// `<a\b[^>]*?\shref\s*=\s*("([^"]*)"|…)[^>]*>`, whose three overlapping quantifiers made it
+// cubic: a 23 KB post of `<a href="…"` with no closing bracket took 45 seconds, and the
+// contest judge runs this ~44 times per post on arbitrary on-chain bodies. Matching the tag
+// first and reading its attributes separately — the shape missingAltImages already uses —
+// removes the nesting entirely.
+const MD_LINK   = /(?<!!)\[[^\]]+\]\(([^)]*)\)/g;
+const HTML_A    = /<a\b[^>]*>/gi;
+const A_HREF    = /\shref\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i;
+
+const linkUrls = (content) => [
+  // A markdown destination may carry a title — `(url "title")`. Take the first token.
+  ...[...content.matchAll(MD_LINK)].map(m => m[1].trim().split(/\s/)[0]),
+  ...[...content.matchAll(HTML_A)].map(tag => {
+    const m = tag[0].match(A_HREF);
+    return m ? (m[2] ?? m[3] ?? m[4] ?? '') : '';
+  }),
+].filter(Boolean);
+
 const classifyLinks = (content) => {
-  const links = [...content.matchAll(/(?<!!)\[[^\]]+\]\(([^)\s]+)[^)]*\)/g)].map(m => m[1]);
   const hiveHosts = /(peakd\.com|ecency\.com|hive\.blog|inleo\.io|leofinance\.io|3speak\.tv|actifit\.io|hive-engine)/i;
+  // An anchor wrapping an image is a lightbox, not a citation — `<a href="…/photo.jpg">`
+  // around an `<img>` is the standard Hive gallery pattern and was scoring +4 link points
+  // on photo posts with no real links at all.
+  const IMAGE_HREF = /\.(png|jpe?g|gif|webp|svg|bmp|avif)(\?|#|$)/i;
   let internal = 0, external = 0;
-  for (const url of links) {
+  for (const url of linkUrls(content)) {
+    if (IMAGE_HREF.test(url)) continue;
     if (/^\/?@/.test(url) || /\/@[a-z0-9.\-]+/.test(url) || hiveHosts.test(url)) internal++;
     else if (/^https?:\/\//.test(url)) external++;
     else if (/^\//.test(url)) internal++;
@@ -114,9 +147,30 @@ const classifyLinks = (content) => {
   return { internal, external };
 };
 
+// One ordered pass over both heading syntaxes. The alternation means matchAll returns them
+// in document order, so a `## ` followed by an `<h4>` is still caught as a skipped level.
+// The HTML branch reads only plain text inside the tag; a heading wrapped in `<b>` yields an
+// empty title, which costs a keyword match but never a level.
+const ANY_HEADING = /^(#{1,6})[ \t]+(.+)$|<h([1-6])\b[^>]*>([^<]*)/gim;
+
+const scanHeadings = (content) =>
+  [...content.matchAll(ANY_HEADING)].map(m => ({
+    level: m[1] ? m[1].length : Number(m[3]),
+    // Trailing `###` closers and any inline markup are not part of the title.
+    text: (m[1] ? m[2] : m[4] || '').replace(/<[^>]*>/g, '').replace(/\s*#+\s*$/, '').trim(),
+  }));
+
+const headingLevels = (content) => scanHeadings(content).map(h => h.level);
+
+// Body headings the analyzer scores: h2 to h4. h1 duplicates the post title, h5/h6 are noise.
+const bodyHeadings = (content) =>
+  scanHeadings(content).filter(h => h.level >= 2 && h.level <= 4);
+
+// Heading hierarchy: the title is the page H1, so a `# ` or an `<h1>` in the body creates a
+// duplicate H1 (bad). Skipping levels (## → ####) also weakens structure.
 const headingHierarchy = (content) => {
-  const levels = [...content.matchAll(/^(#{1,6})\s+\S/gm)].map(m => m[1].length);
-  let skips = false, prev = 1;
+  const levels = headingLevels(content);
+  let skips = false, prev = 1; // title counts as H1
   for (const lvl of levels) { if (lvl > prev + 1) skips = true; prev = lvl; }
   return { hasH1: levels.includes(1), skips, count: levels.filter(l => l >= 2).length };
 };
@@ -131,7 +185,7 @@ const detectIntent = (title, content) => {
   const t = title.toLowerCase();
   if (/^how to|^how i|\bguide\b|\btutorial\b|step[- ]by[- ]step/.test(t)) {
     const steps = (content.match(/^(?:\d+\.|[-*])\s+/gm) || []).length;
-    const heads = (content.match(/^#{2,4}\s+/gm) || []).length;
+    const heads = bodyHeadings(content).length;
     return { type: 'How-to / Guide', matched: steps >= 3 || heads >= 2 };
   }
   if (/^\d+\s|\btop\s+\d+|\bbest\s+\d+|\blist of\b|\d+\s+(ways|tips|reasons|things)/.test(t)) {
@@ -178,8 +232,7 @@ const analyzeKeyword = (kw, content, title, metaDesc) => {
   const frontLoaded = inTitle && titleL.indexOf(k) < title.length * 0.5;
   const plain = stripMd(content);
   const inFirst100 = plain.split(/\s+/).slice(0, 100).join(' ').toLowerCase().includes(k);
-  const mdHeads = content.match(/^#{2,4}\s+.+/mg) || [];
-  const inHeading = mdHeads.some(h => h.toLowerCase().includes(k));
+  const inHeading = bodyHeadings(content).some(h => h.text.toLowerCase().includes(k));
   const inMetaDesc = metaDesc.toLowerCase().includes(k);
   const inPermlink = !!title && toPermlink(title).includes(toPermlink(k));
   const allW = plain.split(/\s+/).filter(w => w.length > 0);
@@ -191,6 +244,25 @@ const analyzeKeyword = (kw, content, title, metaDesc) => {
 const THIRD_PRON = /\b(it|this|that|these|those|they|them|their|theirs|he|she|him|her|hers|his|its)\b/gi;
 const START_PRON = /^(it|this|that|these|those|they|there|here)\b/i;
 
+// GEO rubric v2 — EFFECTIVE FROM CONTEST WEEK 12 (round opening 13 October 2026).
+// Announced in the week 11 results post before it took effect; weeks 1-11 were judged on
+// v1 and are not reopened. Thresholds are pinned by utils/geoRubric.test.ts, which also
+// checks this file and scripts/lib/seo-score.mjs still agree.
+/* GEO - will an AI engine quote this?
+ *
+ * Recalibrated after the rubric stopped discriminating. Measured across all 70 contest
+ * entries ever scored, 57% held a perfect 100 and every individual gate was maxed by
+ * 77-91% of posts - both branches equally, so this was never about the personal branch
+ * having fewer checks. A score that 57% of a self-selecting field maxes is not measuring.
+ *
+ * Same six ideas, same labels, harder top bands, plus one new gate for personal posts.
+ * On the same 70 entries: 9% at 100, median 79, range 45-100. Perfect stays reachable -
+ * six posts still get there - but it has to be earned.
+ *
+ * Every band below was fitted against that corpus, not chosen by eye. The first attempt
+ * put NOBODY at 100 and a median of 67, which is as useless as 57% at 100 in the other
+ * direction; these are the numbers after retuning.
+ */
 const analyzeGeo = (rawContent, intentType) => {
   const content = normalizeEol(rawContent);
   const informational = intentType !== 'General / Personal';
@@ -201,38 +273,55 @@ const analyzeGeo = (rawContent, intentType) => {
   const explicitSummary = /\b(tl;?dr|in summary|in short|summary:|key takeaway|overview)\b/i.test(head);
   const firstPara = content.split(/\n{2,}/).map(p => stripMd(p).trim()).find(p => p.length > 30) || '';
   const fpWords = firstPara.split(/\s+/).filter(Boolean).length;
-  let hookScore01 = 0;
-  if (explicitSummary || (fpWords >= 8 && fpWords <= 60)) hookScore01 = 1;
-  else if (fpWords > 60 && fpWords <= 100) hookScore01 = 0.5;
+
+  // An AI lifts the opening paragraph, so reward one that stands alone as an answer.
+  // 8-60 words used to be full marks, which is almost any paragraph anyone writes.
+  const hookScore01 = explicitSummary || (fpWords >= 12 && fpWords <= 45) ? 1
+                    : fpWords >= 8 && fpWords <= 75 ? 0.7 : 0.3;
+
   const startPron = sentences.filter(s => START_PRON.test(s)).length;
   const startRatio = sentences.length ? startPron / sentences.length : 0;
-  let scScore01 = startRatio < 0.1 ? 1 : startRatio < 0.2 ? 0.8 : startRatio < 0.3 ? 0.5 : 0.2;
-  if (sentences.length < 3) scScore01 = 1;
+  let scScore01 = startRatio < 0.08 ? 1 : startRatio < 0.16 ? 0.75 : startRatio < 0.26 ? 0.45 : 0.2;
+  if (sentences.length < 3) scScore01 = 0.5;   // too short to have shown anything
+
   const pronTotal = (plain.match(THIRD_PRON) || []).length;
   const pronRatio = words.length ? pronTotal / words.length : 0;
-  let entScore01 = pronRatio < 0.04 ? 1 : pronRatio < 0.07 ? 0.7 : 0.4;
-  if (words.length < 40) entScore01 = 1;
+  let entScore01 = pronRatio < 0.03 ? 1 : pronRatio < 0.05 ? 0.75 : pronRatio < 0.08 ? 0.45 : 0.2;
+  if (words.length < 40) entScore01 = 0.5;
+
+  const nums = (plain.match(/\b\d+(?:[.,]\d+)?%?\b/g) || []).length;
+  // Use the same external-link count the extension uses, rather than a second
+  // domain-counting routine that could drift away from it.
+  const { external } = classifyLinks(content);
 
   let score = 0;
-  // `parts` is additive diagnostic detail for scripts/score-post.mjs; it does not affect
-  // `score`, so judge-contest.mjs results are unchanged.
   const parts = [];
-  const add = (s01, max, label) => { score += Math.round(s01 * max); if (label) parts.push({ label, got: Math.round(s01 * max), max }); };
+  const add = (s01, max, label) => { const got = Math.round(s01 * max); score += got; parts.push({ label, got, max }); };
+
   if (!informational) {
-    add(hookScore01, 40, 'Opening hook'); add(scScore01, 35, 'Self-contained sentences'); add(entScore01, 25, 'Clear subjects');
+    add(hookScore01, 35, 'Opening hook');
+    add(scScore01, 30, 'Self-contained sentences');
+    add(entScore01, 20, 'Clear subjects');
+    // New. A personal post used to clear three easy gates and take 100, which is why half
+    // the field sat there. A story an AI can quote names things - people, places, numbers,
+    // dates. Pure generalities are not quotable however well written.
+    const properNouns = (plain.match(/\b[A-Z][a-z]{2,}\b/g) || []).length;
+    const specificity = words.length ? (nums + properNouns) / words.length : 0;
+    add(specificity >= 0.075 ? 1 : specificity >= 0.045 ? 0.7 : specificity >= 0.02 ? 0.4 : 0.1,
+        15, 'Concrete detail');
   } else {
-    add(hookScore01, 20, 'Opening hook'); add(scScore01, 15, 'Self-contained sentences'); add(entScore01, 10, 'Clear subjects');
-    const qHeads = (content.match(/^#{2,4}\s+.*\?\s*$/mg) || []).length;
+    add(hookScore01, 20, 'Opening hook');
+    add(scScore01, 15, 'Self-contained sentences');
+    add(entScore01, 10, 'Clear subjects');
+    const heads = bodyHeadings(content);
+    const qHeads = heads.filter(h => h.text.endsWith('?')).length;
     const faqMark = /\bfaq\b|^\s*q[:.]/im.test(content);
-    const qa01 = qHeads >= 1 || faqMark ? 1 : (content.match(/^#{2,4}\s+/gm) || []).length >= 2 ? 0.5 : 0;
-    add(qa01, 20, 'Q&A structure');
+    add(qHeads >= 2 ? 1 : qHeads === 1 ? 0.6 : faqMark ? 0.5 : heads.length >= 3 ? 0.3 : 0,
+        20, 'Q&A structure');
     const defs = (plain.match(/\b[A-Za-z][\w-]+ (?:is|are|refers to|means|is defined as) (?:a|an|the|when|where|the process|any)\b/gi) || []).length;
-    add(defs >= 2 ? 1 : defs === 1 ? 0.5 : 0, 15, 'Definitions');
-    const nums = (plain.match(/\b\d+(?:[.,]\d+)?%?\b/g) || []).length;
-    const { external } = classifyLinks(content);
-    let data01 = 0;
-    if (nums >= 3 && external > 0) data01 = 1; else if (nums >= 3) data01 = 0.7; else if (nums >= 1) data01 = 0.4;
-    add(data01, 20, 'Data & citations');
+    add(defs >= 3 ? 1 : defs === 2 ? 0.7 : defs === 1 ? 0.4 : 0, 15, 'Definitions');
+    add(nums >= 5 && external > 0 ? 1 : nums >= 3 && external > 0 ? 0.75
+      : nums >= 3 ? 0.5 : nums >= 1 ? 0.25 : 0, 20, 'Data & citations');
   }
   return { informational, score, parts };
 };
@@ -242,8 +331,12 @@ const analyze = (rawContent, title, tags, metaDesc, keyword) => {
   const plain = stripMd(content);
   const wordCount = plain.split(/\s+/).filter(w => w.length > 0).length;
   const imageCount = getImageCount(content);
-  const titleChars = title.length;
-  const subheadings = (content.match(/^#{2,4}\s+.+/mg) || []).length;
+  // Trim first. A trailing space is invisible to the author and must not cost points:
+  // @wardah's week 11 title was 61 characters with one, 60 without, which dropped the
+  // length band from 8/12 to 5/12 and her SEO from 100 to 97. Her panel showed 100 and
+  // was right. Same for the preview description, where a stray space could cross 160.
+  const titleChars = title.trim().length;
+  const subheadings = headingLevels(content).filter(l => l >= 2 && l <= 4).length;
   const hierarchy = headingHierarchy(content);
   const { ease } = wordCount > 20 ? readability(content) : { ease: 0 };
   const kw = analyzeKeyword(keyword, content, title, metaDesc);
@@ -268,7 +361,7 @@ const analyze = (rawContent, title, tags, metaDesc, keyword) => {
   const ctrScore = Math.min(4, (ctr.hasNumber ? 2 : 0) + (ctr.hasPower ? 1 : 0) + (ctr.hasBracket ? 1 : 0));
   const titleScore = title ? titleLen + ctrScore : 0;
 
-  const metaLen = metaDesc.length;
+  const metaLen = metaDesc.trim().length;
   let metaScore = 0;
   if (!metaDesc) metaScore = 0;
   else if (metaLen < 50) metaScore = 4;
@@ -312,5 +405,5 @@ const analyze = (rawContent, title, tags, metaDesc, keyword) => {
 export {
   stripMd, reSafe, toPermlink, autoDetectKeyword, getImageCount, missingAltImages,
   classifyLinks, headingHierarchy, titleCtr, detectIntent, readability, transitionRatio,
-  analyzeKeyword, analyzeGeo, analyze, normalizeEol,
+  analyzeKeyword, analyzeGeo, analyze, normalizeEol, headingLevels, scanHeadings, bodyHeadings,
 };

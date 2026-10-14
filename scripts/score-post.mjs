@@ -25,7 +25,7 @@
 import fs from 'node:fs';
 import {
   analyze, autoDetectKeyword, analyzeKeyword, analyzeGeo, classifyLinks,
-  headingHierarchy, missingAltImages, getImageCount, readability, transitionRatio,
+  headingHierarchy, headingLevels, missingAltImages, getImageCount, readability, transitionRatio,
   detectIntent, stripMd, titleCtr,
 } from './lib/seo-score.mjs';
 import { getPost } from './lib/hive-rpc.mjs';
@@ -75,7 +75,7 @@ const buildFixes = (post, keyword, a) => {
   const hier = headingHierarchy(post.body);
   const noAlt = missingAltImages(post.body);
   const imgs = getImageCount(post.body);
-  const subs = (post.body.match(/^#{2,4}\s+.+/mg) || []).length;
+  const subs = headingLevels(post.body).filter(l => l >= 2 && l <= 4).length;
   const contentTags = post.tags.filter(t => !/^hive-\d+$/.test(t));
   const plain = stripMd(post.body);
   const words = plain.split(/\s+/).filter(Boolean).length;

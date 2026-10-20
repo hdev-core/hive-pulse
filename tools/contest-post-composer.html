@@ -24,7 +24,7 @@
   <section class="panel">
     <label>Posting account<input id="account" value="hdev" autocomplete="off"></label>
     <div class="grid">
-      <label>Title<input id="title" value="HivePulse SEO Contest: New Week 10 Round (500 HIVE)"></label>
+      <label>Title<input id="title" value=""></label>
       <label>Permlink<input id="permlink" value=""> <span id="permstate" class="pill">checking…</span></label>
     </div>
     <label>Community<input id="community" value="hive-177727"></label>
@@ -33,7 +33,7 @@
     <label class="row" style="gap:7px"><input type="checkbox" id="allowEdit" style="width:auto"> <span>Edit an existing post on purpose (required to overwrite a permlink that already exists)</span></label>
   </section>
   <div class="grid">
-    <section><h2>Post body</h2><div class="panel"><textarea id="body" spellcheck="false">Loading the prepared Week 10 announcement...</textarea><div class="row" style="margin-top:12px"><button class="ghost" id="reload">Reload prepared draft</button><button class="ghost" id="copy">Copy body</button></div></div></section>
+    <section><h2>Post body</h2><div class="panel"><textarea id="body" spellcheck="false">Loading the prepared announcement...</textarea><div class="row" style="margin-top:12px"><button class="ghost" id="reload">Reload prepared draft</button><button class="ghost" id="copy">Copy body</button></div></div></section>
     <section><h2>Preview</h2><div class="panel"><div id="preview"><div class="preview-title"></div><div class="preview-body"></div></div></div></section>
   </div>
   <section class="panel"><div class="row"><button class="primary" id="publish">Publish with Keychain</button><span id="status" class="pill">Not published</span></div><div id="log">Ready.</div></section>
@@ -56,7 +56,15 @@ const $ = id => document.getElementById(id);
    permlink already exists on chain.
    ══════════════════════════════════════════════════════════════════════════════ */
 const PRESETS = {
-  // Publishing week 11. The normal case.
+  // Publishing week 12's results and opening week 13. The normal case.
+  week13: {
+    title:       'HivePulse SEO Contest: New Week 13 Round (500 HIVE)',
+    permlink:    'hivepulse-seo-contest-week-12-results-week-13-open',
+    community:   'hive-177727',
+    tags:        'hivepulse seo contest hive writing',
+    description: 'HivePulse SEO Contest week 12: every entry scored a perfect 100, so 55 minutes decided first place. 350 HIVE paid. Two GEO checks fixed from week 13.',
+    draft:       '../enhancements/week13-post-body.md',
+  },
   week12: {
     title:       'HivePulse SEO Contest: New Week 12 Round (500 HIVE)',
     permlink:    'hivepulse-seo-contest-week-11-results-week-12-open',
@@ -80,8 +88,8 @@ const PRESETS = {
   },
 };
 
-// ⬇ THE ONLY LINE TO CHANGE between the two jobs.
-const ROUND = PRESETS.week12;
+// ⬇ THE ONLY LINE TO CHANGE between rounds.
+const ROUND = PRESETS.week13;
 
 const DRAFT_URL = ROUND.draft;
 const RPC = 'https://api.hive.blog';

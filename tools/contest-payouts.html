@@ -120,42 +120,44 @@
    if the stated total does not match the sum of the transfers.
    ══════════════════════════════════════════════════════════════════════════════ */
 const ROUND = {
-  label:  'Week 11',
-  window: '6 – 13 October 2026, closed 12:00 UTC',
-  post:   'https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-10-results-week-11-open',
-  // 5 posts from 4 writers. @ahmedabbaci's second post carries no #hivepulse tag, so it
-  // cannot rank; his best tagged post counts. 4 valid entrants -> under-10 tier -> 300
-  // pool, + 50 X prize. No referrals declared.
+  label:  'Week 12',
+  window: '13 - 20 October 2026, closed 12:00 UTC',
+  post:   'https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-11-results-week-12-open',
+  // 3 posts from 3 writers, all valid: root posts, inside the window, #hivepulse in the
+  // real tag list. 3 valid entrants -> under-10 tier -> 300 pool, + 50 X prize. No
+  // referrals declared.
   //
-  // First round decided by the Reading Ease tiebreak, and it could not separate the top
-  // three: all on combined 100 AND all on reading ease exactly 60. The cascade fell
-  // through to earlier publication, as published - 6 Oct, 7 Oct, 12 Oct.
+  // First round scored on GEO rubric v2, and it did not separate anyone: all three took
+  // a perfect 200/200. All three are personal-branch posts, where v2's harder gates
+  // (question headings, definitions, sourced figures) do not apply - see
+  // documentation/GEO-RUBRIC-V2.md. Tiebreak cascade ran in full: reading ease put
+  // @wardah 3rd (61 vs 60), then earliest publication split the other two by 55 minutes.
   expectedTotal: 350,
-  memoTag: 'HivePulse SEO Contest week 11',
+  memoTag: 'HivePulse SEO Contest week 12',
 };
 
 const CURATION = [
-  { author:'nabbas0786',  permlink:'how-did-2-intense-overs-change-this-evening-engurdu',
+  { author:'ahmedabbaci', permlink:'dunki-and-illegal-immigration-my-5-essential-view-engesp',
     place:'1st', seo:100, geo:100 },
-  { author:'wardah',      permlink:'3-best-friends--oru-creating-countless-memories-together',
+  { author:'nabbas0786',  permlink:'how-was-our-crazy-1-day-canal-adventure-engurdu',
     place:'2nd', seo:100, geo:100 },
-  { author:'ahmedabbaci', permlink:'the-overthinking-trap-action-vs-analysis-3-best-tips',
+  { author:'wardah',      permlink:'best-crochet-journey-part-2-lets-go-shopping-some-yarns',
     place:'3rd', seo:100, geo:100 },
 ];
 
 const PAYMENTS = [
-  { to:'nabbas0786', amount:200,
-    parts:[['1st place — SEO 100 / GEO 100, reading ease 60', 150],
-           ['X quote-retweet prize — most engagement', 50]],
-    memo:'HivePulse SEO Contest week 11: 1st place (SEO 100 / GEO 100) = 150 HIVE, plus 50 HIVE for the winning quote-retweet (9 likes, 8 reposts, 7 replies = 24, against 22). Total 200 HIVE. Three entries tied on a perfect 200/200 AND on reading ease 60, so the published cascade settled it on earliest publication - yours was first by a day. Congratulations!' },
+  { to:'ahmedabbaci', amount:150,
+    parts:[['1st place - SEO 100 / GEO 100, reading ease 60', 150]],
+    memo:'HivePulse SEO Contest week 12: 1st place (SEO 100 / GEO 100) = 150 HIVE. All three entries tied on a perfect 200/200, and the tiebreak could not separate you from 2nd on reading ease either - both of you landed on 60 exactly. The published cascade fell through to earliest publication, and you were first by 55 minutes. Congratulations!' },
 
-  { to:'wardah', amount:100,
-    parts:[['2nd place — SEO 100 / GEO 100, reading ease 60', 100]],
-    memo:'HivePulse SEO Contest week 11: 2nd place (SEO 100 / GEO 100) = 100 HIVE. You were right about your screenshot - our judge was scoring your title at 61 characters because of one trailing space, where your panel correctly read 60. That cost you 3 points and the podium. Fixed, and you are 2nd. Thank you for saying something.' },
+  { to:'nabbas0786', amount:150,
+    parts:[['2nd place - SEO 100 / GEO 100, reading ease 60', 100],
+           ['X quote-retweet prize - most engagement', 50]],
+    memo:'HivePulse SEO Contest week 12: 2nd place (SEO 100 / GEO 100) = 100 HIVE, plus 50 HIVE for the winning quote-retweet (7 likes, 6 reposts, 5 replies = 18, against 4). Total 150 HIVE. Note you pasted your Hive post link where the X link should have gone - we found the quote-retweet and counted it, but please paste the X link next round so it is not missed. Three entries tied on a perfect score AND on reading ease 60, so earliest publication decided 1st from 2nd by 55 minutes.' },
 
-  { to:'ahmedabbaci', amount:50,
-    parts:[['3rd place — SEO 100 / GEO 100, reading ease 60', 50]],
-    memo:'HivePulse SEO Contest week 11: 3rd place (SEO 100 / GEO 100) = 50 HIVE. Three entries tied on a perfect score AND on reading ease 60, so earliest publication decided the order. Note your second post could not be ranked - it carries suseonapulse, suseona, hivepakistan, hive, contest, but not #hivepulse. The word is in the body, which is not the same thing. Congratulations!' },
+  { to:'wardah', amount:50,
+    parts:[['3rd place - SEO 100 / GEO 100, reading ease 61', 50]],
+    memo:'HivePulse SEO Contest week 12: 3rd place (SEO 100 / GEO 100) = 50 HIVE. A perfect score again - all three of you tied at 200/200, so the podium came down to the reading ease tiebreak, and yours read 61 against 60. One point. Congratulations, and thank you for posting your quote-retweet properly.' },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════════════ */

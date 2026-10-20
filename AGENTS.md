@@ -30,6 +30,15 @@ Verify tags, referrals, and any social-media prize requirements separately. Do n
 round with the current script without restoring that round's date window; the script is rolled
 forward for the active contest.
 
+**The scoring engine is rolled forward too, and that is a sharper trap than the date window.**
+A round is judged on the rubric that was live during that round, and `contest-results-weekN.csv`
+is the authoritative record of what was actually paid. Re-running an old entries file against a
+newer engine will produce different numbers and can reorder the podium — week 12 is the worked
+example: under 1.15.0 all three entries tied on GEO 100, and under 1.16.0 @nabbas0786 drops to
+71 and swaps places with @wardah, a 50 HIVE difference. That re-score is not a correction to
+week 12 and must never be published or paid from. If you need to know what a past round scored,
+read its archived CSV; do not regenerate it.
+
 ## Releasing a new version
 
 **Every version bump MUST produce `documentation/RELEASE-<version>.md` before the packages

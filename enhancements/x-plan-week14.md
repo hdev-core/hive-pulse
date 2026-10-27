@@ -1,7 +1,7 @@
 # HivePulse SEO Contest - Week 13 Results + Week 14 X Thread
 
 Anchor tweet: https://x.com/HdevCore/status/2115087202099106060
-Hive post   : POST_URL_HERE
+Hive post   : https://actifit.io/@hdev/hivepulse-seo-contest-week-13-results-week-14-open
 
 Fill both URLs in below once the post and the anchor tweet are live. Post tweets 2-4 as
 replies to the anchor tweet.
@@ -50,7 +50,7 @@ Concrete detail is a RATIO — named people, places, dates, numbers over total w
 2,234 words. 0.0725. Full marks starts at 0.075.
 
 Six more names and it's 200/200 👇
-POST_URL_HERE
+https://actifit.io/@hdev/hivepulse-seo-contest-week-13-results-week-14-open
 ```
 
 ## 4/
@@ -89,5 +89,5 @@ Closes 3 Nov, 12:00 UTC. Tag #hivepulse.
 
 Two of three entrants skipped the X prize entirely last round — it went uncontested. That's 50 HIVE for one quote-retweet.
 
-👉 POST_URL_HERE
+👉 https://actifit.io/@hdev/hivepulse-seo-contest-week-13-results-week-14-open
 ```

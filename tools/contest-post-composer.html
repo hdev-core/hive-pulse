@@ -55,6 +55,10 @@ const $ = id => document.getElementById(id);
    The form is now filled from this block, and publishing is refused outright if the
    permlink already exists on chain.
    ══════════════════════════════════════════════════════════════════════════════ */
+// Keep this in step with package.json. It was pinned at 1.14.0 for three releases and
+// mislabelled every post published in that time.
+const APP_VERSION = 'hivepulse/1.16.0';
+
 const PRESETS = {
   // Publishing week 13's results and opening week 14. The normal case.
   week14: {
@@ -188,7 +192,13 @@ $('publish').onclick = async () => {
       !confirm('This will OVERWRITE the body of an existing post.\n\n' +
                '@' + account + '/' + permlink + '\ncreated ' + existing.created + '\n\n' +
                'Continue?')) return;
-  const metadata={app:'hivepulse/1.14.0',format:'markdown',description:$('description').value.trim(),tags};
+  // json_metadata.image was empty on weeks 11, 12 and 13. Hive frontends mostly fall back
+  // to scraping the first image out of the body, but external scrapers and some clients
+  // read this field, and a contest about SEO should not ship posts without their own
+  // preview image declared. Take the first markdown image in the body.
+  const firstImage=(body.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/)||[])[1];
+  const metadata={app:APP_VERSION,format:'markdown',description:$('description').value.trim(),tags};
+  if (firstImage) metadata.image=[firstImage];
   const operation=['comment',{parent_author:'',parent_permlink:community,author:account,permlink,title,body,json_metadata:JSON.stringify(metadata)}];
   if (!confirm('Publish this post as @'+account+'?\n\nTitle: '+title+'\nPermlink: '+permlink+'\nCommunity: '+community+'\nTags: '+tags.join(', ')+'\n\nKeychain will request your posting-key signature.')) return;
   $('publish').disabled=true; setStatus('Waiting for Keychain...');

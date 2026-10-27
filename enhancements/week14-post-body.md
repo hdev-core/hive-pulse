@@ -30,13 +30,15 @@ Nobody had cleared all of those in a single post before. Two of you did it in th
 
 @ahmedabbaci and @nursejoe finished on the same 200/200 **and** the same reading ease of 60, so the published cascade fell through to earliest publication - 20 October against 22 October. Three rounds running, the tiebreak has decided the top of the board. If you are entering, reading ease 60 is worth aiming at deliberately.
 
-### Where @nabbas0786's four points went, and how to get them back
+### Where @nabbas0786's four points went - six words
 
-@nabbas0786 scored GEO 96, losing four points on **Concrete detail**. The reason is worth everyone's attention because it is a title problem, not a writing problem.
+@nabbas0786 scored GEO 96, losing four points on **Concrete detail**, and the margin is about as thin as this contest has produced.
 
-HivePulse decides what kind of post you wrote from your title. A question post is one whose title **ends** in a question mark. His title is *"How Do Devils Mislead Humans? 3 Key Hadiths [Eng/Urdu]"* - the question mark is in the middle, so the post was scored as a personal story on the four personal checks instead of the six question checks.
+That check measures how much of your writing is made of specifics - named people, places, dates and numbers - as a share of the whole post. His post ran 2,234 words and contained 28 numbers and 134 names, which is a specificity of **0.0725**. Full marks start at **0.075**.
 
-**Move the question mark to the end and you get scored on the question checks instead.** Last week we fixed the case where a trailing `[Eng/Urdu]` tag hid a question mark at the end; a question mark in the *middle* of a title is a different thing, and it still routes to the personal checks. That is deliberate, not a bug - but it is worth knowing which one you are being scored on.
+**He missed it by six words.** Six more names or figures anywhere in that post and it is a perfect 200/200 and a different podium. Nothing was wrong with the writing; it was a long post and the specifics were spread a little thinner across it.
+
+That is the whole lesson from this round for anyone sitting near the top: on a long post, Concrete detail is a *ratio*, so length works against you unless the detail scales with it.
 
 ### The X engagement prize
 

@@ -43,13 +43,13 @@ That's the bar we raised in week 12. Two of them cleared all of it.
 ## 3/
 
 ```tweet
-The 4 points that separated 3rd place came down to a title.
+3rd place missed a perfect score by six words.
 
-A post counts as a question post when the title ENDS in "?".
+Concrete detail is a RATIO — named people, places, dates, numbers over total words.
 
-"How Do Devils Mislead Humans? 3 Key Hadiths" — the mark is mid-title, so it scored on the personal checks.
+2,234 words. 0.0725. Full marks starts at 0.075.
 
-Move it to the end 👇
+Six more names and it's 200/200 👇
 POST_URL_HERE
 ```
 
@@ -83,7 +83,7 @@ Closes 3 Nov, 12:00 UTC. Tag #hivepulse.
 
 1st and 2nd tied on 200/200 *and* on reading ease 60, so earliest publication decided it — three rounds running that the tiebreak has settled the top.
 
-@nabbas0786 lost 4 points to a title, not his writing: a post scores as a question post only when the title **ends** in "?". His sits mid-title, so it ran on the personal checks instead.
+@nabbas0786 missed a perfect score by **six words**. Concrete detail is a ratio — named people, places, dates and numbers over total words. His post: 2,234 words, specificity 0.0725, and full marks starts at 0.075. Six more names anywhere in it and it's 200/200. On a long post that check gets harder, because length is the denominator.
 
 **Week 14 closes 3 November, 12:00 UTC.** 300 HIVE · 400 at 10 entrants · 500 at 20 · 25 each for a referral · 50 for the best quote-RT.
 

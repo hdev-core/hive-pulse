@@ -56,6 +56,16 @@ const $ = id => document.getElementById(id);
    permlink already exists on chain.
    ══════════════════════════════════════════════════════════════════════════════ */
 const PRESETS = {
+  // Publishing week 13's results and opening week 14. The normal case.
+  week14: {
+    title:       'HivePulse SEO Contest: New Week 14 Round (500 HIVE)',
+    permlink:    'hivepulse-seo-contest-week-13-results-week-14-open',
+    community:   'hive-177727',
+    tags:        'hivepulse seo contest hive writing',
+    description: 'HivePulse SEO Contest week 13: two entrants maxed every GEO check, including the harder bands nobody had cleared before. 350 HIVE paid. Week 14 is open.',
+    draft:       '../enhancements/week14-post-body.md',
+  },
+
   // Publishing week 12's results and opening week 13. The normal case.
   week13: {
     title:       'HivePulse SEO Contest: New Week 13 Round (500 HIVE)',
@@ -89,7 +99,7 @@ const PRESETS = {
 };
 
 // ⬇ THE ONLY LINE TO CHANGE between rounds.
-const ROUND = PRESETS.week13;
+const ROUND = PRESETS.week14;
 
 const DRAFT_URL = ROUND.draft;
 const RPC = 'https://api.hive.blog';

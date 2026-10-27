@@ -1,4 +1,4 @@
-![HivePulse SEO Contest Week 14 cover: 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 entrants, 500 HIVE at 20 or more, plus a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](COVER_URL_HERE)
+![HivePulse SEO Contest Week 14 cover: 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 entrants, 500 HIVE at 20 or more, plus a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](https://usermedia.actifit.io/MVQRUFWVOE52RQBRJIPEETMT0FHHYJ)
 
 **Summary:** Week 13 of the HivePulse SEO Contest is settled. Three writers entered, and for the first time two of them cleared the hardest version of the GEO rubric with nothing dropped. 350 HIVE is going out. Week 14 is open.
 
@@ -78,7 +78,7 @@ Quote-retweet the Week 14 announcement tweet with your own words about your Hive
 
 **Paste the link to your quote-retweet in your entry comment** - the link to the tweet, not to your Hive post.
 
-👉 **This is the tweet to quote:** TWEET_URL_HERE
+👉 **This is the tweet to quote:** https://x.com/HdevCore/status/2115087202099106060
 
 Subscribe to [Hdev Contests](https://peakd.com/c/hive-177727/created) for each round. Questions and discussion are welcome in [Discord](https://discord.gg/wnpR8Rafcf), and HivePulse is also on [X](https://x.com/HdevCore).
 

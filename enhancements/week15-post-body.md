@@ -30,13 +30,13 @@ We checked every round this contest has ever run. The bug could only ever bite w
 
 @nabbas0786, this cost you 50 HIVE that our code had already shown you. We are sorry. You still take the X prize, and one point of SEO was the entire difference between fourth and the podium this week.
 
-### Four perfect scores, and one that shows the rubric working
+### Three perfect scores, and one that shows the rubric working
 
 Three of five entries scored a perfect 200/200, and @nabbas0786 was one point away on 199. @ekads came in at SEO 98 and **GEO 88**, and that is the rubric doing its job rather than anyone writing badly - a 489-word post has less room to carry the named detail, question structure and sourced figures the GEO checks look for. Length is not the goal, but the checks need somewhere to live.
 
 ### The X engagement prize
 
-One valid quote-retweet again. **@nabbas_0786 wins 50 HIVE** uncontested, for the second round running.
+One valid quote-retweet again. **@nabbas0786 wins 50 HIVE** uncontested, for the second round running, posting from `nabbas_0786` on X.
 
 Four of five entrants did not enter it at all. It is 50 HIVE for one quote-retweet of the announcement, and nobody is competing for it.
 

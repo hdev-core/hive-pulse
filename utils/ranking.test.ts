@@ -40,6 +40,32 @@ describe('ranking — the published rule', () => {
     expect(order([highGeo, easeWins])).toEqual(['easeWins', 'highGeo']);
   });
 
+  // A truncating comparator (Math.floor before comparing) sees 99.0 and 99.5 as equal and
+  // falls through to the alphabetical fallback. The author names here are deliberately
+  // ordered so that fallback gives the WRONG answer — otherwise it rescues the mutant by
+  // coincidence and the test passes against broken code. (It did, on the first attempt.)
+  it('separates two means that share a floor', () => {
+    const lower  = row('aaa', { combinedExact: 99 });    // alphabetically first
+    const higher = row('zzz', { combinedExact: 99.5 });  // alphabetically last, but better
+    expect(order([lower, higher])).toEqual(['zzz', 'aaa']);
+  });
+
+  // Every other test hands byRank a pre-computed easeGap, so a wiring slip that passed raw
+  // ease through instead of the distance from 60 would go unnoticed — and it would be live:
+  // week 14 had ease 59 and 65, where raw-value ordering and distance ordering disagree.
+  it('drives correctly from raw ease values, not just pre-computed gaps', () => {
+    const near = row('ease59', { easeGap: easeGap(59) });   // distance 1
+    const far  = row('ease65', { easeGap: easeGap(65) });   // distance 5
+    expect(order([far, near])).toEqual(['ease59', 'ease65']);
+    // and the raw values sort the other way, which is the mistake being guarded against
+    expect(59).toBeLessThan(65);
+  });
+
+  it('refuses to rank a row with a non-finite score', () => {
+    const broken = { ...row('broken'), combinedExact: undefined as unknown as number };
+    expect(() => [broken, row('ok')].sort(byRank)).toThrow(/combinedExact/);
+  });
+
   it('does not let a malformed qualifies flag outrank a real entry', () => {
     const good = row('good', { combinedExact: 71 });
     const bad = { ...row('bad', { combinedExact: 100 }), qualifies: undefined as unknown as boolean };

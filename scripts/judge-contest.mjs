@@ -51,7 +51,7 @@ const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 // Scoring engine lives in ./lib/seo-score.mjs — shared with scripts/score-post.mjs so the
 // two tools can never disagree. Keep that file in sync with compose.ts.
 import { analyze, autoDetectKeyword, readability } from './lib/seo-score.mjs';
-import { byRank, easeGap, EASE_TARGET } from './lib/rank.mjs';
+import { byRank, easeGap } from './lib/rank.mjs';
 import { getPost } from './lib/hive-rpc.mjs';
 
 // ══════════════════════════════════════════════════════════════════════════════

@@ -32,19 +32,34 @@ export const easeGap = (ease) => Math.abs(ease - EASE_TARGET);
  * Sort comparator for scored entries, best first. Each row needs:
  *   qualifies (bool), combinedExact (number), geoScore, easeGap, created (ms), author, permlink
  */
+/**
+ * Every key this comparator reads must be a real number before it is compared. A NaN or an
+ * undefined silently poisons the chain: `(NaN) || next` is falsy, so the term is skipped
+ * and the comparator stops being a total order — the same three rows sort into different
+ * orders depending on the order they arrive in, with no error raised anywhere.
+ */
+const num = (v, field, row) => {
+  if (!Number.isFinite(v))
+    throw new TypeError(`byRank: ${field} is ${v} for @${row?.author ?? '(unknown)'} — refusing to rank`);
+  return v;
+};
+
 export const byRank = (x, y) =>
-  // Number(!!v) rather than a bare subtraction: an undefined `qualifies` makes the term
-  // NaN, which is falsy, so the chain would fall straight through and a disqualified entry
-  // could outrank a qualifying one.
+  // Number(!!v) rather than a bare subtraction: an undefined `qualifies` makes the term NaN,
+  // which is falsy, so the chain would fall through and a disqualified entry could outrank a
+  // qualifying one.
   (Number(!!y.qualifies) - Number(!!x.qualifies)) ||
-  (y.combinedExact - x.combinedExact) ||
+  (num(y.combinedExact, 'combinedExact', y) - num(x.combinedExact, 'combinedExact', x)) ||
   // NOTE: a `(y.geoScore - x.geoScore)` term used to sit here, ahead of reading ease. It is
   // not in the published rule, and it pre-empted the tiebreak that is: two entries on the
-  // same mean, one with GEO 90 / ease 60 and one with GEO 100 / ease 70, would be settled
-  // on GEO when the rule says reading ease decides. Removed so the code matches what we
-  // publish. It never changed a result — wherever it could have applied, the tied entries
-  // held the same GEO.
-  (x.easeGap - y.easeGap) ||
+  // same mean, one with GEO 90 / ease 60 and one with GEO 100 / ease 70, would be settled on
+  // GEO when the rule says reading ease decides. Removed so the code matches what we publish.
+  //
+  // It never changed a PAID result, but it was reachable: week 5 positions 7 and 8 were
+  // @cositav (SEO 83 / GEO 73) and @ekads (SEO 79 / GEO 77) — both exactly 78.0, different
+  // GEO. The term did not exist until week 9, and no equal-mean/different-GEO pair has
+  // occurred since, so no round was ever decided by it.
+  (num(x.easeGap, 'easeGap', x) - num(y.easeGap, 'easeGap', y)) ||
   (x.created - y.created) ||
   x.author.localeCompare(y.author) ||
   x.permlink.localeCompare(y.permlink);

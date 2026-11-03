@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 14 correction — @nabbas0786</title>
+<style>
+  :root{--bg:#0b1020;--panel:#121a33;--panel2:#0e1529;--ink:#e8edfb;--ink2:#a8b4d4;
+    --ink3:#6c7a9c;--gold:#f5b301;--green:#35c37d;--red:#ff6b6b;--amber:#f5a524;--line:#24314f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);padding:24px;
+    font:15px/1.6 ui-sans-serif,system-ui,'Segoe UI',Roboto,sans-serif}
+  .wrap{max-width:900px;margin:0 auto}
+  h1{font-size:21px;margin:0 0 3px}
+  .sub{color:var(--ink2);font-size:13.5px;margin:0 0 18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .card h2{font-size:14px;margin:0 0 10px;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em}
+  button{background:var(--gold);color:#241a00;border:0;border-radius:7px;padding:9px 16px;
+    font:650 13.5px/1 inherit;cursor:pointer;font-family:inherit}
+  button:hover:not(:disabled){filter:brightness(1.08)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+  input{background:var(--panel2);border:1px solid var(--line);border-radius:7px;color:var(--ink);
+    padding:9px 11px;font:13.5px/1.5 ui-monospace,Consolas,monospace;max-width:240px}
+  .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .pill{display:inline-block;font-size:11.5px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--ink3)}
+  .pill.ok{background:#07301d;border-color:#0d5c38;color:var(--green)}
+  .pill.bad{background:#3a0f0f;border-color:#6b1c1c;color:var(--red)}
+  pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:0;
+    white-space:pre-wrap;word-break:break-word;font:12.5px/1.6 ui-monospace,Consolas,monospace;color:var(--ink2)}
+  #log{background:#070b16;min-height:80px;font-size:12px}
+  .warn{background:#3a2a07;border:1px solid #6b4e12;color:#ffe9b8;border-radius:8px;padding:12px 14px;font-size:13.5px;margin-bottom:14px}
+  .okbox{background:#07301d;border:1px solid #0d5c38;color:#b9f3d5;border-radius:8px;padding:11px 13px;font-size:13px}
+  label{display:block;font-size:12.5px;color:var(--ink2);margin:10px 0 4px}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;color:var(--gold);font-size:12px}
+  a{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Week 14 correction — @nabbas0786</h1>
+  <p class="sub">One 50 HIVE transfer and one reblog. No upvote - his payout window has already closed. Nothing broadcasts until you press a button.</p>
+
+  <div class="warn">
+    <b>The upvote earns him nothing — his post has already paid out.</b><br>
+    He published 27 Oct 14:33 and Hive pays out after 7 days, so the window closed before this correction.
+    So there is no upvote button on this page - it would cost voting power and transfer him nothing.
+    <b>The reblog still works</b> — it shares the post to your followers, which is reach rather than money.
+    <br><br>
+    Worth knowing: we curate <i>after</i> judging on day 7, so this happens to every entry published early in
+    the window. @itx.wardah and @nursejoe were both voted 100% this round and <b>earned nothing from it either</b>.
+    Only @ahmedabbaci, who published on 1 Nov, was still inside his window. If you want curation to be worth
+    something, it has to happen while the round is open.
+  </div>
+
+  <div class="card">
+    <h2>1 · Account</h2>
+    <div class="row">
+      <input id="acct" value="hdev" placeholder="hive account">
+      <span id="kc" class="pill">Keychain: checking…</span>
+      <span id="bal" class="pill">balance: —</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2 · The payment</h2>
+    <div class="row"><span class="pill ok">50.000 HIVE → @nabbas0786</span><span id="sent" class="pill">on-chain check…</span></div>
+    <label>Memo (sent with the transfer, visible on chain)</label>
+    <pre id="memo"></pre>
+    <div class="row" style="margin-top:12px">
+      <input id="arm" placeholder="type SEND to arm" autocomplete="off">
+      <button id="pay" disabled>Send 50 HIVE (active key)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3 · Reblog</h2>
+    <div class="row" style="margin-bottom:10px">
+      <span class="pill">no upvote — his payout window closed 3 Nov</span>
+      <span class="pill" id="rstate">reblog: checking…</span>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="curate">Reblog his entry (posting key)</button>
+    </div>
+  </div>
+
+  <div class="card"><h2>Log</h2><pre id="log">Ready.</pre></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const RPC = 'https://api.hive.blog';
+const TO = 'nabbas0786';
+const PERMLINK = 'how-did-3-days-in-murree-pass-like-3-minutes-engurdu';
+const AMOUNT = '50.000 HIVE';
+
+const MEMO = "HivePulse SEO Contest week 14 correction: 50 HIVE. After the round closed we changed how tied scores are compared, and that moved you from 3rd place to 4th. The change itself is right and it takes effect from week 15, announced in advance - but applying it to a round that had already finished was our mistake, because our own published rule says anything that changes is announced before the round it applies to, never during. This payment restores what you would have received under the rule as it stood when you entered. You keep the 50 HIVE X prize as well. Sorry for the error, and thank you for entering every round since week 1.";
+
+$('memo').textContent = MEMO;
+
+function log(m, kind){
+  const t = new Date().toISOString().slice(11,19);
+  const c = kind==='ok'?'var(--green)':kind==='err'?'var(--red)':kind==='warn'?'var(--amber)':'var(--ink2)';
+  $('log').innerHTML += `\n<span style="color:${c}">[${t}] ${String(m).replace(/</g,'&lt;')}</span>`;
+  $('log').scrollTop = $('log').scrollHeight;
+}
+const rpc = async (method, params) => {
+  const r = await fetch(RPC,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({jsonrpc:'2.0',method,params,id:1})});
+  const j = await r.json();
+  if (j.error) throw new Error(JSON.stringify(j.error));
+  return j.result;
+};
+const acct = () => $('acct').value.trim().toLowerCase();
+
+function broadcast(ops, keyType, label){
+  return new Promise(resolve => {
+    log(`requesting ${keyType} signature for ${label} …`);
+    window.hive_keychain.requestBroadcast(acct(), ops, keyType, res => {
+      if (res && res.success){
+        log(`${label} BROADCAST — tx ${res.result && res.result.id ? res.result.id : '(no id)'}`, 'ok');
+        resolve(true);
+      } else {
+        log(`${label} FAILED — ${res && res.message ? res.message : JSON.stringify(res)}`, 'err');
+        resolve(false);
+      }
+    });
+  });
+}
+
+// Guards: never double-send, never double-vote, never double-reblog.
+async function checkChain(){
+  const a = acct();
+  try {
+    const [bal] = await rpc('condenser_api.get_accounts',[[a]]);
+    $('bal').textContent = 'balance: ' + bal.balance;
+    $('bal').className = 'pill ' + (parseFloat(bal.balance) >= 50 ? 'ok' : 'bad');
+  } catch(e){ log('balance check failed: '+e,'warn'); }
+
+  try {
+    const hist = await rpc('condenser_api.get_account_history',[a,-1,1000]);
+    const already = hist.some(([,op]) => op.op[0]==='transfer' && op.op[1].to===TO
+      && /week 14 correction/i.test(op.op[1].memo||''));
+    $('sent').className = 'pill ' + (already ? 'bad' : 'ok');
+    $('sent').textContent = already ? 'ALREADY SENT — do not send again' : 'not yet sent';
+    if (already) log('a week 14 correction transfer to @'+TO+' is already on chain','warn');
+  } catch(e){ log('history check failed: '+e,'warn'); }
+
+  try {
+    const rb = await rpc('condenser_api.get_reblogged_by',[TO,PERMLINK]).catch(()=>[]);
+    const did = (rb||[]).includes(a);
+    $('rstate').className = 'pill ' + (did ? 'bad' : 'ok');
+    $('rstate').textContent = did ? 'reblog: ALREADY DONE' : 'reblog: not done';
+    if (did) $('curate').disabled = true;
+  } catch(e){ log('reblog check failed: '+e,'warn'); }
+}
+
+$('arm').addEventListener('input', () => {
+  $('pay').disabled = $('arm').value.trim() !== 'SEND';
+});
+
+$('pay').addEventListener('click', async () => {
+  if (!window.hive_keychain) return log('Keychain not available','err');
+  if (!confirm(`Send ${AMOUNT} to @${TO}?\n\nThis is the week 14 correction payment.`)) return;
+  $('pay').disabled = true;
+  const ops = [['transfer', { from: acct(), to: TO, amount: AMOUNT, memo: MEMO }]];
+  const ok = await broadcast(ops, 'Active', 'transfer');
+  if (ok) { $('sent').className='pill bad'; $('sent').textContent='SENT'; }
+  else $('pay').disabled = false;
+  checkChain();
+});
+
+$('curate').addEventListener('click', async () => {
+  if (!window.hive_keychain) return log('Keychain not available','err');
+  const a = acct();
+  // Reblog only. A vote is deliberately not offered: the post paid out on 3 Nov, so it would
+  // cost voting power and transfer him nothing.
+  const ops = [['custom_json', {
+    required_auths: [], required_posting_auths: [a], id: 'follow',
+    json: JSON.stringify(['reblog', { account: a, author: TO, permlink: PERMLINK }]),
+  }]];
+  if (!confirm(`Reblog @${TO}'s week 14 entry to your followers?`)) return;
+  $('curate').disabled = true;
+  const ok = await broadcast(ops, 'Posting', 'reblog');
+  if (!ok) $('curate').disabled = false;
+  checkChain();
+});
+
+(function init(){
+  const k = () => { const p=$('kc');
+    if (window.hive_keychain){ p.className='pill ok'; p.textContent='Keychain: ready'; }
+    else { p.className='pill bad'; p.textContent='Keychain: not detected'; } };
+  k(); setTimeout(k, 900);
+  checkChain();
+  $('acct').addEventListener('change', checkChain);
+})();
+</script>
+</body>
+</html>

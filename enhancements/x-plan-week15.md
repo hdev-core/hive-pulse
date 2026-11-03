@@ -1,7 +1,7 @@
 # HivePulse SEO Contest - Week 14 Results + Week 15 X Thread
 
 Anchor tweet: TWEET_URL_HERE
-Hive post   : POST_URL_HERE
+Hive post   : https://peakd.com/hive-177727/@hdev/hivepulse-seo-contest-week-14-results-week-15-open
 
 Fill both URLs in below once the post and the anchor tweet are live. Post tweets 2-5 as
 replies to the anchor tweet.
@@ -73,7 +73,7 @@ And week 14, where we got it wrong ourselves:
 🥇 @itx.wardah 🥈 @ahmedabbaci 🥉 @nursejoe
 
 Our judge rounded 99.5 up to 100, invented a tie, and handed 3rd to the wrong person. We fixed it — then sent @nabbas_0786 the 50 HIVE anyway 👇
-POST_URL_HERE
+https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-14-results-week-15-open
 ```
 
 ---
@@ -104,5 +104,5 @@ On a quiet round you are still scored, still listed in the results, and still ge
 
 Four of five entrants skipped the X prize again. 50 HIVE, one quote-retweet, nobody competing.
 
-👉 POST_URL_HERE
+👉 https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-14-results-week-15-open
 ```

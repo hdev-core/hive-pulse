@@ -5,7 +5,7 @@ The furniture changes this round because the offer changes. Weeks 12-14 showed a
 ladder (300 / 400 / 500) where the bottom tier was always the live one, because the field
 has never once exceeded nine. That made the upper tiers decoration.
 
-From week 16 the pool depends on the field in BOTH directions, so the card that matters is
+From week 15 the pool depends on the field in BOTH directions, so the card that matters is
 the one on the left: under five entrants, nothing is paid and the pool rolls over. That is
 the news, it is the thing a reader has to act on, and it is deliberately the first box they
 read rather than a footnote under the prizes.
@@ -47,7 +47,7 @@ def main():
            stroke_width=4, stroke_fill=SHADOW)
     bs.gold_text(im, (W // 2, 232), 'THE POOL NOW GROWS WITH YOU', bs.font('bold', 96),
                  anchor='ma', stroke=8)
-    d.text((W // 2, 356), 'From week 16 the prize depends on how many of us turn up.',
+    d.text((W // 2, 356), 'From this round the prize depends on how many of us turn up.',
            font=bs.font('reg', 36), fill=bs.INK_2, anchor='ma',
            stroke_width=5, stroke_fill=SHADOW)
 

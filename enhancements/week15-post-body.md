@@ -1,6 +1,6 @@
-![HivePulse SEO Contest Week 15 cover: the prize pool now depends on the size of the field, from 300 HIVE at five entrants up to 600 at twenty, with nothing paid below five entrants and the pool rolling over to the next round](COVER_URL_HERE)
+![HivePulse SEO Contest Week 15 cover: the prize pool now depends on the size of the field, from 300 HIVE at five entrants up to 600 at twenty, with nothing paid below five entrants and the pool rolling over to the next round](https://usermedia.actifit.io/MW0Z4X3X5L7A2MQTPJI0VLBSH1GSB6)
 
-**Summary:** Week 14 of the HivePulse SEO Contest is settled. Five writers entered, three scored a perfect 200/200, and 400 HIVE went out. We also got the podium wrong, and we have paid to fix it. And from week 16 the rewards change: the pool will depend on how many of you enter, ties will split the prize instead of being decided by who published first, and below five entrants nothing is paid and the pool rolls into the next round.
+**Summary:** Week 14 of the HivePulse SEO Contest is settled. Five writers entered, three scored a perfect 200/200, and 400 HIVE went out. We also got the podium wrong, and we have paid to fix it. And the rewards change starting with this round: the pool now depends on how many of you enter, ties split the prize instead of being decided by who published first, and below five entrants nothing is paid and the pool rolls into the next round.
 
 ## HivePulse SEO Contest week 14 results
 
@@ -38,11 +38,11 @@ One valid quote-retweet again. **@nabbas0786 wins 50 HIVE** uncontested, for the
 
 Four of five entrants did not enter it at all. That is 50 HIVE for one quote-retweet, going begging.
 
-## Week 15 is open - and from week 16 the rewards change
+## Week 15 is open - and the rewards change today
 
-**Week 15 runs from 3 November to 10 November 2026, 12:00 UTC, under the current rules.** The pool is 300 HIVE, paid 150 / 100 / 50, exactly as it has been.
+**Week 15 runs from 3 November to 10 November 2026, 12:00 UTC.**
 
-Everything below applies **from week 16**. We are telling you two weeks early, because it asks something of you.
+Everything below applies to **this round**, starting now. You are reading it before the round you will enter, which is how any change here is supposed to work - and it asks something of you.
 
 ### Why we are changing it
 
@@ -50,9 +50,9 @@ Honest numbers from our own records. **In the last four rounds this contest has 
 
 That is not a prize problem. Everyone who enters is already scoring well - in fourteen rounds only two entries have ever failed the qualifying bar, and both were in the first fortnight. It is a **discovery** problem. Most Hive writers have never heard of this contest.
 
-So from week 16 the pool depends on the size of the field, in both directions.
+So from this round the pool depends on the size of the field, in both directions.
 
-### The new reward structure, from week 16
+### The new reward structure
 
 | Valid entrants | Prize pool | Places paid |
 |---|---:|---|
@@ -66,7 +66,9 @@ The bigger the field, the more of you get paid - five places at twenty entrants,
 
 **Below five entrants, no prizes are paid and the whole pool carries forward.** A round with four people pays nobody, and the following round is worth 600 instead of 300. Two quiet rounds running and it is still 600 - we cap the rollover there so the number stays believable.
 
-We know exactly how this would have landed: **three of the last four rounds would have paid nothing.** We are doing it anyway, because a contest that quietly pays the same five people forever is not growing anything, and because a rollover turns a quiet week into a bigger prize rather than a dead loss.
+We know exactly what this risks: **three of the last four rounds would have paid nothing under it.** This round could be one of them. We are doing it anyway, because a contest that quietly pays the same five people forever is not growing anything, and because a rollover turns a quiet week into a bigger prize rather than a dead loss.
+
+Five people entered last round. **One more and this round pays.**
 
 **What does not change on a quiet round:** every qualifying entry is still scored, still listed in the results, and still gets an upvote and a reblog from @hdev. You keep the scoring, the feedback and the reach. Only the prize money waits a week.
 
@@ -76,7 +78,7 @@ If you want the pool to grow, the lever is in your hands: bring someone. The ref
 
 Today, when two entries tie, the podium goes to whoever published first. That has decided the top of the board for four rounds running, and it is a bad rule - it rewards rushing a post out on day one and punishes anyone who drafts, re-scores and improves before publishing, which is the entire point of the tool.
 
-**From week 16, tied entries share the prize slots they span, equally.**
+**Tied entries now share the prize slots they span, equally.**
 
 | If this happens | Each gets |
 |---|---|
@@ -100,7 +102,7 @@ The total leaving the pot is always the same. Ties change how many of you get pa
 
 The minimum qualifying score is **SEO 70**. Any language is welcome. Every entry is re-scored on-chain after the round closes.
 
-**For week 15, ties are still settled on Reading Ease closest to 60, then earlier publication.** One definition, since it has decided podiums: **Reading Ease is the whole number HivePulse shows you** - the same figure the SEO readability check scores against. The combined score is different: it comes from a published formula, `(SEO% + GEO)/2`, and from this round we compare it exactly.
+**Ties now split the prize, so Reading Ease is only needed to separate entries that are genuinely NOT tied.** One definition, since it has decided podiums before: **Reading Ease is the whole number HivePulse shows you** - the same figure the SEO readability check scores against. The combined score is different: it comes from a published formula, `(SEO% + GEO)/2`, and from this round we compare it exactly.
 
 ### The 50 HIVE X prize
 

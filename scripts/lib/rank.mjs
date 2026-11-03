@@ -26,8 +26,12 @@
 export const EASE_TARGET = 60;
 
 /**
- * Prize structure, EFFECTIVE FROM CONTEST WEEK 16 (round opening 10 November 2026).
- * Announced in the week 15 results post before it takes effect.
+ * Prize structure, EFFECTIVE FROM CONTEST WEEK 15 (round opening 3 November 2026).
+ *
+ * Announced in the post that OPENS week 15, so every entrant reads it before they enter.
+ * That is what "announced before the round it applies to" means, and it is the same
+ * pattern the week 12 GEO change used. It is the opposite of what went wrong in week 14,
+ * where a ranking change was applied to a round that had already closed.
  *
  * The pool moves in both directions with the size of the field. Below the minimum nothing
  * is paid and the pool rolls into the next round, capped so the headline stays believable.

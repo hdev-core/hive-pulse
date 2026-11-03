@@ -19,9 +19,9 @@ Check lengths with:
 ## 1/
 
 ```tweet
-We're changing how the HivePulse SEO Contest pays, and telling you two weeks early.
+We're changing how the HivePulse SEO Contest pays, starting with the round that opens today.
 
-From week 16: under 5 entrants, nobody is paid and the pool rolls into the next round.
+Under 5 entrants: nobody is paid and the pool rolls into the next round.
 
 Here's why we're doing that to ourselves. 🧵
 ```
@@ -90,7 +90,7 @@ POST_URL_HERE
 
 **We got the podium wrong.** Our judge rounded the combined score before ranking, so @nabbas0786's 99.5 looked like a tie with a genuine 100 and won a tiebreak that should never have run. We fixed it after the round had closed — which broke our own rule that changes are announced *before* the round they apply to. So @nursejoe keeps 3rd on the corrected maths, and @nabbas0786 was sent 50 HIVE separately. Nobody is worse off, and that extra 50 is our error, not your pool.
 
-**From week 16, two things change.**
+**Both changes start with this round, which opens today.**
 
 **1. The pool depends on the size of the field.** Under 5 entrants, nothing is paid and the whole pool rolls into the next round. 5-9 → 300 · 10-14 → 400 · 15-19 → 500 · 20+ → 600, and the bigger the field, the more places get paid.
 
@@ -100,7 +100,7 @@ On a quiet round you are still scored, still listed in the results, and still ge
 
 **2. Ties split the prize.** Two tied for 1st get 125 each; four tied get 75 each. The podium has been decided on publication time for four rounds running, which rewarded rushing and punished revising. That race is over — take the full week.
 
-**Week 15 closes 10 November, 12:00 UTC, under the current rules.** 300 HIVE · 25 each for a referral · 50 for the best quote-RT.
+**Week 15 closes 10 November, 12:00 UTC.** Five people entered last round - one more and this round pays. 25 HIVE each for a referral · 50 for the best quote-RT.
 
 Four of five entrants skipped the X prize again. 50 HIVE, one quote-retweet, nobody competing.
 

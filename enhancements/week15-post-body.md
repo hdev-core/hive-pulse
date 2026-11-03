@@ -110,7 +110,7 @@ Quote-retweet the Week 15 announcement tweet with your own words about your Hive
 
 **Paste the link to your quote-retweet in your entry comment** - the link to the tweet, not to your Hive post.
 
-👉 **This is the tweet to quote:** TWEET_URL_HERE
+👉 **This is the tweet to quote:** https://x.com/HdevCore/status/2117679452226457602
 
 ### One more thing, because someone asked
 

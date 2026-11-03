@@ -1,6 +1,6 @@
 # HivePulse SEO Contest - Week 14 Results + Week 15 X Thread
 
-Anchor tweet: TWEET_URL_HERE
+Anchor tweet: https://x.com/HdevCore/status/2117679452226457602
 Hive post   : https://peakd.com/hive-177727/@hdev/hivepulse-seo-contest-week-14-results-week-15-open
 
 Fill both URLs in below once the post and the anchor tweet are live. Post tweets 2-5 as

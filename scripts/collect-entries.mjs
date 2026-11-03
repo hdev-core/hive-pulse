@@ -54,7 +54,13 @@ for (const [key, c] of Object.entries(thread)) {
   for (const m of (c.body || '').matchAll(LINK)) {
     const a = m[1].toLowerCase(), p = m[2].toLowerCase();
     if (`${a}/${p}` === root) continue;
-    const post = await rpc('condenser_api.get_content', [a, p]);
+    // A missing post is an ordinary outcome here, not a failure: the link pattern also
+    // matches ordinary prose like "@hdev/upvoted and reblogged", and hivemind answers that
+    // with an assert_exception rather than an empty result. Letting rpc() throw aborted the
+    // whole collection on week 13 and would have lost every entry after that comment.
+    let post = null;
+    try { post = await rpc('condenser_api.get_content', [a, p]); }
+    catch { skipped.push([`@${a}/${p}`, 'no such post — looks like prose, not a link']); continue; }
     if (!post || !post.author) { skipped.push([`@${a}/${p}`, 'does not exist']); continue; }
     if (post.parent_author) { skipped.push([`@${a}/${p}`, `reply to @${post.parent_author} — not a post`]); continue; }
     if (a !== c.author) { skipped.push([`@${a}/${p}`, `authored by @${a}, linked by @${c.author}`]); continue; }

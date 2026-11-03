@@ -120,42 +120,48 @@
    if the stated total does not match the sum of the transfers.
    ══════════════════════════════════════════════════════════════════════════════ */
 const ROUND = {
-  label:  'Week 11',
-  window: '6 – 13 October 2026, closed 12:00 UTC',
-  post:   'https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-10-results-week-11-open',
-  // 5 posts from 4 writers. @ahmedabbaci's second post carries no #hivepulse tag, so it
-  // cannot rank; his best tagged post counts. 4 valid entrants -> under-10 tier -> 300
-  // pool, + 50 X prize. No referrals declared.
+  label:  'Week 14',
+  window: '27 October - 3 November 2026, closed 12:00 UTC',
+  post:   'https://actifit.io/@hdev/hivepulse-seo-contest-week-13-results-week-14-open',
+  // 5 posts from 5 writers, all valid: root posts, inside the window, #hivepulse in the real
+  // tag list. 5 valid entrants -> still the under-10 tier -> 300 pool, + 50 X prize. No
+  // referrals declared (@nursejoe thanks @ahmedabbaci but is not new to the contest).
   //
-  // First round decided by the Reading Ease tiebreak, and it could not separate the top
-  // three: all on combined 100 AND all on reading ease exactly 60. The cascade fell
-  // through to earlier publication, as published - 6 Oct, 7 Oct, 12 Oct.
+  // THIRD PLACE CHANGED HANDS ON A BUG FIX. judge-contest.mjs rounded the combined score
+  // before sorting, so @nabbas0786's (99+100)/2 = 99.5 became 100, tied @nursejoe's true
+  // 100, and won the reading-ease tiebreak - taking 3rd from a strictly better post. The
+  // published rule is "Rank = (SEO% + GEO)/2" and 99.5 is not a tie with 100, so the
+  // comparison now uses the exact mean. @nursejoe is 3rd. Checked every archived round:
+  // only week 8 was ever affected, between two unpaid positions, so no past payout moved.
   expectedTotal: 350,
-  memoTag: 'HivePulse SEO Contest week 11',
+  memoTag: 'HivePulse SEO Contest week 14',
 };
 
 const CURATION = [
-  { author:'nabbas0786',  permlink:'how-did-2-intense-overs-change-this-evening-engurdu',
+  { author:'itx.wardah',  permlink:'the-best-shoping-day-hangout-with-sister-fun2x',
     place:'1st', seo:100, geo:100 },
-  { author:'wardah',      permlink:'3-best-friends--oru-creating-countless-memories-together',
+  { author:'ahmedabbaci', permlink:'whats-obsession-4-tips-to-use-obsession-as-weopen',
     place:'2nd', seo:100, geo:100 },
-  { author:'ahmedabbaci', permlink:'the-overthinking-trap-action-vs-analysis-3-best-tips',
+  { author:'nursejoe',    permlink:'how-to-improve-sleep-quality-9-natural-tips-to-improve',
     place:'3rd', seo:100, geo:100 },
 ];
 
 const PAYMENTS = [
-  { to:'nabbas0786', amount:200,
-    parts:[['1st place — SEO 100 / GEO 100, reading ease 60', 150],
-           ['X quote-retweet prize — most engagement', 50]],
-    memo:'HivePulse SEO Contest week 11: 1st place (SEO 100 / GEO 100) = 150 HIVE, plus 50 HIVE for the winning quote-retweet (9 likes, 8 reposts, 7 replies = 24, against 22). Total 200 HIVE. Three entries tied on a perfect 200/200 AND on reading ease 60, so the published cascade settled it on earliest publication - yours was first by a day. Congratulations!' },
+  { to:'itx.wardah', amount:150,
+    parts:[['1st place - SEO 100 / GEO 100, reading ease 60', 150]],
+    memo:'HivePulse SEO Contest week 14: 1st place (SEO 100 / GEO 100) = 150 HIVE. A perfect 200/200 on reading ease 60 exactly. Four entries finished on a perfect score this round, so the published cascade settled it - you and 2nd both landed on reading ease 60, and you published first. Congratulations!' },
 
-  { to:'wardah', amount:100,
-    parts:[['2nd place — SEO 100 / GEO 100, reading ease 60', 100]],
-    memo:'HivePulse SEO Contest week 11: 2nd place (SEO 100 / GEO 100) = 100 HIVE. You were right about your screenshot - our judge was scoring your title at 61 characters because of one trailing space, where your panel correctly read 60. That cost you 3 points and the podium. Fixed, and you are 2nd. Thank you for saying something.' },
+  { to:'ahmedabbaci', amount:100,
+    parts:[['2nd place - SEO 100 / GEO 100, reading ease 60', 100]],
+    memo:'HivePulse SEO Contest week 14: 2nd place (SEO 100 / GEO 100) = 100 HIVE. Identical to 1st on every measure the rules use - a perfect 200/200 and reading ease 60 exactly - so earliest publication decided the order, and you entered on 1 November. Nothing in the writing separated you. Congratulations!' },
 
-  { to:'ahmedabbaci', amount:50,
-    parts:[['3rd place — SEO 100 / GEO 100, reading ease 60', 50]],
-    memo:'HivePulse SEO Contest week 11: 3rd place (SEO 100 / GEO 100) = 50 HIVE. Three entries tied on a perfect score AND on reading ease 60, so earliest publication decided the order. Note your second post could not be ranked - it carries suseonapulse, suseona, hivepakistan, hive, contest, but not #hivepulse. The word is in the body, which is not the same thing. Congratulations!' },
+  { to:'nursejoe', amount:50,
+    parts:[['3rd place - SEO 100 / GEO 100, reading ease 65', 50]],
+    memo:'HivePulse SEO Contest week 14: 3rd place (SEO 100 / GEO 100) = 50 HIVE. A note on how you got here: our judge was rounding the combined score before ranking, which made a 99.5 look like your 100 and cost you this place on the tiebreak. The published rule ranks on (SEO + GEO)/2 exactly, and 99.5 is not a tie with 100. Fixed, and the podium is yours on merit. Thank you for entering again.' },
+
+  { to:'nabbas0786', amount:50,
+    parts:[['X quote-retweet prize - only valid entry', 50]],
+    memo:'HivePulse SEO Contest week 14: 50 HIVE for the X quote-retweet, the only valid one this round. You finished 4th on SEO 99 / GEO 100. One point of SEO was the whole difference - the top four all scored a perfect GEO. Worth knowing: we found and fixed a rounding bug in our judge this week that had been treating your 99.5 as a 100; without it you would have placed 3rd, and we would have paid a lower score over a higher one. Sorry about that, and thank you for always pasting the X link properly.' },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════════════ */

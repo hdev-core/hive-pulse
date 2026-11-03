@@ -526,6 +526,34 @@ const titleCtr = (title: string) => {
 // Search intent / post format inferred from the title — drives the SEO "format
 // match" check AND the GEO content-type detection
 type IntentType = 'How-to / Guide' | 'List' | 'Question / Informational' | 'Review / Comparison' | 'General / Personal';
+// A trailing language or community tag — "[Eng/Urdu]", "(Part 2)", "| ENG-ESP" — sits after
+// the question mark and hid it from a plain `\?$` test, so "How Was Our Canal Adventure?
+// [Eng/Urdu]" was scored as a personal story and skipped the harder informational GEO
+// checks entirely. Measured across the 77 contest entries scored to date, four posts took
+// that route.
+//
+// Three shapes have to pass, and getting one of them alone is a regression on the others:
+//   "Adventure? [Eng/Urdu]"       — the mark is before the tag   -> strip tags, then test
+//   "My Story | Why Quit Sugar?"  — the mark is at the very end  -> test the raw title
+//   "My Week (Did I Make It?)"    — the mark is inside the tag   -> allow trailing brackets
+// Stripping tags is bounded to three passes because "[ENG] [ESP]" is a normal Hive title.
+const TITLE_SUFFIX = /\s*(\[[^\]]*\]|\([^)]*\)|\|[^|]*)\s*$/;
+const Q_THROUGH_BRACKETS = /\?[\s\])|]*$/;
+const bareTitle = (title: string): string => {
+  // The suffix regex is quadratic on input full of unclosed brackets (measured: 16k chars
+  // of "[" costs 566ms, 50k costs 3.8s) because of the leftmost-match restart loop. Titles
+  // are under 256 bytes on chain, but the extension reads this one from the live editor on
+  // a 1s debounce, so a pasted wall of text would jank the page. No real title is this long.
+  if (title.length > 300) return title.slice(0, 300).trim();
+  let s = title.trim();
+  for (let i = 0; i < 3 && TITLE_SUFFIX.test(s); i++) s = s.replace(TITLE_SUFFIX, '').trim();
+  return s;
+};
+// Only the question test consults the stripped title. Everything else matches the FULL
+// title on purpose: a suffix like "[Guide]" or "(Guide & Info)" legitimately makes a post a
+// guide, and stripping before every test reclassified three real guides as personal posts.
+const isQuestionTitle = (title: string): boolean =>
+  Q_THROUGH_BRACKETS.test(title.trim()) || /\?$/.test(bareTitle(title));
 const detectIntent = (title: string, content: string): { type: IntentType; matched: boolean; hint: string } => {
   const t = title.toLowerCase();
   if (/^how to|^how i|\bguide\b|\btutorial\b|step[- ]by[- ]step/.test(t)) {
@@ -538,7 +566,7 @@ const detectIntent = (title: string, content: string): { type: IntentType; match
     const items = (content.match(/^(?:\d+\.|[-*])\s+/gm) || []).length;
     return { type: 'List', matched: items >= 3, hint: items >= 3 ? `${items} list items` : 'Add a numbered/bulleted list' };
   }
-  if (/\?$|^what\b|^why\b|^when\b|^where\b|^who\b|^which\b|^is\b|^are\b|^can\b|^should\b/.test(t)) {
+  if (isQuestionTitle(title) || /^what\b|^why\b|^when\b|^where\b|^who\b|^which\b|^is\b|^are\b|^can\b|^should\b/.test(t)) {
     return { type: 'Question / Informational', matched: true, hint: 'Answer the question directly in the first paragraph' };
   }
   if (/\breview\b|\bvs\.?\b|\bcomparison\b|\bcompared\b/.test(t)) {
@@ -624,7 +652,42 @@ interface GeoResult { informational: boolean; score: number; items: GeoItem[]; }
 const THIRD_PRON = /\b(it|this|that|these|those|they|them|their|theirs|he|she|him|her|hers|his|its)\b/gi;
 const START_PRON = /^(it|this|that|these|those|they|there|here)\b/i;
 
+// Count the capitalised words that are capitalised because they are NAMES, not because a
+// sentence or a line happened to start there.
+//
+// The "Concrete detail" check finds named entities by matching capitalised words, which
+// meant every sentence-initial The/But/Thus/First counted as a name. Measured over the 77
+// contest entries scored to date, ~35% of each post's "proper nouns" were this noise — one
+// entry banked But x15 and The x15 as concrete detail.
+//
+// This is positional rather than a stopword list, and that matters. A list was tried first
+// and failed in both directions: it is language-specific, so a Spanish entrant opening
+// sentences with "Que"/"Entonces"/"Luego" still scored a full 15/15 on prose naming
+// nothing, while an English entrant writing about someone called Will, Les or Del had a
+// real name zeroed — a 13-point swing either way, decided by which words someone had
+// thought to list. Position is language-agnostic and needs no maintenance.
+//
+// The cost is that a name opening a sentence is not counted. That is deliberate and
+// symmetric: the check is a ratio over the whole post, and a genuinely named entity recurs
+// mid-sentence. Over-counting noise was the bug; under-counting one position is not.
+const NAMED_ENTITY = /\b[A-Z][a-z]{2,}\b/g;
+const countNames = (plain: string): number => {
+  let n = 0;
+  for (const m of plain.matchAll(NAMED_ENTITY)) {
+    // Walk back over the spaces to whatever precedes this word. Start of text, or the end
+    // of a sentence, line or list item, means it is capitalised by position and tells us
+    // nothing. Scanning backwards rather than slicing keeps this linear: a 5,000-word post
+    // has ~500 matches, and slicing the text before each one copies megabytes per call.
+    let i = m.index - 1;
+    while (i >= 0 && (plain[i] === ' ' || plain[i] === '\t')) i--;
+    if (i >= 0 && !'.!?:;\n'.includes(plain[i])) n++;
+  }
+  return n;
+};
+
 // GEO rubric v2 — EFFECTIVE FROM CONTEST WEEK 12 (round opening 13 October 2026).
+// Corrected for week 13 (1.16.0): two checks were not measuring what they claimed. See
+// countNames and isQuestionTitle above. No band moved.
 // Announced in the week 11 results post before it took effect; weeks 1-11 were judged on
 // v1 and are not reopened. Thresholds are pinned by utils/geoRubric.test.ts, which also
 // checks this file and scripts/lib/seo-score.mjs still agree.
@@ -674,7 +737,7 @@ const analyzeGeo = (content: string, intentType: IntentType): GeoResult => {
     // A personal post used to clear three easy gates and take 100, which is why half the
     // field sat there. A story an AI can quote names things.
     const pNums = (plain.match(/\b\d+(?:[.,]\d+)?%?\b/g) || []).length;
-    const properNouns = (plain.match(/\b[A-Z][a-z]{2,}\b/g) || []).length;
+    const properNouns = countNames(plain);
     const specificity = words.length ? (pNums + properNouns) / words.length : 0;
     const spec01 = specificity >= 0.075 ? 1 : specificity >= 0.045 ? 0.7 : specificity >= 0.02 ? 0.4 : 0.1;
     add('Concrete detail', spec01, 15,

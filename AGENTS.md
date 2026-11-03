@@ -10,7 +10,7 @@ Chrome Extension (Manifest V3) — not a standard web app. The popup and side pa
 - `npm run dev` — Vite dev server (useful for UI work, but Chrome extension APIs require the built extension)
 - `npm run preview` — preview production build locally
 
-- `npm test` — vitest, 124 tests covering the scoring engines, URL helpers and tag scanner
+- `npm test` — vitest, 178 tests covering the scoring engines, URL helpers, tag scanner, the contest ranking rule and the prize structure
 - `npx tsc --noEmit` — typecheck
 
 No lint or format command. No CI pipeline, so the checks above are run by hand.
@@ -29,6 +29,15 @@ uses the best title-derived keyword because the author's editor keyword is not s
 Verify tags, referrals, and any social-media prize requirements separately. Do not rerun an old
 round with the current script without restoring that round's date window; the script is rolled
 forward for the active contest.
+
+**The scoring engine is rolled forward too, and that is a sharper trap than the date window.**
+A round is judged on the rubric that was live during that round, and `contest-results-weekN.csv`
+is the authoritative record of what was actually paid. Re-running an old entries file against a
+newer engine will produce different numbers and can reorder the podium — week 12 is the worked
+example: under 1.15.0 all three entries tied on GEO 100, and under 1.16.0 @nabbas0786 drops to
+71 and swaps places with @wardah, a 50 HIVE difference. That re-score is not a correction to
+week 12 and must never be published or paid from. If you need to know what a past round scored,
+read its archived CSV; do not regenerate it.
 
 ## Releasing a new version
 

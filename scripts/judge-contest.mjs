@@ -33,8 +33,8 @@
 // with week 1, too early to count for week 2. Starting the window on announcement day closes
 // that gap: anyone who reads the post and publishes the same day is in. Cross-check against the
 // previous round's archived CSV so a post can't be awarded twice.
-const WINDOW_START = Date.parse('2026-10-06T00:00:00Z');
-const WINDOW_END   = Date.parse('2026-10-13T12:00:00Z');   // week 11 closes 12:00 UTC, not 23:59
+const WINDOW_START = Date.parse('2026-10-27T00:00:00Z');
+const WINDOW_END   = Date.parse('2026-11-03T12:00:00Z');   // week 14 closes 12:00 UTC, not 23:59
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 
 // Tiebreak target, from week 11. The engine's own readability check stops caring once a post
@@ -47,11 +47,11 @@ const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 // line: at 60 there is nothing further to gain, and padding does not move it at all, because
 // it is a ratio of words per sentence and syllables per word. Back-tested over weeks 6-10,
 // 21 tied entries, it separated every field with no collisions.
-const EASE_TARGET = 60;
 
 // Scoring engine lives in ./lib/seo-score.mjs — shared with scripts/score-post.mjs so the
 // two tools can never disagree. Keep that file in sync with compose.ts.
 import { analyze, autoDetectKeyword, readability } from './lib/seo-score.mjs';
+import { byRank, easeGap } from './lib/rank.mjs';
 import { getPost } from './lib/hive-rpc.mjs';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -132,23 +132,28 @@ const main = async () => {
 
     const { analysis: a, keyword, autoKeyword } = bestKeywordAnalysis(post);
     const seoPct = Math.round((a.seoScore / a.seoMax) * 100);
-    const combined = Math.round((seoPct + a.geoScore) / 2);
+    // Rank on the EXACT mean and show the rounded one. Rounding before comparing invents
+    // ties between scores that are not tied, and the reading-ease tiebreak then promotes
+    // the lower score over the higher one. Week 14 is the worked example: @nabbas0786 on
+    // (99+100)/2 = 99.5 rounded up to 100 and tied @nursejoe's true 100, then won the
+    // tiebreak on reading ease and took 3rd place and 50 HIVE from a strictly better post.
+    // The published rule is "Rank = (SEO% + GEO)/2"; 99.5 is not a tie with 100.
+    const combinedExact = (seoPct + a.geoScore) / 2;
+    const combined = Math.round(combinedExact);
     const inWindow = post.created >= WINDOW_START && post.created <= WINDOW_END;
     const qualifies = inWindow && seoPct >= MIN_SEO_QUALIFY;
 
     const { ease } = readability(post.body);
     rows.push({
       author: post.author, permlink: post.permlink, created: post.created,
-      seoScore: a.seoScore, seoMax: a.seoMax, seoPct, geoScore: a.geoScore, combined,
-      wordCount: a.wordCount, ease, easeGap: Math.abs(ease - EASE_TARGET),
+      seoScore: a.seoScore, seoMax: a.seoMax, seoPct, geoScore: a.geoScore, combined, combinedExact,
+      wordCount: a.wordCount, ease, easeGap: easeGap(ease),
       keyword, autoKeyword, inWindow, qualifies,
       geoType: a.geoInformational ? 'info' : 'personal', breakdown: a.breakdown,
     });
   }
 
-  rows.sort((x, y) => (y.qualifies - x.qualifies) || (y.combined - x.combined) ||
-    (y.geoScore - x.geoScore) || (x.easeGap - y.easeGap) || (x.created - y.created) ||
-    x.author.localeCompare(y.author) || x.permlink.localeCompare(y.permlink));
+  rows.sort(byRank);
 
   const pad = (s, n) => String(s).padEnd(n);
   const padL = (s, n) => String(s).padStart(n);
@@ -160,14 +165,14 @@ const main = async () => {
     const id = `@${r.author}/${r.permlink}`;
     const seo = `${r.seoScore}/${r.seoMax}(${r.seoPct}%)`;
     const flag = r.qualifies ? '✓' : (!r.inWindow ? '⌛' : '✗');
-    console.log(`${pad(i + 1, 3)} ${pad(id.length > 42 ? id.slice(0, 41) + '…' : id, 42)} ${padL(seo, 7)} ${padL(r.geoScore, 4)} ${padL(r.combined, 5)} ${padL(r.ease, 5)} ${padL(r.wordCount, 6)} ${pad(fmtDate(r.created), 12)} ${flag}`);
+    console.log(`${pad(i + 1, 3)} ${pad(id.length > 42 ? id.slice(0, 41) + '…' : id, 42)} ${padL(seo, 7)} ${padL(r.geoScore, 4)} ${padL(r.combinedExact % 1 ? r.combinedExact.toFixed(1) : r.combined, 5)} ${padL(r.ease, 5)} ${padL(r.wordCount, 6)} ${pad(fmtDate(r.created), 12)} ${flag}`);
   });
 
   const winners = rows.filter(r => r.qualifies).slice(0, 3);
   console.log('\n── Provisional top 3 (qualified, by combined score) ──');
   const medals = ['🥇 150 HIVE', '🥈 100 HIVE', '🥉 50 HIVE'];
   if (!winners.length) console.log('  (no qualifying entries yet)');
-  winners.forEach((r, i) => console.log(`  ${medals[i]}  @${r.author}/${r.permlink}  — SEO ${r.seoPct}% · GEO ${r.geoScore} · combined ${r.combined}`));
+  winners.forEach((r, i) => console.log(`  ${medals[i]}  @${r.author}/${r.permlink}  — SEO ${r.seoPct}% · GEO ${r.geoScore} · combined ${r.combinedExact % 1 ? r.combinedExact.toFixed(1) : r.combined}`));
 
   console.log('\nLegend: ✓ qualifies · ✗ below SEO threshold · ⌛ outside contest window');
   console.log('NOTE: each post is scored with its best-performing keyword, so a ranking can never');
@@ -176,8 +181,8 @@ const main = async () => {
   if (problems.length) { console.log('\n⚠ Problems:'); problems.forEach(p => console.log('  - ' + p)); }
 
   // CSV alongside
-  const csv = ['author,permlink,created,seo_score,seo_max,seo_pct,geo_score,combined,ease,ease_gap,word_count,in_window,qualifies,keyword,auto_keyword']
-    .concat(rows.map(r => `${r.author},${r.permlink},${fmtDate(r.created)},${r.seoScore},${r.seoMax},${r.seoPct},${r.geoScore},${r.combined},${r.ease},${r.easeGap},${r.wordCount},${r.inWindow},${r.qualifies},"${r.keyword}","${r.autoKeyword}"`))
+  const csv = ['author,permlink,created,seo_score,seo_max,seo_pct,geo_score,combined,combined_exact,ease,ease_gap,word_count,in_window,qualifies,keyword,auto_keyword']
+    .concat(rows.map(r => `${r.author},${r.permlink},${fmtDate(r.created)},${r.seoScore},${r.seoMax},${r.seoPct},${r.geoScore},${r.combined},${r.combinedExact},${r.ease},${r.easeGap},${r.wordCount},${r.inWindow},${r.qualifies},"${r.keyword}","${r.autoKeyword}"`))
     .join('\n');
   fs.writeFileSync('contest-results.csv', csv);
   console.log('\n📄 Full results written to contest-results.csv');

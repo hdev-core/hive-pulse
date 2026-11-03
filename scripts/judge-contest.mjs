@@ -33,8 +33,8 @@
 // with week 1, too early to count for week 2. Starting the window on announcement day closes
 // that gap: anyone who reads the post and publishes the same day is in. Cross-check against the
 // previous round's archived CSV so a post can't be awarded twice.
-const WINDOW_START = Date.parse('2026-10-20T00:00:00Z');
-const WINDOW_END   = Date.parse('2026-10-27T12:00:00Z');   // week 13 closes 12:00 UTC, not 23:59
+const WINDOW_START = Date.parse('2026-10-27T00:00:00Z');
+const WINDOW_END   = Date.parse('2026-11-03T12:00:00Z');   // week 14 closes 12:00 UTC, not 23:59
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 
 // Tiebreak target, from week 11. The engine's own readability check stops caring once a post
@@ -47,11 +47,11 @@ const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 // line: at 60 there is nothing further to gain, and padding does not move it at all, because
 // it is a ratio of words per sentence and syllables per word. Back-tested over weeks 6-10,
 // 21 tied entries, it separated every field with no collisions.
-const EASE_TARGET = 60;
 
 // Scoring engine lives in ./lib/seo-score.mjs — shared with scripts/score-post.mjs so the
 // two tools can never disagree. Keep that file in sync with compose.ts.
 import { analyze, autoDetectKeyword, readability } from './lib/seo-score.mjs';
+import { byRank, easeGap, EASE_TARGET } from './lib/rank.mjs';
 import { getPost } from './lib/hive-rpc.mjs';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -132,23 +132,28 @@ const main = async () => {
 
     const { analysis: a, keyword, autoKeyword } = bestKeywordAnalysis(post);
     const seoPct = Math.round((a.seoScore / a.seoMax) * 100);
-    const combined = Math.round((seoPct + a.geoScore) / 2);
+    // Rank on the EXACT mean and show the rounded one. Rounding before comparing invents
+    // ties between scores that are not tied, and the reading-ease tiebreak then promotes
+    // the lower score over the higher one. Week 14 is the worked example: @nabbas0786 on
+    // (99+100)/2 = 99.5 rounded up to 100 and tied @nursejoe's true 100, then won the
+    // tiebreak on reading ease and took 3rd place and 50 HIVE from a strictly better post.
+    // The published rule is "Rank = (SEO% + GEO)/2"; 99.5 is not a tie with 100.
+    const combinedExact = (seoPct + a.geoScore) / 2;
+    const combined = Math.round(combinedExact);
     const inWindow = post.created >= WINDOW_START && post.created <= WINDOW_END;
     const qualifies = inWindow && seoPct >= MIN_SEO_QUALIFY;
 
     const { ease } = readability(post.body);
     rows.push({
       author: post.author, permlink: post.permlink, created: post.created,
-      seoScore: a.seoScore, seoMax: a.seoMax, seoPct, geoScore: a.geoScore, combined,
-      wordCount: a.wordCount, ease, easeGap: Math.abs(ease - EASE_TARGET),
+      seoScore: a.seoScore, seoMax: a.seoMax, seoPct, geoScore: a.geoScore, combined, combinedExact,
+      wordCount: a.wordCount, ease, easeGap: easeGap(ease),
       keyword, autoKeyword, inWindow, qualifies,
       geoType: a.geoInformational ? 'info' : 'personal', breakdown: a.breakdown,
     });
   }
 
-  rows.sort((x, y) => (y.qualifies - x.qualifies) || (y.combined - x.combined) ||
-    (y.geoScore - x.geoScore) || (x.easeGap - y.easeGap) || (x.created - y.created) ||
-    x.author.localeCompare(y.author) || x.permlink.localeCompare(y.permlink));
+  rows.sort(byRank);
 
   const pad = (s, n) => String(s).padEnd(n);
   const padL = (s, n) => String(s).padStart(n);

@@ -120,44 +120,48 @@
    if the stated total does not match the sum of the transfers.
    ══════════════════════════════════════════════════════════════════════════════ */
 const ROUND = {
-  label:  'Week 13',
-  window: '20 - 27 October 2026, closed 12:00 UTC',
-  post:   'https://peakd.com/hive-177727/@hdev/hivepulse-seo-contest-week-12-results-week-13-open',
-  // 3 posts from 3 writers, all valid: root posts, inside the window, #hivepulse in the real
-  // tag list. 3 valid entrants -> under-10 tier -> 300 pool, + 50 X prize. No referrals.
+  label:  'Week 14',
+  window: '27 October - 3 November 2026, closed 12:00 UTC',
+  post:   'https://actifit.io/@hdev/hivepulse-seo-contest-week-13-results-week-14-open',
+  // 5 posts from 5 writers, all valid: root posts, inside the window, #hivepulse in the real
+  // tag list. 5 valid entrants -> still the under-10 tier -> 300 pool, + 50 X prize. No
+  // referrals declared (@nursejoe thanks @ahmedabbaci but is not new to the contest).
   //
-  // First round scored on 1.16.0, and the rubric finally separated someone: @nabbas0786 took
-  // 96, four points off Concrete detail. @ahmedabbaci and @nursejoe both routed to the
-  // INFORMATIONAL branch and maxed all six gates - including the harder week-12 bands (two
-  // question headings, three definitions, five sourced figures). Nobody had cleared those
-  // before. 1st and 2nd still tied on 100 and on reading ease 60, so earliest publication
-  // settled it: 20 Oct 18:13 against 22 Oct 05:24.
+  // THIRD PLACE CHANGED HANDS ON A BUG FIX. judge-contest.mjs rounded the combined score
+  // before sorting, so @nabbas0786's (99+100)/2 = 99.5 became 100, tied @nursejoe's true
+  // 100, and won the reading-ease tiebreak - taking 3rd from a strictly better post. The
+  // published rule is "Rank = (SEO% + GEO)/2" and 99.5 is not a tie with 100, so the
+  // comparison now uses the exact mean. @nursejoe is 3rd. Checked every archived round:
+  // only week 8 was ever affected, between two unpaid positions, so no past payout moved.
   expectedTotal: 350,
-  memoTag: 'HivePulse SEO Contest week 13',
+  memoTag: 'HivePulse SEO Contest week 14',
 };
 
 const CURATION = [
-  { author:'ahmedabbaci', permlink:'whats-daydreaming-8-best-ways-to-stop-doing-it-by-me',
+  { author:'itx.wardah',  permlink:'the-best-shoping-day-hangout-with-sister-fun2x',
     place:'1st', seo:100, geo:100 },
-  { author:'nursejoe',    permlink:'how-to-check-blood-pressure-at-home-5-essential-tips',
+  { author:'ahmedabbaci', permlink:'whats-obsession-4-tips-to-use-obsession-as-weopen',
     place:'2nd', seo:100, geo:100 },
-  { author:'nabbas0786',  permlink:'how-do-devils-mislead-humans-3-key-hadiths-engurdu',
-    place:'3rd', seo:100, geo:96 },
+  { author:'nursejoe',    permlink:'how-to-improve-sleep-quality-9-natural-tips-to-improve',
+    place:'3rd', seo:100, geo:100 },
 ];
 
 const PAYMENTS = [
-  { to:'ahmedabbaci', amount:150,
+  { to:'itx.wardah', amount:150,
     parts:[['1st place - SEO 100 / GEO 100, reading ease 60', 150]],
-    memo:'HivePulse SEO Contest week 13: 1st place (SEO 100 / GEO 100) = 150 HIVE. You maxed all six informational GEO checks, including the harder bands introduced in week 12 - two question headings, three definitions, five figures with a source. Nobody had cleared those before. You and 2nd tied on a perfect score AND on reading ease 60, so earliest publication decided it, and you were first by a day and a half. Congratulations!' },
+    memo:'HivePulse SEO Contest week 14: 1st place (SEO 100 / GEO 100) = 150 HIVE. A perfect 200/200 on reading ease 60 exactly. Four entries finished on a perfect score this round, so the published cascade settled it - you and 2nd both landed on reading ease 60, and you published first. Congratulations!' },
 
-  { to:'nursejoe', amount:100,
+  { to:'ahmedabbaci', amount:100,
     parts:[['2nd place - SEO 100 / GEO 100, reading ease 60', 100]],
-    memo:'HivePulse SEO Contest week 13: 2nd place (SEO 100 / GEO 100) = 100 HIVE. A perfect score on your first entry back, and you maxed all six informational checks including the harder week-12 bands. You tied 1st place exactly - same 200/200, same reading ease 60 - and the published cascade fell through to earliest publication. Nothing in your writing cost you the top spot. Congratulations!' },
+    memo:'HivePulse SEO Contest week 14: 2nd place (SEO 100 / GEO 100) = 100 HIVE. Identical to 1st on every measure the rules use - a perfect 200/200 and reading ease 60 exactly - so earliest publication decided the order, and you entered on 1 November. Nothing in the writing separated you. Congratulations!' },
 
-  { to:'nabbas0786', amount:100,
-    parts:[['3rd place - SEO 100 / GEO 96, reading ease 60', 50],
-           ['X quote-retweet prize - only valid entry', 50]],
-    memo:'HivePulse SEO Contest week 13: 3rd place (SEO 100 / GEO 96) = 50 HIVE, plus 50 HIVE for the X quote-retweet, the only valid one this round. Total 100 HIVE. The 4 points came off Concrete detail, and you missed a perfect score by six words. That check is a ratio - named people, places, dates and numbers over total words. Your post ran 2234 words with 28 numbers and 134 names, giving 0.0725, where full marks starts at 0.075. Six more names anywhere in it and you are on 200/200. Nothing was wrong with the writing; on a long post that check gets harder because the length is the denominator. Thank you for pasting the X link properly this time!' },
+  { to:'nursejoe', amount:50,
+    parts:[['3rd place - SEO 100 / GEO 100, reading ease 65', 50]],
+    memo:'HivePulse SEO Contest week 14: 3rd place (SEO 100 / GEO 100) = 50 HIVE. A note on how you got here: our judge was rounding the combined score before ranking, which made a 99.5 look like your 100 and cost you this place on the tiebreak. The published rule ranks on (SEO + GEO)/2 exactly, and 99.5 is not a tie with 100. Fixed, and the podium is yours on merit. Thank you for entering again.' },
+
+  { to:'nabbas0786', amount:50,
+    parts:[['X quote-retweet prize - only valid entry', 50]],
+    memo:'HivePulse SEO Contest week 14: 50 HIVE for the X quote-retweet, the only valid one this round. You finished 4th on SEO 99 / GEO 100. One point of SEO was the whole difference - the top four all scored a perfect GEO. Worth knowing: we found and fixed a rounding bug in our judge this week that had been treating your 99.5 as a 100; without it you would have placed 3rd, and we would have paid a lower score over a higher one. Sorry about that, and thank you for always pasting the X link properly.' },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════════════ */

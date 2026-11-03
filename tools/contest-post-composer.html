@@ -60,6 +60,16 @@ const $ = id => document.getElementById(id);
 const APP_VERSION = 'hivepulse/1.16.0';
 
 const PRESETS = {
+  // Publishing week 14's results and opening week 15. The normal case.
+  week15: {
+    title:       'HivePulse SEO Contest: New Week 15 Round (500 HIVE)',
+    permlink:    'hivepulse-seo-contest-week-14-results-week-15-open',
+    community:   'hive-177727',
+    tags:        'hivepulse seo contest hive writing',
+    description: 'HivePulse SEO Contest week 14: five entrants, four perfect scores, and a bug in our own judge that had third place with the wrong person. 350 HIVE paid.',
+    draft:       '../enhancements/week15-post-body.md',
+  },
+
   // Publishing week 13's results and opening week 14. The normal case.
   week14: {
     title:       'HivePulse SEO Contest: New Week 14 Round (500 HIVE)',
@@ -103,7 +113,7 @@ const PRESETS = {
 };
 
 // ⬇ THE ONLY LINE TO CHANGE between rounds.
-const ROUND = PRESETS.week14;
+const ROUND = PRESETS.week15;
 
 const DRAFT_URL = ROUND.draft;
 const RPC = 'https://api.hive.blog';

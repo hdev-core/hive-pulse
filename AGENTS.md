@@ -10,7 +10,7 @@ Chrome Extension (Manifest V3) — not a standard web app. The popup and side pa
 - `npm run dev` — Vite dev server (useful for UI work, but Chrome extension APIs require the built extension)
 - `npm run preview` — preview production build locally
 
-- `npm test` — vitest, 156 tests covering the scoring engines, URL helpers, tag scanner and the contest ranking rule
+- `npm test` — vitest, 178 tests covering the scoring engines, URL helpers, tag scanner, the contest ranking rule and the prize structure
 - `npx tsc --noEmit` — typecheck
 
 No lint or format command. No CI pipeline, so the checks above are run by hand.

@@ -3,11 +3,7 @@
 Anchor tweet: TWEET_URL_HERE
 Hive post   : POST_URL_HERE
 
-> NOTE: tweet 4 and the Discord sign-off describe the week 15 prize structure, which @hdev
-> is changing this round. Replace those two before posting. Tweets 1-3 are results and
-> stand on their own.
-
-Fill both URLs in below once the post and the anchor tweet are live. Post tweets 2-4 as
+Fill both URLs in below once the post and the anchor tweet are live. Post tweets 2-5 as
 replies to the anchor tweet.
 
 Check lengths with:
@@ -17,17 +13,17 @@ Check lengths with:
 ## Images
 
 - Tweet 1: `enhancements/images/contest-week15-cover.jpg`
-- Tweets 2-4: text only. X shows a thread's first image prominently; repeating the cover
+- Tweets 2-5: text only. X shows a thread's first image prominently; repeating the cover
   further down reads as filler.
 
 ## 1/
 
 ```tweet
-Week 14 of the HivePulse SEO Contest is settled.
+We're changing how the HivePulse SEO Contest pays, and telling you two weeks early.
 
-Five writers entered, up from three. Three scored a perfect 200/200.
+From week 16: under 5 entrants, nobody is paid and the pool rolls into the next round.
 
-And we found a bug in our own judge that had third place with the wrong person. 🧵
+Here's why we're doing that to ourselves. 🧵
 ```
 
 Attach: `enhancements/images/contest-week15-cover.jpg`
@@ -35,37 +31,49 @@ Attach: `enhancements/images/contest-week15-cover.jpg`
 ## 2/
 
 ```tweet
-🥇 @itx.wardah — 100/100
-🥈 @ahmedabbaci — 100/100
-🥉 @nursejoe — 100/100
+In the last four rounds this contest gained ONE new entrant.
 
-Four perfect scores in one round.
+Weeks 11, 12 and 13 brought in nobody at all.
 
-First win for @itx.wardah, on reading ease 60 exactly.
+The same five people keep writing excellent posts and splitting the same 300 HIVE. That isn't growth, it's a standing order.
 ```
 
 ## 3/
 
 ```tweet
-The bug: we rounded the combined score before ranking.
+So the pool now moves in both directions.
 
-99.5 became 100, tied a real 100, and won a tiebreak that should never have run. A lower score took 3rd.
+5 entrants → 300 HIVE
+10 → 400
+15 → 500
+20 → 600
 
-Fixed. 3rd is @nursejoe's. We checked all 14 rounds — no past payout moved.
+Under 5 → nothing paid, and it all rolls into next week.
+
+Three of our last four rounds would have paid zero. Doing it anyway.
 ```
 
 ## 4/
 
 ```tweet
-Week 15 is open.
+Second change: ties now SPLIT the prize.
 
-300 HIVE under 10 entrants. 400 at ten. 500 at twenty.
+Two tied for 1st get 125 each. Four tied get 75 each.
 
-Five more writers and this round pays 400.
+For four rounds the podium has been decided by who published first — rewarding rushing, punishing revising, in a contest about revising.
 
-Closes 10 Nov, 12:00 UTC. Tag #hivepulse.
+That race is over.
+```
 
-#Hive #SEO
+## 5/
+
+```tweet
+And week 14, where we got it wrong ourselves:
+
+🥇 @itx.wardah 🥈 @ahmedabbaci 🥉 @nursejoe
+
+Our judge rounded 99.5 up to 100, invented a tie, and handed 3rd to the wrong person. We fixed it — then sent @nabbas_0786 the 50 HIVE anyway 👇
+POST_URL_HERE
 ```
 
 ---
@@ -75,18 +83,24 @@ Closes 10 Nov, 12:00 UTC. Tag #hivepulse.
 **#announcements** - attach `enhancements/images/contest-week15-cover.jpg` to the message.
 
 ```text
-**🏆 HivePulse SEO Contest — week 14 results, week 15 open**
+**🏆 HivePulse SEO Contest — week 14 results, and the rewards are changing**
 
 🥇 @itx.wardah — 150 · 🥈 @ahmedabbaci — 100 · 🥉 @nursejoe — 50
-🐦 @nabbas0786 takes the 50 HIVE X prize, uncontested again. **350 HIVE going out.**
+🐦 @nabbas0786 takes the 50 HIVE X prize uncontested, plus a 50 HIVE correction. **400 HIVE went out.**
 
-**Five entrants, up from three, and three of them scored a perfect 200/200** - with a fourth one point short. @itx.wardah takes the win on reading ease 60 exactly.
+**We got the podium wrong.** Our judge rounded the combined score before ranking, so @nabbas0786's 99.5 looked like a tie with a genuine 100 and won a tiebreak that should never have run. We fixed it after the round had closed — which broke our own rule that changes are announced *before* the round they apply to. So @nursejoe keeps 3rd on the corrected maths, and @nabbas0786 was sent 50 HIVE separately. Nobody is worse off, and that extra 50 is our error, not your pool.
 
-**We also found a bug in our own judge, and it had the podium wrong.** We were rounding the combined score before ranking, so a 99.5 looked like a 100, tied a genuine 100, and won a reading-ease tiebreak that should never have run — a lower score taking 3rd from a higher one. The rule we publish is "Rank = (SEO% + GEO)/2", and 99.5 is not a tie with 100. Fixed, and 3rd place is @nursejoe's. We re-checked all 14 rounds: it could only ever bite within half a point, which happened once before between two unpaid positions. No past payout moved.
+**From week 16, two things change.**
 
-@nabbas0786 — that cost you 50 HIVE our own code had already shown you. Sorry. One point of SEO was the entire gap between 4th and the podium.
+**1. The pool depends on the size of the field.** Under 5 entrants, nothing is paid and the whole pool rolls into the next round. 5-9 → 300 · 10-14 → 400 · 15-19 → 500 · 20+ → 600, and the bigger the field, the more places get paid.
 
-**Week 15 closes 10 November, 12:00 UTC.** 300 HIVE · 400 at 10 entrants · 500 at 20 · 25 each for a referral · 50 for the best quote-RT.
+Straight with you: three of our last four rounds would have paid nothing. In the last four rounds this contest has gained one new entrant. The writing isn't the problem — only two entries in fourteen rounds have ever failed the qualifying bar. Discovery is. So the pool grows with the field, and shrinks without it.
+
+On a quiet round you are still scored, still listed in the results, and still get an upvote and a reblog. Only the prize money waits a week.
+
+**2. Ties split the prize.** Two tied for 1st get 125 each; four tied get 75 each. The podium has been decided on publication time for four rounds running, which rewarded rushing and punished revising. That race is over — take the full week.
+
+**Week 15 closes 10 November, 12:00 UTC, under the current rules.** 300 HIVE · 25 each for a referral · 50 for the best quote-RT.
 
 Four of five entrants skipped the X prize again. 50 HIVE, one quote-retweet, nobody competing.
 

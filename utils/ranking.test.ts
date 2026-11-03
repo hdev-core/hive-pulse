@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { byRank, easeGap, EASE_TARGET } from '../scripts/lib/rank.mjs';
+import { byRank, easeGap, EASE_TARGET, tierFor, allocatePrizes, MIN_ENTRANTS } from '../scripts/lib/rank.mjs';
 
 /**
  * The comparator that decides who gets paid. It had no test until week 14, when it was
@@ -112,5 +112,89 @@ describe('ranking — the published rule', () => {
       row('ekads',       { combinedExact: 93,   easeGap: 11, geoScore: 88, created: Date.parse('2026-11-03T03:17:12Z') }),
     ];
     expect(order(wk14)).toEqual(['itx.wardah', 'ahmedabbaci', 'nursejoe', 'nabbas0786', 'ekads']);
+  });
+});
+
+/**
+ * Prize structure effective from week 16: the pool scales with the field, nothing is paid
+ * below five entrants, and tied entries split the slots they span instead of being
+ * separated by who published first.
+ */
+describe('prize tiers — the pool moves with the field', () => {
+  it.each([
+    [0, 0], [1, 0], [4, 0],
+    [5, 300], [9, 300],
+    [10, 400], [14, 400],
+    [15, 500], [19, 500],
+    [20, 600], [57, 600],
+  ])('a field of %i pays a pool of %i', (n, pool) => {
+    expect(tierFor(n).pool).toBe(pool);
+  });
+
+  it('pays nothing below the minimum, and the minimum is five', () => {
+    expect(MIN_ENTRANTS).toBe(5);
+    expect(tierFor(MIN_ENTRANTS - 1).slots).toEqual([]);
+    expect(tierFor(MIN_ENTRANTS).slots.length).toBeGreaterThan(0);
+  });
+
+  it('pays more places as the field grows', () => {
+    const places = [5, 10, 15, 20].map(n => tierFor(n).slots.length);
+    expect(places).toEqual([3, 4, 4, 5]);
+  });
+
+  it('every tier\'s slots sum exactly to its pool', () => {
+    for (const n of [5, 10, 15, 20]) {
+      const t = tierFor(n);
+      expect(t.slots.reduce((a: number, b: number) => a + b, 0), `field of ${n}`).toBe(t.pool);
+    }
+  });
+});
+
+describe('tie-splitting', () => {
+  const ent = (author: string, combinedExact: number) => ({
+    author, permlink: author + '-p', qualifies: true,
+    combinedExact, geoScore: 100, easeGap: 0, created: 0,
+  });
+  const SLOTS = [150, 100, 50];
+  const pay = (scores: number[]) =>
+    allocatePrizes(scores.map((s, i) => ent(String.fromCharCode(97 + i), s)), SLOTS)
+      .map((r: { prize: number }) => r.prize);
+
+  it('pays 125 each when two tie for first, then 50 to the next', () => {
+    expect(pay([100, 100, 90])).toEqual([125, 125, 50]);
+  });
+
+  it('pays 100 each when three tie for first', () => {
+    expect(pay([100, 100, 100])).toEqual([100, 100, 100]);
+  });
+
+  it('pays four people 75 each when four tie for first', () => {
+    expect(pay([100, 100, 100, 100])).toEqual([75, 75, 75, 75]);
+  });
+
+  it('pays five people 60 each when five tie — week 9 really happened', () => {
+    expect(pay([100, 100, 100, 100, 100])).toEqual([60, 60, 60, 60, 60]);
+  });
+
+  it('handles a tie below first place', () => {
+    expect(pay([100, 90, 90])).toEqual([150, 75, 75]);
+    expect(pay([100, 95, 90, 90])).toEqual([150, 100, 25, 25]);
+  });
+
+  it('is unchanged from today when nothing ties', () => {
+    expect(pay([100, 95, 90, 85])).toEqual([150, 100, 50]);
+  });
+
+  it('always pays out exactly the pool, however the ties fall', () => {
+    for (const scores of [[100,100,90],[100,100,100],[100,100,100,100],[100,90,90],[100,95,90],[100,100,100,100,100]]) {
+      const total = pay(scores).reduce((a, b) => a + b, 0);
+      expect(total, JSON.stringify(scores)).toBe(300);
+    }
+  });
+
+  it('never pays an entry that scored strictly less than a paid one nothing extra', () => {
+    // 99.5 must not share with 100 — this is the week 14 case that started all of it
+    const out = allocatePrizes([ent('a',100), ent('b',100), ent('c',100), ent('d',99.5)], SLOTS);
+    expect(out.map((r: { author: string }) => r.author)).toEqual(['a','b','c']);
   });
 });

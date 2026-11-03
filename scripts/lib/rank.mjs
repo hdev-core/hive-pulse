@@ -25,6 +25,59 @@
 
 export const EASE_TARGET = 60;
 
+/**
+ * Prize structure, EFFECTIVE FROM CONTEST WEEK 16 (round opening 10 November 2026).
+ * Announced in the week 15 results post before it takes effect.
+ *
+ * The pool moves in both directions with the size of the field. Below the minimum nothing
+ * is paid and the pool rolls into the next round, capped so the headline stays believable.
+ * The reason is measured, not a hunch: across weeks 11-14 the contest gained one new
+ * entrant, and only two entries in fourteen rounds ever failed the qualifying bar. The
+ * constraint is discovery, not writing quality, so the reward now depends on the field.
+ */
+export const MIN_ENTRANTS = 5;
+export const ROLLOVER_CAP = 300;
+const TIERS = [
+  { min: 20, pool: 600, slots: [250, 150, 100, 60, 40] },
+  { min: 15, pool: 500, slots: [250, 120, 80, 50] },
+  { min: 10, pool: 400, slots: [200, 100, 60, 40] },
+  { min: 5,  pool: 300, slots: [150, 100, 50] },
+];
+
+/** The tier a field of n qualifying entries earns. Below MIN_ENTRANTS: nothing. */
+export const tierFor = (n) =>
+  n < MIN_ENTRANTS ? { pool: 0, slots: [] } : TIERS.find(t => n >= t.min);
+
+/**
+ * Split the prize slots across ranked entries, sharing equally within a tied group.
+ *
+ * Replaces breaking ties on publication time, which had decided the top of the board four
+ * rounds running. That rule rewarded publishing on day one of a seven-day window and
+ * punished anyone who drafted, re-scored and improved first — the opposite of what the
+ * tool is for.
+ *
+ * A tied group takes the slots it SPANS and shares their sum equally, so the total paid is
+ * always the pool and only the number of recipients changes. A group may run past the last
+ * slot — four entries tied for three slots are paid 75 each, which is deliberate: they are
+ * genuinely tied and there is no honest way to pick three of them.
+ *
+ * `ranked` must already be sorted by byRank. Returns [{ ...row, prize }] for paid entries.
+ */
+export const allocatePrizes = (ranked, slots) => {
+  const paid = [];
+  let i = 0, slot = 0;
+  while (slot < slots.length && i < ranked.length) {
+    const score = ranked[i].combinedExact;
+    const group = [];
+    while (i < ranked.length && ranked[i].combinedExact === score) group.push(ranked[i++]);
+    const take = slots.slice(slot, slot + group.length);
+    const share = take.reduce((a, b) => a + b, 0) / group.length;
+    for (const row of group) paid.push({ ...row, prize: share });
+    slot += group.length;
+  }
+  return paid;
+};
+
 /** Distance from the reading-ease target. Lower is better. */
 export const easeGap = (ease) => Math.abs(ease - EASE_TARGET);
 

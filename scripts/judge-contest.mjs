@@ -165,14 +165,14 @@ const main = async () => {
     const id = `@${r.author}/${r.permlink}`;
     const seo = `${r.seoScore}/${r.seoMax}(${r.seoPct}%)`;
     const flag = r.qualifies ? '✓' : (!r.inWindow ? '⌛' : '✗');
-    console.log(`${pad(i + 1, 3)} ${pad(id.length > 42 ? id.slice(0, 41) + '…' : id, 42)} ${padL(seo, 7)} ${padL(r.geoScore, 4)} ${padL(r.combined, 5)} ${padL(r.ease, 5)} ${padL(r.wordCount, 6)} ${pad(fmtDate(r.created), 12)} ${flag}`);
+    console.log(`${pad(i + 1, 3)} ${pad(id.length > 42 ? id.slice(0, 41) + '…' : id, 42)} ${padL(seo, 7)} ${padL(r.geoScore, 4)} ${padL(r.combinedExact % 1 ? r.combinedExact.toFixed(1) : r.combined, 5)} ${padL(r.ease, 5)} ${padL(r.wordCount, 6)} ${pad(fmtDate(r.created), 12)} ${flag}`);
   });
 
   const winners = rows.filter(r => r.qualifies).slice(0, 3);
   console.log('\n── Provisional top 3 (qualified, by combined score) ──');
   const medals = ['🥇 150 HIVE', '🥈 100 HIVE', '🥉 50 HIVE'];
   if (!winners.length) console.log('  (no qualifying entries yet)');
-  winners.forEach((r, i) => console.log(`  ${medals[i]}  @${r.author}/${r.permlink}  — SEO ${r.seoPct}% · GEO ${r.geoScore} · combined ${r.combined}`));
+  winners.forEach((r, i) => console.log(`  ${medals[i]}  @${r.author}/${r.permlink}  — SEO ${r.seoPct}% · GEO ${r.geoScore} · combined ${r.combinedExact % 1 ? r.combinedExact.toFixed(1) : r.combined}`));
 
   console.log('\nLegend: ✓ qualifies · ✗ below SEO threshold · ⌛ outside contest window');
   console.log('NOTE: each post is scored with its best-performing keyword, so a ranking can never');
@@ -181,8 +181,8 @@ const main = async () => {
   if (problems.length) { console.log('\n⚠ Problems:'); problems.forEach(p => console.log('  - ' + p)); }
 
   // CSV alongside
-  const csv = ['author,permlink,created,seo_score,seo_max,seo_pct,geo_score,combined,ease,ease_gap,word_count,in_window,qualifies,keyword,auto_keyword']
-    .concat(rows.map(r => `${r.author},${r.permlink},${fmtDate(r.created)},${r.seoScore},${r.seoMax},${r.seoPct},${r.geoScore},${r.combined},${r.ease},${r.easeGap},${r.wordCount},${r.inWindow},${r.qualifies},"${r.keyword}","${r.autoKeyword}"`))
+  const csv = ['author,permlink,created,seo_score,seo_max,seo_pct,geo_score,combined,combined_exact,ease,ease_gap,word_count,in_window,qualifies,keyword,auto_keyword']
+    .concat(rows.map(r => `${r.author},${r.permlink},${fmtDate(r.created)},${r.seoScore},${r.seoMax},${r.seoPct},${r.geoScore},${r.combined},${r.combinedExact},${r.ease},${r.easeGap},${r.wordCount},${r.inWindow},${r.qualifies},"${r.keyword}","${r.autoKeyword}"`))
     .join('\n');
   fs.writeFileSync('contest-results.csv', csv);
   console.log('\n📄 Full results written to contest-results.csv');

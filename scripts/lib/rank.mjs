@@ -33,9 +33,17 @@ export const easeGap = (ease) => Math.abs(ease - EASE_TARGET);
  *   qualifies (bool), combinedExact (number), geoScore, easeGap, created (ms), author, permlink
  */
 export const byRank = (x, y) =>
-  (y.qualifies - x.qualifies) ||
+  // Number(!!v) rather than a bare subtraction: an undefined `qualifies` makes the term
+  // NaN, which is falsy, so the chain would fall straight through and a disqualified entry
+  // could outrank a qualifying one.
+  (Number(!!y.qualifies) - Number(!!x.qualifies)) ||
   (y.combinedExact - x.combinedExact) ||
-  (y.geoScore - x.geoScore) ||
+  // NOTE: a `(y.geoScore - x.geoScore)` term used to sit here, ahead of reading ease. It is
+  // not in the published rule, and it pre-empted the tiebreak that is: two entries on the
+  // same mean, one with GEO 90 / ease 60 and one with GEO 100 / ease 70, would be settled
+  // on GEO when the rule says reading ease decides. Removed so the code matches what we
+  // publish. It never changed a result — wherever it could have applied, the tied entries
+  // held the same GEO.
   (x.easeGap - y.easeGap) ||
   (x.created - y.created) ||
   x.author.localeCompare(y.author) ||

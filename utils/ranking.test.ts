@@ -32,6 +32,20 @@ describe('ranking — the published rule', () => {
       .toEqual(['b', 'a']);
   });
 
+  // A `geoScore` term used to sit ahead of reading ease in the chain. It is not in the
+  // published rule and it pre-empted the tiebreak that is.
+  it('settles a tie on reading ease, not on GEO', () => {
+    const easeWins = row('easeWins', { combinedExact: 95, geoScore: 90,  easeGap: easeGap(60) });
+    const highGeo  = row('highGeo',  { combinedExact: 95, geoScore: 100, easeGap: easeGap(70) });
+    expect(order([highGeo, easeWins])).toEqual(['easeWins', 'highGeo']);
+  });
+
+  it('does not let a malformed qualifies flag outrank a real entry', () => {
+    const good = row('good', { combinedExact: 71 });
+    const bad = { ...row('bad', { combinedExact: 100 }), qualifies: undefined as unknown as boolean };
+    expect(order([bad, good])).toEqual(['good', 'bad']);
+  });
+
   it('breaks a genuine tie on reading ease closest to 60', () => {
     const near = row('near', { easeGap: easeGap(61) });
     const far  = row('far',  { easeGap: easeGap(70) });

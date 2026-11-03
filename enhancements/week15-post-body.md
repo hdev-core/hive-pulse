@@ -1,10 +1,10 @@
 ![HivePulse SEO Contest Week 15 cover: 300 HIVE under 10 entrants, 400 HIVE at 10 to 19 entrants, 500 HIVE at 20 or more, plus a 25 HIVE referral bonus and a 50 HIVE prize for the most engaged quote-retweet](COVER_URL_HERE)
 
-**Summary:** Week 14 of the HivePulse SEO Contest is settled. Five writers entered, up from three, and four of them finished on a perfect score. We also found and fixed a bug in our own judge that had put third place with the wrong person. 350 HIVE is going out.
+**Summary:** Week 14 of the HivePulse SEO Contest is settled. Five writers entered, up from three, and three of them finished on a perfect score. We also found and fixed a bug in our own judge that had put third place with the wrong person. 350 HIVE is going out.
 
 ## HivePulse SEO Contest week 14 results
 
-Five writers entered, up from three last round - the biggest field since week 10. **Four of the five finished on a perfect 200/200.** Five valid entrants keeps the round in the under-10 tier, so the podium pool is 300 HIVE, plus the 50 HIVE X prize. **350 HIVE is going out.**
+Five writers entered, up from three last round - the biggest field since week 10. **Three of the five finished on a perfect 200/200**, and a fourth missed it by a single point. Five valid entrants keeps the round in the under-10 tier, so the podium pool is 300 HIVE, plus the 50 HIVE X prize. **350 HIVE is going out.**
 
 | Place | Author | Post | SEO | GEO | Ease | Published | Prize |
 |---|---|---|---:|---:|---:|---|---:|
@@ -16,7 +16,7 @@ Five writers entered, up from three last round - the biggest field since week 10
 
 The scores are re-derived from each post's on-chain content with the same HivePulse scoring engine the extension uses. All five entries cleared the three checks that usually catch people out: root posts, published inside the window, and `#hivepulse` in the real tag list.
 
-Welcome to @itx.wardah, who takes a first-round win with a perfect score.
+@itx.wardah takes the win on a perfect score and reading ease 60.
 
 ### We found a bug in our own judge, and it had the podium wrong
 
@@ -32,7 +32,7 @@ We checked every round this contest has ever run. The bug could only ever bite w
 
 ### Four perfect scores, and one that shows the rubric working
 
-Four of five entries scored a perfect 200/200. @ekads came in at SEO 98 and **GEO 88**, and that is the rubric doing its job rather than anyone writing badly - a 489-word post has less room to carry the named detail, question structure and sourced figures the GEO checks look for. Length is not the goal, but the checks need somewhere to live.
+Three of five entries scored a perfect 200/200, and @nabbas0786 was one point away on 199. @ekads came in at SEO 98 and **GEO 88**, and that is the rubric doing its job rather than anyone writing badly - a 489-word post has less room to carry the named detail, question structure and sourced figures the GEO checks look for. Length is not the goal, but the checks need somewhere to live.
 
 ### The X engagement prize
 
@@ -71,6 +71,8 @@ Five valid entries this round, up from three. **Five more people and the pool mo
 The minimum qualifying score is **SEO 70**. Any language is welcome. Every entry is re-scored on-chain after the round closes.
 
 **If two or more entries tie, the podium goes to the post whose Reading Ease is closest to 60, then to the earlier publication time.** A tie means the same score - as of this round, compared exactly, not rounded.
+
+One definition worth stating now that it decides podiums: **Reading Ease is the whole number HivePulse shows you** - the same figure the SEO readability check already scores against. The combined score is different: it is the result of a formula we publish, `(SEO% + GEO)/2`, and we compare it exactly. Displayed scores are rounded for readability; the arithmetic behind the rule is not.
 
 ### The 50 HIVE X prize
 

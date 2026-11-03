@@ -2,9 +2,9 @@
 """Render the Week 15 HivePulse contest cover.
 
 Same furniture as week 14. The band carries this round's news: the field grew from three to
-five and four of the five finished on a perfect score. "Four perfect scores" is the social
-proof; "the pool grows with the field" is already the subtitle, so the band pushes the
-headroom - five more entrants moves the pool to 400.
+five, and three of the five finished on a perfect 200/200 with a fourth one point short. That
+is the social proof; "the pool grows with the field" is already the subtitle, so the band
+pushes the headroom - five more entrants moves the pool to 400.
 """
 
 from PIL import Image, ImageDraw
@@ -63,7 +63,7 @@ def main():
     band_y = top + box_h + 40
     for y in (band_y, band_y + 112):
         d.line([(margin, y), (W - margin, y)], fill=bs.GOLD, width=3)
-    d.text((W // 2, band_y + 20), 'FOUR OF FIVE ENTRIES SCORED A PERFECT 200/200',
+    d.text((W // 2, band_y + 20), 'THREE PERFECT SCORES, AND A FOURTH ONE POINT SHORT',
            font=bs.font('semi', 30), fill=bs.INK_2, anchor='ma',
            stroke_width=4, stroke_fill=SHADOW)
     bs.gold_text(im, (W // 2, band_y + 58), 'Five more writers and the pool hits 400.',

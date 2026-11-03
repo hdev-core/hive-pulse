@@ -25,7 +25,7 @@ Check lengths with:
 ```tweet
 Week 14 of the HivePulse SEO Contest is settled.
 
-Five writers entered, up from three. Four scored a perfect 200/200.
+Five writers entered, up from three. Three scored a perfect 200/200.
 
 And we found a bug in our own judge that had third place with the wrong person. 🧵
 ```
@@ -80,7 +80,7 @@ Closes 10 Nov, 12:00 UTC. Tag #hivepulse.
 🥇 @itx.wardah — 150 · 🥈 @ahmedabbaci — 100 · 🥉 @nursejoe — 50
 🐦 @nabbas0786 takes the 50 HIVE X prize, uncontested again. **350 HIVE going out.**
 
-**Five entrants, up from three, and four of them scored a perfect 200/200.** First win for @itx.wardah.
+**Five entrants, up from three, and three of them scored a perfect 200/200** - with a fourth one point short. @itx.wardah takes the win on reading ease 60 exactly.
 
 **We also found a bug in our own judge, and it had the podium wrong.** We were rounding the combined score before ranking, so a 99.5 looked like a 100, tied a genuine 100, and won a reading-ease tiebreak that should never have run — a lower score taking 3rd from a higher one. The rule we publish is "Rank = (SEO% + GEO)/2", and 99.5 is not a tie with 100. Fixed, and 3rd place is @nursejoe's. We re-checked all 14 rounds: it could only ever bite within half a point, which happened once before between two unpaid positions. No past payout moved.
 

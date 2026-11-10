@@ -120,48 +120,33 @@
    if the stated total does not match the sum of the transfers.
    ══════════════════════════════════════════════════════════════════════════════ */
 const ROUND = {
-  label:  'Week 14',
-  window: '27 October - 3 November 2026, closed 12:00 UTC',
-  post:   'https://actifit.io/@hdev/hivepulse-seo-contest-week-13-results-week-14-open',
-  // 5 posts from 5 writers, all valid: root posts, inside the window, #hivepulse in the real
-  // tag list. 5 valid entrants -> still the under-10 tier -> 300 pool, + 50 X prize. No
-  // referrals declared (@nursejoe thanks @ahmedabbaci but is not new to the contest).
+  label:  'Week 15',
+  window: '3 - 10 November 2026, closed 12:00 UTC',
+  post:   'https://peakd.com/hive-177727/@hdev/hivepulse-seo-contest-week-14-results-week-15-open',
+  // FOUR valid entrants, one short of the five-entrant threshold that took effect this
+  // round. So NO PRIZE POOL IS PAID and the 300 rolls into week 16, making it 600.
   //
-  // THIRD PLACE CHANGED HANDS ON A BUG FIX. judge-contest.mjs rounded the combined score
-  // before sorting, so @nabbas0786's (99+100)/2 = 99.5 became 100, tied @nursejoe's true
-  // 100, and won the reading-ease tiebreak - taking 3rd from a strictly better post. The
-  // published rule is "Rank = (SEO% + GEO)/2" and 99.5 is not a tie with 100, so the
-  // comparison now uses the exact mean. @nursejoe is 3rd. Checked every archived round:
-  // only week 8 was ever affected, between two unpaid positions, so no past payout moved.
-  expectedTotal: 350,
-  memoTag: 'HivePulse SEO Contest week 14',
+  // The 50 HIVE X prize is a separate line with its own rule and is still paid. Two
+  // quote-retweets were submitted, both validly timed, but @ekads has no Hive entry this
+  // round - he posted a bare X link - and the published rule says to paste it "in your
+  // entry comment". No entry, no entry comment, so @nabbas_0786 is the only eligible
+  // submission and wins unopposed. No engagement comparison was needed.
+  //
+  // Curation is already done: all four entries upvoted 100% and reblogged on 10 Nov while
+  // their payout windows were still open, so those votes actually earned the authors
+  // rewards - the first round where curating on judging day was worth anything.
+  expectedTotal: 50,
+  memoTag: 'HivePulse SEO Contest week 15',
 };
 
-const CURATION = [
-  { author:'itx.wardah',  permlink:'the-best-shoping-day-hangout-with-sister-fun2x',
-    place:'1st', seo:100, geo:100 },
-  { author:'ahmedabbaci', permlink:'whats-obsession-4-tips-to-use-obsession-as-weopen',
-    place:'2nd', seo:100, geo:100 },
-  { author:'nursejoe',    permlink:'how-to-improve-sleep-quality-9-natural-tips-to-improve',
-    place:'3rd', seo:100, geo:100 },
-];
+// Already curated by tools/week15-curation.html before this console was used. Left empty
+// so pressing the curation button here cannot double-vote.
+const CURATION = [];
 
 const PAYMENTS = [
-  { to:'itx.wardah', amount:150,
-    parts:[['1st place - SEO 100 / GEO 100, reading ease 60', 150]],
-    memo:'HivePulse SEO Contest week 14: 1st place (SEO 100 / GEO 100) = 150 HIVE. A perfect 200/200 on reading ease 60 exactly. Four entries finished on a perfect score this round, so the published cascade settled it - you and 2nd both landed on reading ease 60, and you published first. Congratulations!' },
-
-  { to:'ahmedabbaci', amount:100,
-    parts:[['2nd place - SEO 100 / GEO 100, reading ease 60', 100]],
-    memo:'HivePulse SEO Contest week 14: 2nd place (SEO 100 / GEO 100) = 100 HIVE. Identical to 1st on every measure the rules use - a perfect 200/200 and reading ease 60 exactly - so earliest publication decided the order, and you entered on 1 November. Nothing in the writing separated you. Congratulations!' },
-
-  { to:'nursejoe', amount:50,
-    parts:[['3rd place - SEO 100 / GEO 100, reading ease 65', 50]],
-    memo:'HivePulse SEO Contest week 14: 3rd place (SEO 100 / GEO 100) = 50 HIVE. A note on how you got here: our judge was rounding the combined score before ranking, which made a 99.5 look like your 100 and cost you this place on the tiebreak. The published rule ranks on (SEO + GEO)/2 exactly, and 99.5 is not a tie with 100. Fixed, and the podium is yours on merit. Thank you for entering again.' },
-
   { to:'nabbas0786', amount:50,
-    parts:[['X quote-retweet prize - only valid entry', 50]],
-    memo:'HivePulse SEO Contest week 14: 50 HIVE for the X quote-retweet, the only valid one this round. You finished 4th on SEO 99 / GEO 100. One point of SEO was the whole difference - the top four all scored a perfect GEO. Worth knowing: we found and fixed a rounding bug in our judge this week that had been treating your 99.5 as a 100; without it you would have placed 3rd, and we would have paid a lower score over a higher one. Sorry about that, and thank you for always pasting the X link properly.' },
+    parts:[['X quote-retweet prize - only eligible entry', 50]],
+    memo:'HivePulse SEO Contest week 15: 50 HIVE for the X quote-retweet. No placing prizes were paid this round - four writers entered and the new rule needs five, so the whole 300 pool rolls into week 16, which is now worth 600. Your entry scored a perfect SEO 100 / GEO 100 and finished top of the board; it just did not have a fifth entrant alongside it. One more person next week and that 600 is live. Thank you for promoting the round on X again - you were the only eligible quote-retweet.' },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════════════ */

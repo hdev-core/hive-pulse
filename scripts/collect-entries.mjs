@@ -28,6 +28,16 @@ const rpc = async (method, params) => {
   return j.result;
 };
 
+// Automated commenters whose posts must never be counted as entries.
+//
+// `/bot$/` alone was not enough: @hivebuzz does not end in "bot", and its badge comments
+// embed image URLs like hivebuzz.me/@hdev/replies.png which match the LINK pattern below.
+// In week 15 that inflated the count from four entrants to five — and five was exactly the
+// new payout threshold, so the bug would have paid out a round that should not have paid.
+// Count only what a human submitted.
+const BOTS = /^(hivebuzz|pizzabot|poshtoken|ecency|hivebits|actifit|dustsweeper|steemitboard|hiveonboard|peakd)$|bot$/i;
+const isBot = (name) => BOTS.test(name);
+
 // referred / refered / referrad / reffered …, with or without the @
 const REFERRAL = /\bre+f+e+r+[ae]?d\s+by\s*@?([a-z0-9][a-z0-9.\-]{1,15})\b/i;
 const LINK = /@([a-z0-9][a-z0-9.\-]{1,15})\/([a-z0-9-]{6,})/gi;
@@ -45,7 +55,7 @@ const referrals = [];
 const skipped = [];
 
 for (const [key, c] of Object.entries(thread)) {
-  if (key === root || c.author === author || /bot$/i.test(c.author)) continue;
+  if (key === root || c.author === author || isBot(c.author)) continue;
 
   const ref = REFERRAL.exec(c.body || '');
   // "don't type referred by me next time" is advice, not a declaration.

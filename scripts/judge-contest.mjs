@@ -33,8 +33,8 @@
 // with week 1, too early to count for week 2. Starting the window on announcement day closes
 // that gap: anyone who reads the post and publishes the same day is in. Cross-check against the
 // previous round's archived CSV so a post can't be awarded twice.
-const WINDOW_START = Date.parse('2026-10-27T00:00:00Z');
-const WINDOW_END   = Date.parse('2026-11-03T12:00:00Z');   // week 14 closes 12:00 UTC, not 23:59
+const WINDOW_START = Date.parse('2026-11-03T00:00:00Z');
+const WINDOW_END   = Date.parse('2026-11-10T12:00:00Z');   // week 15 closes 12:00 UTC, not 23:59
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 
 // Tiebreak target, from week 11. The engine's own readability check stops caring once a post
@@ -51,7 +51,7 @@ const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 // Scoring engine lives in ./lib/seo-score.mjs — shared with scripts/score-post.mjs so the
 // two tools can never disagree. Keep that file in sync with compose.ts.
 import { analyze, autoDetectKeyword, readability } from './lib/seo-score.mjs';
-import { byRank, easeGap } from './lib/rank.mjs';
+import { byRank, easeGap, tierFor, allocatePrizes, MIN_ENTRANTS } from './lib/rank.mjs';
 import { getPost } from './lib/hive-rpc.mjs';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -168,11 +168,33 @@ const main = async () => {
     console.log(`${pad(i + 1, 3)} ${pad(id.length > 42 ? id.slice(0, 41) + '…' : id, 42)} ${padL(seo, 7)} ${padL(r.geoScore, 4)} ${padL(r.combinedExact % 1 ? r.combinedExact.toFixed(1) : r.combined, 5)} ${padL(r.ease, 5)} ${padL(r.wordCount, 6)} ${pad(fmtDate(r.created), 12)} ${flag}`);
   });
 
-  const winners = rows.filter(r => r.qualifies).slice(0, 3);
-  console.log('\n── Provisional top 3 (qualified, by combined score) ──');
-  const medals = ['🥇 150 HIVE', '🥈 100 HIVE', '🥉 50 HIVE'];
-  if (!winners.length) console.log('  (no qualifying entries yet)');
-  winners.forEach((r, i) => console.log(`  ${medals[i]}  @${r.author}/${r.permlink}  — SEO ${r.seoPct}% · GEO ${r.geoScore} · combined ${r.combinedExact % 1 ? r.combinedExact.toFixed(1) : r.combined}`));
+  // Report the prizes the PUBLISHED rules actually produce. This printed a flat
+  // 150/100/50 for the top three long after the rules said otherwise — the threshold and
+  // tie-splitting shipped in lib/rank.mjs for week 15 but were never wired in here, so the
+  // judge was quietly contradicting the contest it judges.
+  const qualified = rows.filter(r => r.qualifies);
+  const tier = tierFor(qualified.length);
+  console.log(`\n── Prizes (${qualified.length} qualifying ${qualified.length === 1 ? 'entry' : 'entries'}) ──`);
+
+  if (!qualified.length) {
+    console.log('  (no qualifying entries)');
+  } else if (!tier.pool) {
+    console.log(`  NO PAYOUT — ${qualified.length} qualifying entries, and the published`);
+    console.log(`  threshold is ${MIN_ENTRANTS}. The pool rolls into the next round.`);
+    console.log('  Every qualifying entry is still scored, listed, upvoted and reblogged.');
+  } else {
+    const paid = allocatePrizes(qualified, tier.slots);
+    const medals = ['🥇', '🥈', '🥉'];
+    console.log(`  pool ${tier.pool} HIVE · slots ${tier.slots.join(' / ')}`);
+    paid.forEach((r, i) => console.log(
+      `  ${medals[i] || '  '} ${String(Math.round(r.prize * 100) / 100).padStart(6)} HIVE  @${r.author}/${r.permlink}` +
+      `  — SEO ${r.seoPct}% · GEO ${r.geoScore} · combined ${r.combinedExact % 1 ? r.combinedExact.toFixed(1) : r.combined}`));
+    const out = paid.reduce((a, r) => a + r.prize, 0);
+    if (Math.round(out) !== tier.pool)
+      console.log(`  !! paid ${out} but the pool is ${tier.pool} — refusing to trust this, check allocatePrizes`);
+    const shared = paid.length > tier.slots.length || new Set(paid.map(r => r.prize)).size < paid.length;
+    if (shared) console.log(`  (${paid.length} paid — tied entries share the slots they span)`);
+  }
 
   console.log('\nLegend: ✓ qualifies · ✗ below SEO threshold · ⌛ outside contest window');
   console.log('NOTE: each post is scored with its best-performing keyword, so a ranking can never');

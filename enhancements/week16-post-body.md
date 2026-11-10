@@ -1,4 +1,4 @@
-![HivePulse SEO Contest Week 16 cover: 600 HIVE in the pool because last round did not reach five entrants and the prize rolled over, with nothing paid below five, 300 at five to nine, 400 at ten to fourteen, 500 at fifteen to nineteen and 600 at twenty or more](COVER_URL_HERE)
+![HivePulse SEO Contest Week 16 cover: 600 HIVE in the pool because last round did not reach five entrants and the prize rolled over, with nothing paid below five, 300 at five to nine, 400 at ten to fourteen, 500 at fifteen to nineteen and 600 at twenty or more](https://usermedia.actifit.io/MWATSRGI5VPICQO8RKW6LIQFAQ3QL2)
 
 **Summary:** Week 15 is settled, and for the first time nothing was paid. Four writers entered and the new rule needs five, so the whole 300 HIVE pool rolled over. **Week 16 is worth 600 HIVE** - the biggest pool this contest has ever had. Three of the four entries scored a perfect 200/200. One more person and all of them would have been paid.
 

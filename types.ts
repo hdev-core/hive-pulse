@@ -241,6 +241,14 @@ export interface Channel {
   unread_count?: number; 
   mention_count?: number;
   is_favorite?: boolean;
+  /**
+   * Muted in Ecency. Their own channel sorter buckets muted channels last
+   * (features/chat/channel-sort.ts), and the mobile app hides their notifications — but we
+   * were not reading this field at all, so muting a channel in Ecency silenced it
+   * everywhere except here. Reported by @ahmedabbaci, who kept getting popups for a
+   * community channel he had no interest in.
+   */
+  is_muted?: boolean;
   last_viewed_at?: number; // Explicitly added for UI logic
   teammate?: {
     id: string;

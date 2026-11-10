@@ -192,7 +192,10 @@ const runCheckStatus = async () => {
              if (ch.last_post_at > prevLastPost) {
                  currentMap[ch.id] = ch.last_post_at;
 
-                 if (!isFirstRun && count > 0) {
+                 // A channel muted in Ecency must stay silent here too. Mute is the
+                 // control a user reaches for when a channel is busy and they do not care
+                 // about it, and until now it worked everywhere except in this extension.
+                 if (!isFirstRun && count > 0 && !ch.is_muted) {
                      try {
                          const { messages } = await fetchChannelPosts(ch.id, tokenToUse, 1);
                          if (messages && messages.length > 0) {
@@ -412,7 +415,15 @@ chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
 
 chrome.notifications.onClicked.addListener((notificationId: string) => {
     if (notificationId.startsWith('chat:')) {
-        chrome.tabs.create({ url: 'https://ecency.com/chat' });
+        // Ecency's route is /chats, not /chat — the singular 404s, which is what a user
+        // reported seeing every time they tapped one of these. The id is also carried in
+        // the notification id (`chat:<channelId>:<ts>`), so open the actual conversation
+        // rather than dropping the user on the index to hunt for it.
+        const channelId = notificationId.split(':')[1];
+        const url = channelId && channelId !== 'group'
+          ? `https://ecency.com/chats/${channelId}`
+          : 'https://ecency.com/chats';
+        chrome.tabs.create({ url });
         chrome.notifications.clear(notificationId);
     } else if (notificationId.startsWith('hive:')) {
         chrome.action.openPopup?.();

@@ -1,6 +1,6 @@
 # HivePulse SEO Contest - Week 15 Results + Week 16 X Thread
 
-Anchor tweet: TWEET_URL_HERE
+Anchor tweet: https://x.com/HdevCore/status/2120174181157675173
 Hive post   : POST_URL_HERE
 
 Fill both URLs in below once the post and the anchor tweet are live. Post tweets 2-5 as

@@ -67,7 +67,7 @@ Quote-retweet the Week 16 announcement tweet with your own words about your Hive
 
 **Paste the link in your entry comment** - and you need an entry for it to count.
 
-👉 **This is the tweet to quote:** TWEET_URL_HERE
+👉 **This is the tweet to quote:** https://x.com/HdevCore/status/2120174181157675173
 
 ### What this is, in case you are new here
 

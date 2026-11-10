@@ -218,7 +218,11 @@ const runCheckStatus = async () => {
            badgeSet = true;
          }
 
-         if (notificationChannels.length > 0) {
+         // Gated on its own setting. This used to fire unconditionally: the only
+         // chat-related toggle we shipped was overrideBadgeWithUnreadMessages, which
+         // controls the toolbar badge and nothing else, so a user receiving popups they
+         // did not want had no way to stop them.
+         if (notificationChannels.length > 0 && settings.chatNotificationsEnabled !== false) {
              handleNotifications(notificationChannels, settings.ecencyUserId);
          }
        }
@@ -348,7 +352,10 @@ const handleNotifications = (channels: Channel[], myId?: string) => {
             title: `New Message from ${name}`,
             message: `You have new messages from ${name}.`,
             priority: 2,
-            requireInteraction: true 
+            // Not sticky. requireInteraction kept every popup on screen until dismissed by
+            // hand, so a channel posting through the day stacked up a queue of them —
+            // seven in three days was enough for a user to report it as a fault.
+            requireInteraction: false
         });
     } else {
         chrome.notifications.create(`chat:group:${Date.now()}`, {
@@ -357,7 +364,7 @@ const handleNotifications = (channels: Channel[], myId?: string) => {
             title: 'HivePulse',
             message: `You have new messages in ${channels.length} conversations.`,
             priority: 2,
-            requireInteraction: true
+            requireInteraction: false
         });
     }
 };

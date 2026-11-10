@@ -162,6 +162,15 @@ export interface AppSettings {
   ecencyUserId?: string;      // Internal Mattermost User ID (for reliable 'isMe' check)
   ecencyRefreshToken?: string;
   overrideBadgeWithUnreadMessages: boolean;
+  /**
+   * Desktop popups for new chat messages. Separate from
+   * `overrideBadgeWithUnreadMessages`, which only controls the number on the toolbar icon.
+   *
+   * Until this existed there was no way to stop the popups at all short of signing out of
+   * chat — reported by @ahmedabbaci after seven of them in three days for a community
+   * channel he did not recognise.
+   */
+  chatNotificationsEnabled: boolean;
   /** Show the @username hover card on Hive frontends. Opt-out; some people find it noisy. */
   usernameHoverCards?: boolean;
   /**

@@ -96,7 +96,7 @@ A custom Vite plugin (`copy-assets`) copies `manifest.json`, `icon.svg`, `icon.p
 - `chrome` is typed as `any` everywhere — this is intentional, not a mistake to fix.
 - State management is React `useState`/`useEffect` with `chrome.storage.local` for persistence. No external state library.
 - Styling: Tailwind CSS utility classes only. Custom scrollbars/transitions in `index.css`.
-- `DEFAULT_SETTINGS` is duplicated in `App.tsx` and `background.ts` — keep both in sync when modifying settings.
+- `DEFAULT_SETTINGS` lives in `utils/settingsStore.ts` and is imported everywhere; it is no longer duplicated in `App.tsx`/`background.ts`. Adding a setting means the type in `types.ts`, the default in `settingsStore.ts`, a control in `SettingsView.tsx`, and wherever it is read.
 - Never store private keys; all signing uses `window.hive_keychain` (content script injection via `chrome.scripting.executeScript`).
 - The extension icon badge displays VP/RC percentage or unread message count — badge logic exists in both `App.tsx` and `background.ts`.
 

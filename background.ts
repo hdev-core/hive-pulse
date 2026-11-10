@@ -9,7 +9,7 @@ import {
   getMmPatCookie,
   fetchChannelPosts,
   fetchUnreads,
-  fetchMe,
+  sessionBelongsTo,
   UnauthorizedError
 } from './utils/ecencyHelpers';
 import { ActionMode, AppSettings, FrontendId, Channel, HivePrices, HiveNotificationType } from './types';
@@ -93,16 +93,29 @@ const runCheckStatus = async () => {
 
           if (cookieToken) {
               const validChannels = await fetchChannels(cookieToken);
+              // A working cookie is not the same as OUR cookie. mm_pat is one shared
+              // cookie on ecency.com, so when someone is signed into Ecency in a tab as a
+              // different account than the extension holds, this fallback used to adopt
+              // that session — reporting their unread counts under our username and
+              // popping up their messages. Only take it once the API says it is ours.
               if (validChannels) {
-                  const me = await fetchMe(cookieToken);
-                  newTokens = { token: 'cookie-session', userId: me?.id };
+                  const me = await sessionBelongsTo(
+                     settings.ecencyUsername, settings.ecencyUserId, cookieToken
+                  );
+                  if (me) newTokens = { token: 'cookie-session', userId: me.id };
               }
           }
           if (!newTokens && settings.ecencyRefreshToken) {
              const refreshed = await refreshEcencySession(settings.ecencyRefreshToken);
              if (refreshed) {
-                const me = await fetchMe(refreshed.token);
-                newTokens = { ...refreshed, userId: me?.id };
+                // The token is ours (it came from our own refresh token), so it is safe
+                // to adopt. The IDENTITY is not: /users/me authenticates by cookie and
+                // ignores the Bearer, so it answers for whoever ecency.com is signed in
+                // as. Keep the stored id unless it is confirmed to be ours.
+                const me = await sessionBelongsTo(
+                   settings.ecencyUsername, settings.ecencyUserId, refreshed.token
+                );
+                newTokens = { ...refreshed, userId: me?.id || settings.ecencyUserId };
              }
           }
           if (!newTokens && settings.ecencyAccessToken) {

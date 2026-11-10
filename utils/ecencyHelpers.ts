@@ -146,7 +146,15 @@ export const bootstrapEcencyChat = async (username: string, accessToken: string)
         userId = data.user_id || data.id;
         refreshToken = data.refresh_token || data.refreshToken;
       } catch (e) {}
-      return { token, userId, refreshToken, mmPat: mmPat ?? undefined };
+      // A 200 here does not prove the cookie we just read is the one this bootstrap set.
+      // mm_pat is a single cookie shared with every ecency.com tab, so if the Set-Cookie
+      // did not land we have just read whoever was already signed in there — and storing
+      // that under THIS account means every later switch to it restores a stranger's chat
+      // session. Keep the value only once the API confirms whose session it is.
+      const verifiedMmPat = mmPat && await sessionBelongsTo(cleanUsername, undefined, token)
+        ? mmPat
+        : undefined;
+      return { token, userId, refreshToken, mmPat: verifiedMmPat };
     }
     return null;
   } catch (e) {
@@ -182,6 +190,42 @@ export const fetchMe = async (token?: string): Promise<{ id: string; username: s
     if (e instanceof UnauthorizedError) throw e;
     return null;
   }
+};
+
+/**
+ * Whose chat session is the browser actually holding?
+ *
+ * Chat auth is one `mm_pat` cookie on ecency.com, shared with every Ecency tab the
+ * person has open — it is not ours and it is not per-account. So a session that answers
+ * our requests is not necessarily the account HivePulse believes is signed in. Someone
+ * signed into ecency.com as one account while the extension holds another gets the other
+ * session adopted silently, and from then on the toolbar count and the desktop popups
+ * describe a stranger's inbox.
+ *
+ * `expectedUserId` is the stronger test wherever we already have one: an opaque
+ * Mattermost id settles identity without any assumption about how Hive names map to chat
+ * names. The username comparison covers the first run, before an id has been stored.
+ *
+ * Returns the identity only on a match, and null when identity cannot be established at
+ * all — adopting a session we cannot attribute is the thing being prevented, so an
+ * unanswered /users/me is a refusal, not a pass.
+ */
+export const sessionBelongsTo = async (
+  username?: string,
+  expectedUserId?: string,
+  token?: string
+): Promise<{ id: string; username: string } | null> => {
+  const want = (username || '').replace(/^@/, '').trim().toLowerCase();
+  if (!want && !expectedUserId) return null;
+  let me: { id: string; username: string } | null = null;
+  try {
+    me = await fetchMe(token);
+  } catch (e) {
+    return null; // 401 — not a live session at all
+  }
+  if (!me || !me.id) return null;
+  if (expectedUserId) return me.id === expectedUserId ? me : null;
+  return (me.username || '').replace(/^@/, '').trim().toLowerCase() === want ? me : null;
 };
 
 export const fetchUnreads = async (token?: string): Promise<UnreadsApiResponse | null> => {

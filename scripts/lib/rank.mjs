@@ -53,6 +53,26 @@ export const tierFor = (n) =>
   n < MIN_ENTRANTS ? { pool: 0, slots: [] } : TIERS.find(t => n >= t.min);
 
 /**
+ * Apply a rolled-over pool from a round that fell below the threshold.
+ *
+ * The carried amount is added to whatever tier the field earns, and every slot is scaled
+ * by the same factor so the places keep their published proportions and still sum to the
+ * pool exactly. Week 16 is the worked example: week 15 drew four entrants, so 300 carried,
+ * and a field of 5-9 now pays 600 split 300 / 200 / 100 instead of 150 / 100 / 50.
+ *
+ * Rounding is taken out of the top slot rather than spread, so the total is always exact
+ * and first place absorbs the remainder — never a lower place being quietly short-changed.
+ */
+export const withRollover = (tier, carried = 0) => {
+  if (!tier.pool || !carried) return tier;
+  const pool = tier.pool + Math.min(carried, ROLLOVER_CAP);
+  const scale = pool / tier.pool;
+  const slots = tier.slots.map(s => Math.round(s * scale));
+  slots[0] += pool - slots.reduce((a, b) => a + b, 0);
+  return { pool, slots };
+};
+
+/**
  * Split the prize slots across ranked entries, sharing equally within a tied group.
  *
  * Replaces breaking ties on publication time, which had decided the top of the board four

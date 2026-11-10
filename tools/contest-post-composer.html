@@ -60,6 +60,16 @@ const $ = id => document.getElementById(id);
 const APP_VERSION = 'hivepulse/1.16.0';
 
 const PRESETS = {
+  // Publishing week 15's results and opening week 16. The pool rolled over.
+  week16: {
+    title:       'HivePulse SEO Contest: Week 16 Is 600 HIVE, Because Nobody Was Paid Last Week',
+    permlink:    'hivepulse-seo-contest-week-15-results-week-16-open',
+    community:   'hive-177727',
+    tags:        'hivepulse seo contest hive writing',
+    description: 'Week 15 drew four entrants and the threshold is five, so nothing was paid and the pool rolled over. Week 16 is worth 600 HIVE. Three entries scored a perfect 200/200 and went home with nothing.',
+    draft:       '../enhancements/week16-post-body.md',
+  },
+
   // Publishing week 14's results and opening week 15. The normal case.
   week15: {
     title:       'HivePulse SEO Contest: Week 15 Open, and the Rewards Are Changing',
@@ -113,7 +123,7 @@ const PRESETS = {
 };
 
 // ⬇ THE ONLY LINE TO CHANGE between rounds.
-const ROUND = PRESETS.week15;
+const ROUND = PRESETS.week16;
 
 const DRAFT_URL = ROUND.draft;
 const RPC = 'https://api.hive.blog';

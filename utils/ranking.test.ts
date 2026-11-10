@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { byRank, easeGap, EASE_TARGET, tierFor, allocatePrizes, MIN_ENTRANTS } from '../scripts/lib/rank.mjs';
+import { byRank, easeGap, EASE_TARGET, tierFor, allocatePrizes, MIN_ENTRANTS, withRollover, ROLLOVER_CAP } from '../scripts/lib/rank.mjs';
 
 /**
  * The comparator that decides who gets paid. It had no test until week 14, when it was
@@ -196,5 +196,59 @@ describe('tie-splitting', () => {
     // 99.5 must not share with 100 — this is the week 14 case that started all of it
     const out = allocatePrizes([ent('a',100), ent('b',100), ent('c',100), ent('d',99.5)], SLOTS);
     expect(out.map((r: { author: string }) => r.author)).toEqual(['a','b','c']);
+  });
+});
+
+/**
+ * Rollover: a round below the threshold pays nothing and its pool carries into the next.
+ * Week 15 drew four entrants, so week 16 runs on 600 instead of 300.
+ */
+describe('rollover', () => {
+  const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+
+  it('adds the carried pool and scales every slot to match', () => {
+    const t = withRollover(tierFor(5), 300);
+    expect(t.pool).toBe(600);
+    expect(t.slots).toEqual([300, 200, 100]);
+  });
+
+  it.each([[5, 600], [10, 700], [15, 800], [20, 900]])(
+    'a field of %i with 300 carried pays a pool of %i that its slots sum to exactly',
+    (n, pool) => {
+      const t = withRollover(tierFor(n), 300);
+      expect(t.pool).toBe(pool);
+      expect(sum(t.slots)).toBe(pool);
+    });
+
+  it('pays nothing below the threshold however much has rolled over', () => {
+    const t = withRollover(tierFor(MIN_ENTRANTS - 1), 300);
+    expect(t.pool).toBe(0);
+    expect(t.slots).toEqual([]);
+  });
+
+  it('caps the carry so the pool waits rather than growing forever', () => {
+    const capped = withRollover(tierFor(5), 9999);
+    expect(capped.pool).toBe(300 + ROLLOVER_CAP);
+  });
+
+  it('is a no-op when nothing has rolled over', () => {
+    expect(withRollover(tierFor(5), 0)).toEqual(tierFor(5));
+  });
+
+  it('puts any rounding remainder in first place, never short-changes a lower one', () => {
+    // 500 base scaled by 7/5 gives fractional slots; the total must still be exact
+    const t = withRollover(tierFor(15), 200);
+    expect(sum(t.slots)).toBe(t.pool);
+    expect(t.slots[0]).toBeGreaterThan(t.slots[1]);
+  });
+
+  it('still splits correctly when a rolled pool meets a tie', () => {
+    const t = withRollover(tierFor(5), 300);          // 600, slots 300/200/100
+    const ent = (a: string, s: number) => ({
+      author: a, permlink: a, qualifies: true, combinedExact: s, geoScore: 100, easeGap: 0, created: 0,
+    });
+    const paid = allocatePrizes([ent('a',100), ent('b',100), ent('c',100)], t.slots);
+    expect(paid.map((r: { prize: number }) => r.prize)).toEqual([200, 200, 200]);
+    expect(sum(paid.map((r: { prize: number }) => r.prize))).toBe(600);
   });
 });

@@ -1,7 +1,7 @@
 # HivePulse SEO Contest - Week 15 Results + Week 16 X Thread
 
 Anchor tweet: https://x.com/HdevCore/status/2120174181157675173
-Hive post   : POST_URL_HERE
+Hive post   : https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-15-results-week-16-open
 
 Fill both URLs in below once the post and the anchor tweet are live. Post tweets 2-5 as
 replies to the anchor tweet.
@@ -70,7 +70,7 @@ So: 600 HIVE, five entrants, one week.
 If you write on Hive, this is the cheapest 600 HIVE has ever been to compete for.
 
 Closes 17 Nov, 12:00 UTC. Tag #hivepulse 👇
-POST_URL_HERE
+https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-15-results-week-16-open
 
 #Hive #SEO
 ```
@@ -98,5 +98,5 @@ Also, honestly: two of our own tools disagreed with these rules this round. One 
 
 **Week 16 closes 17 November, 12:00 UTC.** 600 HIVE · 25 each for a referral · 50 for the best quote-RT.
 
-👉 POST_URL_HERE
+👉 https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-15-results-week-16-open
 ```

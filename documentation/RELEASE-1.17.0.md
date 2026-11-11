@@ -175,6 +175,19 @@ string, 1.16.0 -> 1.17.0. Nothing else changed.
                         notifications, scripting)   — UNCHANGED
   host_permissions: 29                              — UNCHANGED
 
+The AMO listing page for 1.16.0 shows 18 permissions, not 7. Those 18 are the
+7 manifest permissions above plus the 11 match patterns declared in
+content_scripts (<all_urls> and ten Hive frontend origins), which AMO folds
+into a single displayed list. The content_scripts block is unchanged in this
+release, so that displayed count of 18 is unchanged too.
+
+Method, so this is checkable rather than asserted: the manifest was extracted
+from the submitted hivepulse-1.17.0-firefox.zip and diffed against the
+manifest inside the published 1.16.0 package. Exactly one line differs — the
+version string. The same diff on the Chrome packages gives the same single
+line. (Chrome declares one permission more than Firefox, sidePanel; that is a
+long-standing difference between the two manifests, not a change here.)
+
 No new permissions, no new hosts, no new content scripts, no change to the
 background service worker's registration.
 
@@ -253,6 +266,15 @@ archive is **required** because the build is bundled and minified.
 ## Known and accepted
 
 - The 21 web-ext lint warnings are unchanged and explained in Box 2.
+- The source archive carries 52 files the build never reads: the weekly contest
+  entries and archived results, the cover-image scripts, and internal notes
+  (`AGENTS.md`, `PRD.md`, `GEMINI.md`, `REVIEWERS.md`). The archive is
+  reviewer-only rather than public, and it was audited for credentials before
+  submission — none, the sole grep hit being a substring of a `@babel/template`
+  integrity hash. Five earlier releases shipped the same way and passed review,
+  so this is not a blocker. `scripts/make-source-zip.mjs` should still be
+  narrowed to what `npm ci && npm run build:firefox` actually reads; 1.18.0
+  rebuilds the archive anyway and is the place to do it.
 - `sidePanel.open` remains Chrome-only; the Firefox build uses the popup.
 - `compose.ts` and `scripts/lib/seo-score.mjs` are still kept in sync by hand.
   `utils/geoRubric.test.ts` compares the shared regexes, helpers and every

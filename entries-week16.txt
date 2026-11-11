@@ -1,0 +1,12 @@
+# Contest week 16 — IN PROGRESS. Round closes 17 November 2026 12:00 UTC.
+#
+# Collected from the thread on
+# @hdev/hivepulse-seo-contest-week-15-results-week-16-open
+# Re-run scripts/collect-entries.mjs before judging; this is a snapshot, not the
+# final field. Five qualifying entries unlock the 600 HIVE pool — below that the
+# published threshold pays nothing and the pool rolls over (capped at one round).
+#
+# As of 11 November: 2 entries with post links. Three more comments in the thread
+# (@pakx, @ahmedabbaci, @kryptonita) carried no link and are not entries yet.
+@nursejoe/food-poisoning-7-simple-ways-to-prevent-it-stay-healthy
+@itx.wardah/1-of-the-best-well-spent-dayshad-good-time-with-my-sister

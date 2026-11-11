@@ -33,8 +33,8 @@
 // with week 1, too early to count for week 2. Starting the window on announcement day closes
 // that gap: anyone who reads the post and publishes the same day is in. Cross-check against the
 // previous round's archived CSV so a post can't be awarded twice.
-const WINDOW_START = Date.parse('2026-11-03T00:00:00Z');
-const WINDOW_END   = Date.parse('2026-11-10T12:00:00Z');   // week 15 closes 12:00 UTC, not 23:59
+const WINDOW_START = Date.parse('2026-11-10T00:00:00Z');
+const WINDOW_END   = Date.parse('2026-11-17T12:00:00Z');   // week 16 closes 12:00 UTC, not 23:59
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 
 // Tiebreak target, from week 11. The engine's own readability check stops caring once a post
@@ -115,6 +115,47 @@ const main = async () => {
   const file = process.argv[2];
   if (!file) {
     console.error('Usage: node scripts/judge-contest.mjs entries.txt');
+    process.exit(1);
+  }
+
+  // Refuse to run against a window that has long since closed. Both the date window AND
+  // the scoring engine in this file are rolled forward for the ACTIVE round, so pointing
+  // it at an old entries file re-scores a closed, paid round with today's rubric and
+  // overwrites contest-results.csv with the answer. AGENTS.md warns about that in prose;
+  // nothing enforced it, and the window guard it describes as the protection does not
+  // help — a stale WINDOW_END passes every entry of the round it belongs to.
+  //
+  // This is also the other half of the trap: the window was still set to week 15 while
+  // week 16 was open, so judging week 16 would have marked every entry out-of-window and
+  // voided the round.
+  // The sharper guard, because the staleness check below only catches a window that is
+  // badly out of date -- it would happily have judged week 15's entries one day after
+  // that round was paid. A round with an archived CSV is closed: that file is the record
+  // of what was paid, and re-running the round can only disagree with it.
+  const fsSync = await import('node:fs');
+  const weekOfFile = /(?:^|[^0-9])week(\d+)\b/i.exec(file);
+  if (weekOfFile) {
+    const archive = `contest-results-week${weekOfFile[1]}.csv`;
+    if (fsSync.existsSync(archive) && !process.argv.includes('--allow-stale-window')) {
+      console.error(`\nREFUSING TO RUN: week ${weekOfFile[1]} is already archived as ${archive}`);
+      console.error('\n  That file is the record of what was actually paid. This script rolls its date');
+      console.error('  window AND its scoring engine forward for the active round, so re-running a');
+      console.error('  closed round produces different numbers and can reorder the podium. Read the');
+      console.error('  rubric-history note in AGENTS.md. If you genuinely mean to, pass');
+      console.error('  --allow-stale-window -- and do not publish or pay from the result.\n');
+      process.exit(1);
+    }
+  }
+
+  const STALE_DAYS = (Date.now() - WINDOW_END) / 86400000;
+  if (STALE_DAYS > 3 && !process.argv.includes('--allow-stale-window')) {
+    console.error(`\nREFUSING TO RUN: the window in this script closed ${Math.floor(STALE_DAYS)} days ago`);
+    console.error(`  (${fmtDate(WINDOW_START)} → ${fmtDate(WINDOW_END)})\n`);
+    console.error('  Set WINDOW_START and WINDOW_END to the round you are judging. If you');
+    console.error('  really do mean to re-score a closed round, pass --allow-stale-window');
+    console.error('  and read the rubric-history note in AGENTS.md first: the engine has');
+    console.error('  moved on since, so the numbers will NOT match the archived CSV, and');
+    console.error('  they must never be published or paid from.\n');
     process.exit(1);
   }
   const fs = await import('node:fs');
@@ -206,8 +247,19 @@ const main = async () => {
   const csv = ['author,permlink,created,seo_score,seo_max,seo_pct,geo_score,combined,combined_exact,ease,ease_gap,word_count,in_window,qualifies,keyword,auto_keyword']
     .concat(rows.map(r => `${r.author},${r.permlink},${fmtDate(r.created)},${r.seoScore},${r.seoMax},${r.seoPct},${r.geoScore},${r.combined},${r.combinedExact},${r.ease},${r.easeGap},${r.wordCount},${r.inWindow},${r.qualifies},"${r.keyword}","${r.autoKeyword}"`))
     .join('\n');
+  // Keep the previous run recoverable. contest-results.csv is the working file every round
+  // overwrites, and it holds the last round's result until someone remembers to archive it
+  // as contest-results-weekN.csv. A single careless run replaces it, which is how the
+  // week-15 result briefly became week-15 posts scored against the week-16 window.
+  if (fs.existsSync('contest-results.csv')) {
+    fs.copyFileSync('contest-results.csv', 'contest-results.csv.prev');
+  }
   fs.writeFileSync('contest-results.csv', csv);
-  console.log('\n📄 Full results written to contest-results.csv');
+  console.log('\n📄 Full results written to contest-results.csv (previous run kept as contest-results.csv.prev)');
+  const week = /(?:^|[^0-9])week(\d+)\b/i.exec(file);
+  if (week && !fs.existsSync(`contest-results-week${week[1]}.csv`)) {
+    console.log(`   ARCHIVE IT: cp contest-results.csv contest-results-week${week[1]}.csv`);
+  }
 };
 
 main().catch(e => { console.error(e); process.exit(1); });

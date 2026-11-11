@@ -24,6 +24,14 @@ The weekly SEO contest is judged with `scripts/judge-contest.mjs`. Before runnin
 3. Run `node scripts/judge-contest.mjs entries-weekN.txt` from the repository root.
 4. Review `contest-results.csv`, then archive it as `contest-results-weekN.csv` before the next round.
 
+Step 2 is now partly enforced rather than merely documented. The script refuses to run when
+`contest-results-weekN.csv` already exists for the week named in the entries filename, and
+when its own `WINDOW_END` closed more than three days ago. `--allow-stale-window` overrides
+both, and a result produced that way must never be published or paid from. Neither guard
+replaces setting the window: a window left on the *previous* round still passes the date
+check for that round's entries, and marks every entry of the current round out-of-window —
+which is exactly what would have voided week 16.
+
 The judge fetches each post from Hive and uses the shared `scripts/lib/seo-score.mjs` engine. It
 uses the best title-derived keyword because the author's editor keyword is not stored on-chain.
 Verify tags, referrals, and any social-media prize requirements separately. Do not rerun an old

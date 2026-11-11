@@ -24,6 +24,12 @@ The weekly SEO contest is judged with `scripts/judge-contest.mjs`. Before runnin
 3. Run `node scripts/judge-contest.mjs entries-weekN.txt` from the repository root.
 4. Review `contest-results.csv`, then archive it as `contest-results-weekN.csv` before the next round.
 
+**Week 16 must be judged from `develop`, before PR #18 is merged.** `develop` is the only
+state that has both the rubric week 16 was written under and the correct date window. The
+`v1.17.0` tag is the reproducibility anchor for the submitted 1.17.0 package and the
+fallback if the old engine is ever needed again — it is NOT the thing to judge from, because
+it predates the window roll-forward and would mark every week-16 entry out of window.
+
 Step 2 is now partly enforced rather than merely documented. The script refuses to run when
 `contest-results-weekN.csv` already exists for the week named in the entries filename, and
 when its own `WINDOW_END` closed more than three days ago. `--allow-stale-window` overrides

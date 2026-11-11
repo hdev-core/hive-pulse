@@ -57,8 +57,12 @@ before it.
 
 **Week 17 opens 17 Nov 2026 12:00 UTC, which is also the moment week 16 CLOSES — and week
 16 is judged after that.** So "effective from week 17" is not a date, it is an ordering:
-week 16 must be judged, published and archived from the `v1.17.0` tag, and this change may
-only reach `develop` once `contest-results-week16.csv` exists. The judge imports the engine
+week 16 must be judged, published and archived from `develop`, and this change may only
+reach `develop` once `contest-results-week16.csv` exists. **Not from the `v1.17.0` tag** —
+an earlier version of this file said the tag, which is wrong: the tag predates the judging
+window roll-forward and would mark every week-16 entry out of window, voiding the round.
+The tag is the reproducibility anchor for the submitted 1.17.0 package, and the fallback if
+the old engine is ever needed again. The judge imports the engine
 from the working tree, so merging first would silently re-score a round whose entrants were
 told, in `enhancements/week16-post-body.md`, that reading ease is the number HivePulse shows
 them.
@@ -74,9 +78,12 @@ history). Those rounds are closed and paid. They are not reopened.
 the old rule 19 of the 99 corpus posts scored ease exactly 60 — 14 of the 20 entries from
 weeks 11-15, against 4 of the 80 from weeks 1-10. That is entrants tuning to the number the
 panel showed them, and after this change none of those 19 stay in the top band. The
-thresholds were deliberately NOT moved to compensate: 60 is the standard Flesch "plain
-English" line, and lowering it to 55 to preserve a pass rate would be fitting the ruler to
-the result. The consequence has to be said plainly in the week 17 opening post instead —
+thresholds were NOT moved to compensate. That was put to the owner as an explicit choice —
+keep 60 and accept a lower pass rate, or drop the bands to 55/35/15 and keep it — and the
+answer on 11 Nov 2026 was **keep 60**. So it is a decision on record, not a default nobody
+examined: 60 is the standard Flesch "plain English" line, and lowering it to 55 to preserve
+a pass rate would be fitting the ruler to the result. Do not quietly recalibrate the bands
+later to lift the pass rate; reopen the question with the owner instead. The consequence has to be said plainly in the week 17 opening post instead —
 readability numbers now read lower, and 5/5 is genuinely harder than it was.
 
 **What this change does not claim.** Breaking prose into one-line paragraphs still raises

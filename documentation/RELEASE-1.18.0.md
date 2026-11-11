@@ -100,7 +100,7 @@ genuinely does read more easily — Flesch is meant to reward short units, just 
 of an editor window. Over the corpus that gain is a mean of **0.37**, at most **4**, and it
 moves one post across the band.
 
-### The band threshold was deliberately left alone
+### The band threshold stays at 60 — confirmed, not defaulted
 
 `EASE_TARGET` is 60 and the top SEO band also starts at 60. Under the old rule **19 of the
 99 corpus posts scored ease exactly 60** — 14 of the 20 entries from weeks 11-15, against 4
@@ -108,8 +108,10 @@ of the 80 from weeks 1-10. That is entrants tuning to the number the panel showe
 after this change none of those 19 stay in the top band.
 
 Lowering the thresholds from 60/40/20 to 55/35/15 would restore the old pass rate almost
-exactly (90% for the weeks 11-15 field). It was rejected: 60 is the standard Flesch "plain
-English" line, and moving it to preserve a pass rate is fitting the ruler to the result.
+exactly (90% for the weeks 11-15 field). It was put to the owner as an explicit
+choice rather than decided here, and the answer on 11 Nov 2026 was **keep 60**. 60 is the
+standard Flesch "plain English" line, and moving it to preserve a pass rate is fitting the
+ruler to the result.
 **The consequence must be stated plainly in the week 17 opening post instead** — readability
 numbers now read lower, and 5/5 readability is genuinely harder than it was. Three of last
 round's entries were described in print as "perfect 200/200"; that will be rarer now, and

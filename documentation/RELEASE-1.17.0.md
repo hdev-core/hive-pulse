@@ -1,5 +1,13 @@
 # HivePulse 1.17.0 — store submission
 
+> **SHIPPED.** Submitted 11 Nov 2026 and approved by Firefox AMO the same day,
+> reviewed 17:46 UTC, now `public` as the current version. The live listing reports 18
+> permissions and 29 host permissions — exactly the 7 manifest permissions plus the 11
+> `content_scripts` match patterns predicted in Box 2, so the permission delta in the
+> reviewer note was accurate as submitted. The signed XPI is 368,459 bytes against our
+> 345,376-byte zip; the difference is Mozilla's signature block.
+> **Next release measures its permission delta against 1.17.0, not 1.16.0.**
+
 Packages are in `releases/` (gitignored). Rebuild any of them with:
 
 ```

@@ -720,6 +720,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                 <label className="flex items-start justify-between cursor-pointer mb-3 gap-3">
                   <span className="text-sm text-slate-600">
+                    Desktop popups for new messages
+                    <span className="block text-[11px] text-slate-400">
+                      Turn this off to keep the unread badge but stop the popup notifications.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={settings.chatNotificationsEnabled !== false}
+                    onChange={(e) => updateSettings({ chatNotificationsEnabled: e.target.checked })}
+                    className="accent-emerald-500 w-4 h-4 mt-0.5 flex-shrink-0"
+                  />
+                </label>
+
+                <label className="flex items-start justify-between cursor-pointer mb-3 gap-3">
+                  <span className="text-sm text-slate-600">
                     Username hover cards
                     <span className="block text-[11px] text-slate-400">
                       Show reputation, account age and scam warnings when hovering an @username on Hive sites.

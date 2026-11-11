@@ -10,7 +10,7 @@ Chrome Extension (Manifest V3) — not a standard web app. The popup and side pa
 - `npm run dev` — Vite dev server (useful for UI work, but Chrome extension APIs require the built extension)
 - `npm run preview` — preview production build locally
 
-- `npm test` — vitest, 178 tests covering the scoring engines, URL helpers, tag scanner, the contest ranking rule and the prize structure
+- `npm test` — vitest, 228 tests covering the scoring engines, URL helpers, tag scanner, the contest ranking rule, the prize structure and rollover, the chat-session identity gate, and the readability block splitter
 - `npx tsc --noEmit` — typecheck
 
 No lint or format command. No CI pipeline, so the checks above are run by hand.
@@ -23,6 +23,14 @@ The weekly SEO contest is judged with `scripts/judge-contest.mjs`. Before runnin
 2. Set `WINDOW_START` and `WINDOW_END` in the script to the contest's published UTC window.
 3. Run `node scripts/judge-contest.mjs entries-weekN.txt` from the repository root.
 4. Review `contest-results.csv`, then archive it as `contest-results-weekN.csv` before the next round.
+
+Step 2 is now partly enforced rather than merely documented. The script refuses to run when
+`contest-results-weekN.csv` already exists for the week named in the entries filename, and
+when its own `WINDOW_END` closed more than three days ago. `--allow-stale-window` overrides
+both, and a result produced that way must never be published or paid from. Neither guard
+replaces setting the window: a window left on the *previous* round still passes the date
+check for that round's entries, and marks every entry of the current round out-of-window —
+which is exactly what would have voided week 16.
 
 The judge fetches each post from Hive and uses the shared `scripts/lib/seo-score.mjs` engine. It
 uses the best title-derived keyword because the author's editor keyword is not stored on-chain.
@@ -38,6 +46,52 @@ example: under 1.15.0 all three entries tied on GEO 100, and under 1.16.0 @nabba
 71 and swaps places with @wardah, a 50 HIVE difference. That re-score is not a correction to
 week 12 and must never be published or paid from. If you need to know what a past round scored,
 read its archived CSV; do not regenerate it.
+
+**Rubric changes, newest first.** Each one applies from the round named and to no round
+before it.
+
+| From | Change | Effect measured on the 99-post corpus |
+|---|---|---|
+| week 17 | Reading ease counts BLOCKS, not newlines: a wrap inside a paragraph is no longer a sentence end, and neither is a line carrying no words (a horizontal rule in any spelling, an image on its own line, a bare URL, a table separator row). Fenced code is not measured as prose at all. | ease falls on 96 of 99 posts and rises on none, mean 4.16 and up to 16 points; 29 posts cross an SEO readability band; the top band (ease >= 60) goes from 79 of 99 to 51; the tiebreak reorders. |
+| 1.16.0 (week 13) | GEO: positional name counting, three-shape question-title test. | week 12 re-scored would move @nabbas0786 100 -> 71 and swap the podium. Do not. |
+
+**Week 17 opens 17 Nov 2026 12:00 UTC, which is also the moment week 16 CLOSES — and week
+16 is judged after that.** So "effective from week 17" is not a date, it is an ordering:
+week 16 must be judged, published and archived from `develop`, and this change may only
+reach `develop` once `contest-results-week16.csv` exists. **Not from the `v1.17.0` tag** —
+an earlier version of this file said the tag, which is wrong: the tag predates the judging
+window roll-forward and would mark every week-16 entry out of window, voiding the round.
+The tag is the reproducibility anchor for the submitted 1.17.0 package, and the fallback if
+the old engine is ever needed again. The judge imports the engine
+from the working tree, so merging first would silently re-score a round whose entrants were
+told, in `enhancements/week16-post-body.md`, that reading ease is the number HivePulse shows
+them.
+
+Weeks 1-16 were judged with every newline counting as a sentence end, which is why their
+archived ease figures sit higher than the current engine produces. That is not an error in
+the archive. Like-for-like on the same posts, the readability rule alone changes the paid
+allocation in 3 of the 15 closed rounds (weeks 1, 3 and 14 — about 175 HIVE, modelled with
+the current comparator, which only shipped for week 15, so that figure is magnitude and not
+history). Those rounds are closed and paid. They are not reopened.
+
+**The 60 cluster.** `EASE_TARGET` is 60 and the top SEO band also starts at 60, and under
+the old rule 19 of the 99 corpus posts scored ease exactly 60 — 14 of the 20 entries from
+weeks 11-15, against 4 of the 80 from weeks 1-10. That is entrants tuning to the number the
+panel showed them, and after this change none of those 19 stay in the top band. The
+thresholds were NOT moved to compensate. That was put to the owner as an explicit choice —
+keep 60 and accept a lower pass rate, or drop the bands to 55/35/15 and keep it — and the
+answer on 11 Nov 2026 was **keep 60**. So it is a decision on record, not a default nobody
+examined: 60 is the standard Flesch "plain English" line, and lowering it to 55 to preserve
+a pass rate would be fitting the ruler to the result. Do not quietly recalibrate the bands
+later to lift the pass rate; reopen the question with the owner instead. The consequence has to be said plainly in the week 17 opening post instead —
+readability numbers now read lower, and 5/5 is genuinely harder than it was.
+
+**What this change does not claim.** Breaking prose into one-line paragraphs still raises
+ease, and on a single paragraph it raises it by the same amount hard-wrapping used to. The
+difference is that a wrap is invisible once markdown renders, while one-line paragraphs are
+a visible structural choice that genuinely does read more easily — Flesch is meant to reward
+short units, just not the width of an editor window. Measured over the corpus the available
+gain is a mean of 0.37 ease, at most 4, and it pushes one post across the band.
 
 ## Releasing a new version
 
@@ -96,7 +150,7 @@ A custom Vite plugin (`copy-assets`) copies `manifest.json`, `icon.svg`, `icon.p
 - `chrome` is typed as `any` everywhere — this is intentional, not a mistake to fix.
 - State management is React `useState`/`useEffect` with `chrome.storage.local` for persistence. No external state library.
 - Styling: Tailwind CSS utility classes only. Custom scrollbars/transitions in `index.css`.
-- `DEFAULT_SETTINGS` is duplicated in `App.tsx` and `background.ts` — keep both in sync when modifying settings.
+- `DEFAULT_SETTINGS` lives in `utils/settingsStore.ts` and is imported everywhere; it is no longer duplicated in `App.tsx`/`background.ts`. Adding a setting means the type in `types.ts`, the default in `settingsStore.ts`, a control in `SettingsView.tsx`, and wherever it is read.
 - Never store private keys; all signing uses `window.hive_keychain` (content script injection via `chrome.scripting.executeScript`).
 - The extension icon badge displays VP/RC percentage or unread message count — badge logic exists in both `App.tsx` and `background.ts`.
 

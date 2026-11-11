@@ -9,7 +9,7 @@ import {
   getMmPatCookie,
   fetchChannelPosts,
   fetchUnreads,
-  fetchMe,
+  sessionBelongsTo,
   UnauthorizedError
 } from './utils/ecencyHelpers';
 import { ActionMode, AppSettings, FrontendId, Channel, HivePrices, HiveNotificationType } from './types';
@@ -93,16 +93,29 @@ const runCheckStatus = async () => {
 
           if (cookieToken) {
               const validChannels = await fetchChannels(cookieToken);
+              // A working cookie is not the same as OUR cookie. mm_pat is one shared
+              // cookie on ecency.com, so when someone is signed into Ecency in a tab as a
+              // different account than the extension holds, this fallback used to adopt
+              // that session — reporting their unread counts under our username and
+              // popping up their messages. Only take it once the API says it is ours.
               if (validChannels) {
-                  const me = await fetchMe(cookieToken);
-                  newTokens = { token: 'cookie-session', userId: me?.id };
+                  const me = await sessionBelongsTo(
+                     settings.ecencyUsername, settings.ecencyUserId, cookieToken
+                  );
+                  if (me) newTokens = { token: 'cookie-session', userId: me.id };
               }
           }
           if (!newTokens && settings.ecencyRefreshToken) {
              const refreshed = await refreshEcencySession(settings.ecencyRefreshToken);
              if (refreshed) {
-                const me = await fetchMe(refreshed.token);
-                newTokens = { ...refreshed, userId: me?.id };
+                // The token is ours (it came from our own refresh token), so it is safe
+                // to adopt. The IDENTITY is not: /users/me authenticates by cookie and
+                // ignores the Bearer, so it answers for whoever ecency.com is signed in
+                // as. Keep the stored id unless it is confirmed to be ours.
+                const me = await sessionBelongsTo(
+                   settings.ecencyUsername, settings.ecencyUserId, refreshed.token
+                );
+                newTokens = { ...refreshed, userId: me?.id || settings.ecencyUserId };
              }
           }
           if (!newTokens && settings.ecencyAccessToken) {
@@ -192,7 +205,10 @@ const runCheckStatus = async () => {
              if (ch.last_post_at > prevLastPost) {
                  currentMap[ch.id] = ch.last_post_at;
 
-                 if (!isFirstRun && count > 0) {
+                 // A channel muted in Ecency must stay silent here too. Mute is the
+                 // control a user reaches for when a channel is busy and they do not care
+                 // about it, and until now it worked everywhere except in this extension.
+                 if (!isFirstRun && count > 0 && !ch.is_muted) {
                      try {
                          const { messages } = await fetchChannelPosts(ch.id, tokenToUse, 1);
                          if (messages && messages.length > 0) {
@@ -218,7 +234,11 @@ const runCheckStatus = async () => {
            badgeSet = true;
          }
 
-         if (notificationChannels.length > 0) {
+         // Gated on its own setting. This used to fire unconditionally: the only
+         // chat-related toggle we shipped was overrideBadgeWithUnreadMessages, which
+         // controls the toolbar badge and nothing else, so a user receiving popups they
+         // did not want had no way to stop them.
+         if (notificationChannels.length > 0 && settings.chatNotificationsEnabled !== false) {
              handleNotifications(notificationChannels, settings.ecencyUserId);
          }
        }
@@ -348,7 +368,10 @@ const handleNotifications = (channels: Channel[], myId?: string) => {
             title: `New Message from ${name}`,
             message: `You have new messages from ${name}.`,
             priority: 2,
-            requireInteraction: true 
+            // Not sticky. requireInteraction kept every popup on screen until dismissed by
+            // hand, so a channel posting through the day stacked up a queue of them —
+            // seven in three days was enough for a user to report it as a fault.
+            requireInteraction: false
         });
     } else {
         chrome.notifications.create(`chat:group:${Date.now()}`, {
@@ -357,7 +380,7 @@ const handleNotifications = (channels: Channel[], myId?: string) => {
             title: 'HivePulse',
             message: `You have new messages in ${channels.length} conversations.`,
             priority: 2,
-            requireInteraction: true
+            requireInteraction: false
         });
     }
 };
@@ -405,7 +428,15 @@ chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
 
 chrome.notifications.onClicked.addListener((notificationId: string) => {
     if (notificationId.startsWith('chat:')) {
-        chrome.tabs.create({ url: 'https://ecency.com/chat' });
+        // Ecency's route is /chats, not /chat — the singular 404s, which is what a user
+        // reported seeing every time they tapped one of these. The id is also carried in
+        // the notification id (`chat:<channelId>:<ts>`), so open the actual conversation
+        // rather than dropping the user on the index to hunt for it.
+        const channelId = notificationId.split(':')[1];
+        const url = channelId && channelId !== 'group'
+          ? `https://ecency.com/chats/${channelId}`
+          : 'https://ecency.com/chats';
+        chrome.tabs.create({ url });
         chrome.notifications.clear(notificationId);
     } else if (notificationId.startsWith('hive:')) {
         chrome.action.openPopup?.();

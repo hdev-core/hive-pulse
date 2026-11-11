@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 15 curation — upvote + reblog all four entries</title>
+<style>
+  :root{--bg:#0b1020;--panel:#121a33;--panel2:#0e1529;--ink:#e8edfb;--ink2:#a8b4d4;
+    --ink3:#6c7a9c;--gold:#f5b301;--green:#35c37d;--red:#ff6b6b;--amber:#f5a524;--line:#24314f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);padding:24px;
+    font:15px/1.6 ui-sans-serif,system-ui,'Segoe UI',Roboto,sans-serif}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:21px;margin:0 0 3px}
+  .sub{color:var(--ink2);font-size:13.5px;margin:0 0 16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .card h2{font-size:14px;margin:0 0 10px;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em}
+  button{background:var(--gold);color:#241a00;border:0;border-radius:7px;padding:10px 18px;
+    font:650 14px/1 inherit;cursor:pointer;font-family:inherit}
+  button:hover:not(:disabled){filter:brightness(1.08)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  input{background:var(--panel2);border:1px solid var(--line);border-radius:7px;color:var(--ink);
+    padding:9px 11px;font:13.5px/1.5 ui-monospace,Consolas,monospace;max-width:220px}
+  .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .pill{display:inline-block;font-size:11.5px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--ink3)}
+  .pill.ok{background:#07301d;border-color:#0d5c38;color:var(--green)}
+  .pill.bad{background:#3a0f0f;border-color:#6b1c1c;color:var(--red)}
+  .pill.warn{background:#3a2a07;border-color:#6b4e12;color:var(--amber)}
+  pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:0;
+    white-space:pre-wrap;word-break:break-word;font:12.5px/1.6 ui-monospace,Consolas,monospace;color:var(--ink2)}
+  #log{background:#070b16;min-height:80px;font-size:12px}
+  .urgent{background:#3a0f0f;border:1px solid #8b2626;color:#ffd6d6;border-radius:8px;padding:13px 15px;font-size:14px;margin-bottom:14px}
+  .urgent b{color:#ff9b9b}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;color:var(--ink3);font-weight:600;font-size:11.5px;text-transform:uppercase;
+    letter-spacing:.05em;padding:0 8px 7px 0;border-bottom:1px solid var(--line)}
+  td{padding:9px 8px 9px 0;border-bottom:1px solid var(--line);vertical-align:middle}
+  td a{color:var(--gold);text-decoration:none}
+  td a:hover{text-decoration:underline}
+  .tiny{font-size:11.5px;color:var(--ink3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Week 15 curation</h1>
+  <p class="sub">Four qualifying entries. One upvote and one reblog each, in a single transaction. No HIVE is transferred by this page.</p>
+
+  <div class="urgent" id="deadline">checking payout windows…</div>
+
+  <div class="card">
+    <h2>1 · Account</h2>
+    <div class="row">
+      <input id="acct" value="hdev">
+      <input id="weight" value="100" style="max-width:90px" title="vote weight %">
+      <span class="tiny">% vote weight</span>
+      <span id="kc" class="pill">Keychain: checking…</span>
+      <span id="vp" class="pill">voting power: —</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2 · The four entries</h2>
+    <table>
+      <thead><tr><th>Author</th><th>Post</th><th>Payout closes</th><th>Vote</th><th>Reblog</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>3 · Curate</h2>
+    <div class="row">
+      <button id="go" disabled>Upvote + reblog all four (posting key)</button>
+      <span id="gomsg" class="pill"></span>
+    </div>
+    <p class="sub" style="margin:10px 0 0">One transaction: four <code>vote</code> ops and four <code>custom_json</code> reblogs. Entries already voted or reblogged are skipped automatically, so pressing this twice is safe.</p>
+  </div>
+
+  <div class="card"><h2>Log</h2><pre id="log">Ready.</pre></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const RPC = 'https://api.hive.blog';
+
+// Week 15 qualifying entries, in score order. Four entrants is below the five-entrant
+// threshold, so no prize money is paid this round — but the published rule says every
+// qualifying entry is still scored, listed, upvoted and reblogged. This page is that half.
+const ENTRIES = [
+  { author: 'nabbas0786', permlink: 'why-choose-homeopathy-3-core-truths-we-must-know-engurdu',  seo: 100, geo: 100 },
+  { author: 'ahmedabbaci', permlink: 'whats-diabetes-why-people-arent-taking-it-serious-2026',    seo: 100, geo: 100 },
+  { author: 'nursejoe',    permlink: 'how-to-prevent-dehydration-7-simple-tips-to-stay-healthy',  seo: 100, geo: 100 },
+  { author: 'itx.wardah',  permlink: 'my-top-5-favorite-dramas-can-watch-them-on-repeat-',        seo:  92, geo: 100 },
+];
+
+const state = ENTRIES.map(e => ({ ...e, voted: null, reblogged: null, cashout: null }));
+
+function log(m, kind){
+  const t = new Date().toISOString().slice(11,19);
+  const c = kind==='ok'?'var(--green)':kind==='err'?'var(--red)':kind==='warn'?'var(--amber)':'var(--ink2)';
+  $('log').innerHTML += `\n<span style="color:${c}">${t} ${String(m).replace(/</g,'&lt;')}</span>`;
+  $('log').scrollTop = $('log').scrollHeight;
+}
+const rpc = async (method, params) => {
+  const r = await fetch(RPC,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({jsonrpc:'2.0',method,params,id:1})});
+  const j = await r.json();
+  if (j.error) throw new Error(JSON.stringify(j.error));
+  return j.result;
+};
+const acct = () => $('acct').value.trim().toLowerCase();
+
+function render(){
+  $('rows').innerHTML = state.map(s => {
+    const left = s.cashout ? (Date.parse(s.cashout + 'Z') - Date.now()) : null;
+    const closes = left === null ? '…'
+      : left > 0 ? `<span class="pill warn">${(left/3600000).toFixed(1)}h left</span>`
+                 : `<span class="pill bad">CLOSED — vote earns nothing</span>`;
+    const pill = (v) => v === null ? '…' : v ? '<span class="pill bad">already done</span>'
+                                             : '<span class="pill ok">will send</span>';
+    return `<tr>
+      <td>@${s.author}<div class="tiny">SEO ${s.seo} · GEO ${s.geo}</div></td>
+      <td><a href="https://peakd.com/@${s.author}/${s.permlink}" target="_blank">${s.permlink.slice(0,34)}…</a></td>
+      <td>${closes}</td><td>${pill(s.voted)}</td><td>${pill(s.reblogged)}</td></tr>`;
+  }).join('');
+}
+
+async function refresh(){
+  const a = acct();
+  try {
+    const [acc] = await rpc('condenser_api.get_accounts',[[a]]);
+    // rough current voting power, regenerating 20% a day
+    const secs = (Date.now() - Date.parse(acc.last_vote_time + 'Z')) / 1000;
+    const vp = Math.min(10000, acc.voting_power + (secs * 10000) / (5*24*3600)) / 100;
+    $('vp').textContent = 'voting power: ' + vp.toFixed(1) + '%';
+    $('vp').className = 'pill ' + (vp > 60 ? 'ok' : 'warn');
+  } catch(e){ log('voting power check failed: ' + e, 'warn'); }
+
+  for (const s of state) {
+    try {
+      const post = await rpc('condenser_api.get_content',[s.author, s.permlink]);
+      s.cashout = post.cashout_time;
+      s.voted = (post.active_votes || []).some(v => v.voter === a);
+      const rb = await rpc('condenser_api.get_reblogged_by',[s.author, s.permlink]).catch(()=>[]);
+      s.reblogged = (rb || []).includes(a);
+    } catch(e){ log(`check failed for @${s.author}: ${e}`, 'warn'); }
+  }
+  render();
+
+  const open = state.filter(s => s.cashout && Date.parse(s.cashout + 'Z') > Date.now());
+  const soonest = open.length ? Math.min(...open.map(s => Date.parse(s.cashout + 'Z'))) : null;
+  const d = $('deadline');
+  if (!open.length) {
+    d.innerHTML = '<b>Every payout window has closed.</b> Votes will still show on the posts but transfer no rewards. ' +
+      'Reblogs still deliver reach. Next round, vote entries as they arrive rather than after judging.';
+  } else {
+    const hrs = ((soonest - Date.now())/3600000).toFixed(1);
+    d.innerHTML = `<b>${open.length} of 4 payout windows close in ${hrs} hours.</b> ` +
+      'A vote cast before then earns the author real rewards; after it, nothing. ' +
+      'This is the first round where curating on judging day still counts — because everyone published on day one.';
+  }
+  $('go').disabled = !window.hive_keychain;
+}
+
+$('go').addEventListener('click', async () => {
+  if (!window.hive_keychain) return log('Keychain not available','err');
+  const a = acct();
+  const w = Math.round(Math.max(1, Math.min(100, parseFloat($('weight').value) || 100)) * 100);
+  const ops = [];
+  for (const s of state) {
+    if (!s.voted)     ops.push(['vote', { voter: a, author: s.author, permlink: s.permlink, weight: w }]);
+    if (!s.reblogged) ops.push(['custom_json', {
+      required_auths: [], required_posting_auths: [a], id: 'follow',
+      json: JSON.stringify(['reblog', { account: a, author: s.author, permlink: s.permlink }]),
+    }]);
+  }
+  if (!ops.length) return log('nothing left to do — all four are already voted and reblogged','ok');
+  const votes = ops.filter(o => o[0]==='vote').length, rbs = ops.length - votes;
+  if (!confirm(`Broadcast ${votes} vote(s) at ${w/100}% and ${rbs} reblog(s) as @${a}?`)) return;
+  $('go').disabled = true;
+  log(`broadcasting ${votes} votes + ${rbs} reblogs …`);
+  window.hive_keychain.requestBroadcast(a, ops, 'Posting', res => {
+    if (res && res.success) {
+      log('DONE — tx ' + (res.result && res.result.id ? res.result.id : '(no id)'), 'ok');
+      $('gomsg').className = 'pill ok'; $('gomsg').textContent = 'broadcast';
+    } else {
+      log('FAILED — ' + (res && res.message ? res.message : JSON.stringify(res)), 'err');
+      $('go').disabled = false;
+    }
+    refresh();
+  });
+});
+
+(function init(){
+  const k = () => { const p=$('kc');
+    if (window.hive_keychain){ p.className='pill ok'; p.textContent='Keychain: ready'; }
+    else { p.className='pill bad'; p.textContent='Keychain: not detected'; } };
+  k(); setTimeout(k, 900);
+  render();
+  refresh();
+  $('acct').addEventListener('change', refresh);
+  setInterval(render, 60000);   // keep the countdown honest
+})();
+</script>
+</body>
+</html>

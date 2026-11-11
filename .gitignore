@@ -31,3 +31,4 @@ contest-results.csv
 # Python bytecode from the scripts/ image + copy tooling
 __pycache__/
 *.pyc
+contest-results.csv.prev

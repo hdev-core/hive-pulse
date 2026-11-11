@@ -219,17 +219,34 @@ describe('the two engines must not drift', () => {
       readFileSync(resolve(root, f), 'utf8').split('\r\n').join('\n');
     const ts = slurp('compose.ts');
     const mjs = slurp('scripts/lib/seo-score.mjs');
-    // Strip TS type annotations and all whitespace so only the logic is compared.
+    // Strip TS type annotations, then COLLAPSE whitespace rather than removing it.
+    // The array form must go first: stripping `: string` out of `blocks: string[] = []`
+    // would otherwise leave `blocks[]=[]`, which never matches the .mjs `blocks = []`
+    // and would fail the pin on two files that are in fact identical.
+    //
+    // Collapsing instead of deleting matters because the whitespace INSIDE a string
+    // literal is load-bearing here. Deleting it made `' ' + line` and `'' + line`
+    // identical, and `join('. ')` identical to `join('.')` — both of which change every
+    // reading-ease score in the contest, and both of which are literals this code uses.
     const norm = (s: string) => s
+      .replace(/:\s*(?:string|number|boolean)\[\]/g, '')
       .replace(/:\s*(?:string|number|boolean)\b/g, '')
-      .replace(/\s+/g, '');
+      .replace(/\s+/g, ' ')
+      .trim();
     const grab = (src: string, name: string) => {
       const a = src.indexOf(`const ${name}`);
       expect(a, `${name} not found`).toBeGreaterThan(-1);
-      const multi = src.indexOf('\n};', a);
       const one = src.indexOf(';\n', a);
-      // a multi-line arrow body ends at "\n};", a one-liner at the first ";" ending a line
-      const end = multi > -1 && multi < one ? multi : one;
+      const multi = src.indexOf('\n};', a);
+      // A declaration whose body opens a brace runs to the "\n};" that closes it, and its
+      // inner statements each end at a ";\n" that must NOT cut the slice short. Taking
+      // min(multi, one) did exactly that: it reduced the `toSentences` pin to its own
+      // first line — "const toSentences = (text) => {const blocks = []" — so the loop,
+      // the line classification and both join strings were compared against nothing, and
+      // a divergence worth 13 ease points and a podium flip shipped green. It also
+      // truncated `countNames` to "let n = 0" and `bareTitle` to its length guard.
+      const opensBlock = /=>\s*\{/.test(src.slice(a, one > -1 ? one + 2 : a + 200));
+      const end = opensBlock ? multi : one;
       expect(end, `${name}: could not find the end of the declaration`).toBeGreaterThan(a);
       return norm(src.slice(a, end));
     };
@@ -237,6 +254,42 @@ describe('the two engines must not drift', () => {
                         'Q_THROUGH_BRACKETS', 'bareTitle', 'isQuestionTitle']) {
       expect(grab(ts, name), `${name} differs between the two engines`).toBe(grab(mjs, name));
     }
+  });
+
+  // The readability block is pinned WHOLE, between sentinel comments, rather than
+  // declaration by declaration. It is nine declarations that only make sense together —
+  // the line classifiers, the fence stripper and the splitter — and a `grab`-style slice
+  // of each is both fragile (brace counting across regex literals like `{3,}`) and easy
+  // to under-specify, which is how the first version of this pin came to compare one
+  // line. Sentinels cannot silently match less than they claim: if either marker moves or
+  // disappears, the test fails loudly instead of passing on a shorter string.
+  it('carry an identical readability block', () => {
+    const root = resolve(__dirname, '..');
+    const START = '// ===== readability block parity:';
+    const END = '// ===== end readability block parity =====';
+    const norm = (s: string) => s
+      .replace(/:\s*(?:string|number|boolean)\[\]/g, '')
+      .replace(/:\s*(?:string|number|boolean)\b/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const block = (f: string) => {
+      const src = readFileSync(resolve(root, f), 'utf8').split('\r\n').join('\n');
+      const a = src.indexOf(START);
+      expect(a, `${f}: readability parity start sentinel missing`).toBeGreaterThan(-1);
+      const b = src.indexOf(END, a);
+      expect(b, `${f}: readability parity end sentinel missing`).toBeGreaterThan(a);
+      const text = src.slice(a, b);
+      // Guard the guard: a sentinel pair that bracketed only comments would compare equal
+      // and protect nothing. Every declaration the splitter needs must be inside.
+      for (const decl of ['NO_PROSE', 'HEADING', 'LIST_ITEM', 'TABLE_ROW', 'QUOTE_MARK',
+                          'HARD_BREAK', 'stripFences', 'toSentences']) {
+        expect(text, `${f}: ${decl} is outside the pinned block`).toContain(`const ${decl}`);
+      }
+      expect(text.split('\n').length, `${f}: pinned block looks truncated`).toBeGreaterThan(40);
+      return norm(text);
+    };
+    expect(block('compose.ts'), 'the readability block differs between the two engines')
+      .toBe(block('scripts/lib/seo-score.mjs'));
   });
 
   it('contain no stray control characters', () => {

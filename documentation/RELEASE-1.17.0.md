@@ -73,9 +73,22 @@ the error screenshotted in the report. The channel id was already sitting unused
 notification id, so the click now lands on `/chats/{channelId}`: the actual conversation,
 not a listing and not an error page.
 
-**5. Another account's chat session is no longer adopted.** This one was not reported;
-it was found while ruling out a cross-account explanation for the above, and it is the
-most serious of the five.
+**5. Another account's chat session is no longer adopted.** Found while ruling out a
+cross-account explanation for the above, and it is the most serious of the five.
+
+**CONFIRMED IN THE WILD, 12 Nov 2026.** This was written up as unreported and theoretical.
+The reporter's own follow-up says otherwise, and it is worth correcting rather than leaving
+the flattering version on the record. @ahmedabbaci states he **never followed and never
+muted** the "Black And White" channel he was being notified about — so the muting gap in
+item 2 does not explain his report — and that the messages **stopped once he logged into
+Ecency**. That is this bug precisely: with no session of his own, the extension fell back
+to whatever `mm_pat` cookie answered on ecency.com and adopted a stranger's session, which
+is why he saw a channel he had never joined. Logging in replaced the cookie with his own
+and the stranger's conversations disappeared.
+
+So item 5 is not a hardening measure found during a hunt — it is the root cause of the
+original report, and item 2 is a real but separate gap. The severity in the AMO reviewer
+note was stated correctly; only its discovery story was wrong.
 
 Ecency chat authenticates with a single `mm_pat` cookie on `ecency.com`. The cookie
 belongs to the **browser** — it is not ours and it is not per-account. Three code paths

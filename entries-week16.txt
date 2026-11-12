@@ -11,7 +11,14 @@
 # @nabbas0786 entered since the 11 Nov snapshot.
 #
 # Commented in the thread but NOT entered — no post link, so not entries yet:
-#   @ahmedabbaci  — active in the thread, asked about prize splitting on 12 Nov
+#   @ahmedabbaci  — ** HAS A QUALIFYING POST BUT HAS NOT ENTERED. ** He believes he has.
+#                   @ahmedabbaci/7-days-time-table-the-biggest-proven-delusion-of-life-
+#                   published 2026-11-10T15:21:09, in window, tagged #hivepulse, and it
+#                   scores a perfect 200/200. His only comment on the announcement (15:33,
+#                   12 minutes later) carries no post link, and the rule requires the link
+#                   in the entry comment. Same miss as @ekads in week 15. He told hdev on
+#                   12 Nov that the field is "4 including me" — it is 3, and he is not in
+#                   it. If he comments the link before close, the field is 4.
 #   @pakx
 #   @kryptonita
 #   @ekads        — posted a quote-retweet in week 15 with no entry alongside it;

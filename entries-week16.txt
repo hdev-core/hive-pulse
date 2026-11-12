@@ -1,12 +1,21 @@
 # Contest week 16 — IN PROGRESS. Round closes 17 November 2026 12:00 UTC.
 #
-# Collected from the thread on
+# Collected with scripts/collect-entries.mjs from the thread on
 # @hdev/hivepulse-seo-contest-week-15-results-week-16-open
-# Re-run scripts/collect-entries.mjs before judging; this is a snapshot, not the
-# final field. Five qualifying entries unlock the 600 HIVE pool — below that the
-# published threshold pays nothing and the pool rolls over (capped at one round).
+# This is a SNAPSHOT, not the final field — re-run the collector immediately before
+# judging. Five qualifying entries unlock the 600 HIVE pool (300 tier + 300 rolled
+# over from week 15). Below five, nothing is paid and the pool holds at 600 for
+# week 17; the rollover is capped at one round, so it does not climb to 900.
 #
-# As of 11 November: 2 entries with post links. Three more comments in the thread
-# (@pakx, @ahmedabbaci, @kryptonita) carried no link and are not entries yet.
-@nursejoe/food-poisoning-7-simple-ways-to-prevent-it-stay-healthy
+# As of 12 November: 3 entries, 2 short of the bar. No referrals declared.
+# @nabbas0786 entered since the 11 Nov snapshot.
+#
+# Commented in the thread but NOT entered — no post link, so not entries yet:
+#   @ahmedabbaci  — active in the thread, asked about prize splitting on 12 Nov
+#   @pakx
+#   @kryptonita
+#   @ekads        — posted a quote-retweet in week 15 with no entry alongside it;
+#                   was the missing fifth entrant that round.
 @itx.wardah/1-of-the-best-well-spent-dayshad-good-time-with-my-sister
+@nabbas0786/how-does-homeopathy-help-in-daily-life-4-ways-engurdu
+@nursejoe/food-poisoning-7-simple-ways-to-prevent-it-stay-healthy

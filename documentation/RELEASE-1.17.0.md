@@ -7,6 +7,21 @@
 > reviewer note was accurate as submitted. The signed XPI is 368,459 bytes against our
 > 345,376-byte zip; the difference is Mozilla's signature block.
 > **Next release measures its permission delta against 1.17.0, not 1.16.0.**
+>
+> **Chrome Web Store: also live, published 11 Nov 2026**, same day. Listing reports
+> version 1.17.0, 342 KiB, 42 users. Both stores shipped 1.17.0 within hours of
+> submission.
+>
+> Verifying a release without any store credentials, for next time:
+>
+> - **AMO** has a public REST API — `https://addons.mozilla.org/api/v5/addons/addon/hivepulse/`
+>   returns `current_version.version`, the file status and the permission list.
+> - **Chrome Web Store** has no public API (the Publish API needs OAuth tied to the
+>   publisher account), but the *published* version is in the public listing HTML at
+>   `https://chromewebstore.google.com/detail/hivepulse/hakcpohpejoejmlhiphpkjobpjeckdlg`
+>   — the Details panel carries `Version` and `Updated`, and the page embeds the
+>   manifest. Only the **review-queue** state (pending / in review / rejected) is truly
+>   dashboard-only. Do not report a Chrome release as unverifiable; check the listing.
 
 Packages are in `releases/` (gitignored). Rebuild any of them with:
 

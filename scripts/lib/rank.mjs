@@ -5,12 +5,23 @@
  * code that decides who gets paid. It had no test until week 14, when it was found to be
  * ranking a strictly lower score above a higher one.
  *
- * The published rule, in the announcement post every week:
+ * The published rule, from the week 16 opening post:
  *
- *   "Rank = (SEO% + GEO)/2 ... If two or more entries tie, the podium goes to the post
- *    whose Reading Ease is closest to 60, then to the earlier publication time."
+ *   "Ties split the prize. Two tied for first share 1st and 2nd and take half each;
+ *    three tied share all three places. The total paid never changes, only how many of
+ *    you receive it - and there is no advantage to publishing first."
+ *   "Reading Ease is the whole number HivePulse shows you. The combined score is
+ *    (SEO% + GEO)/2, compared exactly."
  *
- * Two things follow from that wording and are easy to get wrong:
+ * SUPERSEDED, and this comment used to still quote it: up to week 14 the published rule
+ * read "if two or more entries tie, the podium goes to the post whose Reading Ease is
+ * closest to 60, then to the earlier publication time". From week 15 a tie is SPLIT, not
+ * broken. The reading-ease term in byRank below still orders rows inside a tied group,
+ * but it no longer decides money — allocatePrizes groups on exact equality first. Do not
+ * reintroduce an ease or publication-time tiebreak for payment; that is the rule the
+ * split replaced, because it had decided the top of the board four rounds running.
+ *
+ * Two things follow from the exact-comparison half and are easy to get wrong:
  *
  *  1. The mean is compared EXACTLY. Rounding first invents ties between scores that are
  *     not tied, and the reading-ease rule then breaks a tie that should never have existed

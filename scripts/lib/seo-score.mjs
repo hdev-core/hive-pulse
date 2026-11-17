@@ -232,8 +232,99 @@ const syllables = (word) => {
   const g = s.match(/[aeiouy]{1,2}/g);
   return g ? g.length : 1;
 };
+// ===== readability block parity: keep IDENTICAL in compose.ts and seo-score.mjs =====
+// A line break in markdown is not a sentence end. A newline inside a paragraph is a WRAP
+// -- the width of the author's editor window, not a feature of their prose -- and
+// markdown itself renders it as a space. The old rule (`replace(/\n+/g, '. ')`) counted
+// every newline as a sentence boundary, which did two bad things.
+//
+// It paid for hard-wrapping. Across the 99-post contest corpus the SAME prose scored up
+// to 36 points of reading ease higher wrapped at 60 columns than written as unbroken
+// paragraphs, and 96 of 99 real entries were banking some ease on their wraps and on
+// word-less lines rather than on how they read. Reading ease is a scoring band AND the
+// podium tiebreak, so that was a free edge for a text editor setting.
+//
+// And it made the score move between the editor and the published post, because a WYSIWYG
+// editor (Ecency, InLeo) holds BLOCKS and has no wraps to find. @ahmedabbaci reported
+// exactly that on his diabetes post: 60 in the panel, 57 once published, not a word
+// changed.
+//
+// So the text is cut into BLOCKS -- paragraphs, headings, list items, table rows -- each
+// of which genuinely ends a thought, and wraps inside a block are rejoined with a space.
+// The split happens BEFORE stripMd, because stripMd erases the markers that identify a
+// block.
+//
+// The hard part is NOT the paragraph case; it is everything that looks like a block and
+// is not one. A first attempt classified any marker-prefixed line as its own block, and
+// review found it left the whole hard-wrap bonus intact for anyone who wrapped inside a
+// quote or a list -- a wrapped blockquote scored +42 ease over the same words on one
+// line, a 2-to-5 band jump. Each rule below answers a measured case:
+//
+//   NO_PROSE    A line of rules, underlines, table separators or divider art carries no
+//               prose, so it cannot be a sentence. `---` SURVIVES stripMd (`-` is not in
+//               its strip set) while `***` does not, so the two spellings of one
+//               construct scored differently -- and five `---` lines, 15 characters and
+//               no words, bought @nursejoe's week 15 entry from 99.5 to a perfect 100,
+//               which is the exact margin that moved 100 HIVE in week 14. Defined by the
+//               characters PRESENT, not by matching each construct, and deliberately not
+//               /^[^A-Za-z0-9]*$/, which would discard a whole line of Chinese or Arabic.
+//   QUOTE_MARK  A blockquote is a CONTAINER, not a sentence end: `> a` + `> b` is one
+//               paragraph inside a quote. Stripping the marker first is what closes the
+//               wrapped-quote loophole.
+//   LIST_ITEM   Two digits at most. `\d+` matched the `2024. ` inside a wrapped
+//               paragraph, which left plain prose wrap-sensitive by up to 6 points; no
+//               real list is numbered past 99.
+//   HEADING     Self-terminating -- it must not absorb the line beneath it. In CommonMark
+//               a heading is a leaf block and always ends at its own line; letting it
+//               swallow the next paragraph was worth 10 ease points for omitting a blank
+//               line. Setext headings need no rule: their `===` / `---` underline is
+//               NO_PROSE, which both drops it and closes the heading above it.
+//   HARD_BREAK  Two or more trailing spaces are markdown's hard line break -- a real
+//               <br>, so a real boundary.
+//   stripFences Fenced code is not prose and must not be measured as a sentence. Leaving
+//               it in made the score depend on whether a snippet's comments began with
+//               `#`, `//`, `>` or `*`: an 8-point swing on identical prose.
+const NO_PROSE = /^[\s\-=*_|:~#.+]*$/;
+const HEADING = /^ {0,3}#{1,6}(?:\s|$)/;
+const LIST_ITEM = /^ {0,3}(?:[-*+]|\d{1,2}[.)])\s+/;
+const TABLE_ROW = /^ {0,3}\|/;
+const QUOTE_MARK = /^ {0,3}(?:>[ \t]?)+/;
+const HARD_BREAK = /[ \t]{2,}$/;
+const stripFences = (text) => {
+  const out = [];
+  let fence = '';
+  for (const line of text.split('\n')) {
+    const m = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (fence) {
+      if (m && m[1][0] === fence[0] && m[1].length >= fence.length) fence = '';
+      continue;
+    }
+    if (m) { fence = m[1]; continue; }
+    out.push(line);
+  }
+  return out.join('\n');
+};
+const toSentences = (text) => {
+  const blocks = [];
+  let open = -1;
+  for (const raw of stripFences(text).split('\n')) {
+    const hard = HARD_BREAK.test(raw);
+    const line = raw.replace(QUOTE_MARK, '');
+    const trimmed = line.trim();
+    if (!trimmed || NO_PROSE.test(line)) { open = -1; continue; }
+    if (HEADING.test(line)) { blocks.push(line); open = -1; continue; }
+    if (TABLE_ROW.test(line)) { blocks.push(line); open = -1; continue; }
+    if (LIST_ITEM.test(line)) { blocks.push(trimmed.replace(LIST_ITEM, '')); open = blocks.length - 1; }
+    else if (open >= 0) blocks[open] += ' ' + trimmed;
+    else { blocks.push(trimmed); open = blocks.length - 1; }
+    if (hard) open = -1;
+  }
+  const out = blocks.map(b => stripMd(b).trim()).filter(Boolean);
+  return out.length ? out.join('. ') + '.' : '';
+};
+// ===== end readability block parity =====
 const readability = (text) => {
-  const plain = stripMd(text).replace(/\n+/g, '. ');
+  const plain = toSentences(text);
   const sentences = Math.max(1, (plain.match(/[.!?]+/g) || []).length);
   const words = plain.split(/\s+/).filter(w => w.length > 0);
   const wc = words.length || 1;

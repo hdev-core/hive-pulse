@@ -26,6 +26,8 @@ The weekly SEO contest is judged with `scripts/judge-contest.mjs`. Before runnin
 5. Review `contest-results.csv`, then archive it as `contest-results-weekN.csv` before the next round.
 6. **Run `node scripts/check-proposal.mjs` before writing the announcement post**, and carry
    the DHF ask if it is still needed — see below.
+7. **Read `enhancements/week<N>-post-notes.md`** if one exists. It is the single list of
+   what that week's post must carry, written while the reasons were fresh.
 
 **The weekly post carries the DHF proposal ask, conditionally.** The contest prize money
 comes from Hdev DHF proposal #391, whose budget sets aside 18% for "outreach and growth

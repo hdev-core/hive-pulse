@@ -1,12 +1,31 @@
-# Contest week 16 — IN PROGRESS. Round closes 17 November 2026 12:00 UTC.
+# Contest week 16 — FINAL FIELD. Round closed 17 November 2026 12:00 UTC.
 #
-# Collected from the thread on
+# Collected with scripts/collect-entries.mjs from
 # @hdev/hivepulse-seo-contest-week-15-results-week-16-open
-# Re-run scripts/collect-entries.mjs before judging; this is a snapshot, not the
-# final field. Five qualifying entries unlock the 600 HIVE pool — below that the
-# published threshold pays nothing and the pool rolls over (capped at one round).
+# 5 qualifying entrants — the bar is met, so the 600 HIVE pool pays
+# (300 base tier + 300 rolled over from week 15), split 300 / 200 / 100.
 #
-# As of 11 November: 2 entries with post links. Three more comments in the thread
-# (@pakx, @ahmedabbaci, @kryptonita) carried no link and are not entries yet.
-@nursejoe/food-poisoning-7-simple-ways-to-prevent-it-stay-healthy
+# RULING ON @ahmedabbaci, decided by @hdev on 17 Nov 2026 and to be stated
+# openly in the results post:
+#   The post he LINKED (never-do-business-with-family, 13 Nov) fails twice —
+#   it carries no #hivepulse tag and scores SEO 60 against a published bar of
+#   70. But rule 6 as published reads "You may enter more than one post. Your
+#   highest-scoring tagged post counts." His 7-days-time-table post is a root
+#   post, inside the window, tagged #hivepulse, and scores 200/200. Rule 6 is
+#   applied, so that post is his entry and the field is 5 rather than 4.
+#   The strict reading would have put the field at 4, paid nothing for the
+#   second round running, and penalised four entrants who did everything right
+#   for someone else's formatting error.
+#   Rules 4 and 6 contradict each other on this and must be reconciled for
+#   week 17 — this is the second round running where a tagged, in-window,
+#   qualifying post nearly went uncounted (@ekads, week 15).
+#
+# No referrals declared, so none are paid (rule 7 requires naming them in the
+# entry comment). @fluer is a genuinely new entrant — not present in earlier
+# rounds, account 186 days old — and nobody claimed the referral.
+# X prize: @nabbas0786 submitted https://x.com/nabbas_0786/status/2120877144683466794
+@ahmedabbaci/7-days-time-table-the-biggest-proven-delusion-of-life-
+@fluer/the-no1-best-way-to-spend-weekends-crochet-for-my-mother
 @itx.wardah/1-of-the-best-well-spent-dayshad-good-time-with-my-sister
+@nabbas0786/how-does-homeopathy-help-in-daily-life-4-ways-engurdu
+@nursejoe/food-poisoning-7-simple-ways-to-prevent-it-stay-healthy

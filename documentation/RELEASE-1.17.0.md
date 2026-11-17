@@ -1,5 +1,28 @@
 # HivePulse 1.17.0 — store submission
 
+> **SHIPPED.** Submitted 11 Nov 2026 and approved by Firefox AMO the same day,
+> reviewed 17:46 UTC, now `public` as the current version. The live listing reports 18
+> permissions and 29 host permissions — exactly the 7 manifest permissions plus the 11
+> `content_scripts` match patterns predicted in Box 2, so the permission delta in the
+> reviewer note was accurate as submitted. The signed XPI is 368,459 bytes against our
+> 345,376-byte zip; the difference is Mozilla's signature block.
+> **Next release measures its permission delta against 1.17.0, not 1.16.0.**
+>
+> **Chrome Web Store: also live, published 11 Nov 2026**, same day. Listing reports
+> version 1.17.0, 342 KiB, 42 users. Both stores shipped 1.17.0 within hours of
+> submission.
+>
+> Verifying a release without any store credentials, for next time:
+>
+> - **AMO** has a public REST API — `https://addons.mozilla.org/api/v5/addons/addon/hivepulse/`
+>   returns `current_version.version`, the file status and the permission list.
+> - **Chrome Web Store** has no public API (the Publish API needs OAuth tied to the
+>   publisher account), but the *published* version is in the public listing HTML at
+>   `https://chromewebstore.google.com/detail/hivepulse/hakcpohpejoejmlhiphpkjobpjeckdlg`
+>   — the Details panel carries `Version` and `Updated`, and the page embeds the
+>   manifest. Only the **review-queue** state (pending / in review / rejected) is truly
+>   dashboard-only. Do not report a Chrome release as unverifiable; check the listing.
+
 Packages are in `releases/` (gitignored). Rebuild any of them with:
 
 ```
@@ -50,9 +73,22 @@ the error screenshotted in the report. The channel id was already sitting unused
 notification id, so the click now lands on `/chats/{channelId}`: the actual conversation,
 not a listing and not an error page.
 
-**5. Another account's chat session is no longer adopted.** This one was not reported;
-it was found while ruling out a cross-account explanation for the above, and it is the
-most serious of the five.
+**5. Another account's chat session is no longer adopted.** Found while ruling out a
+cross-account explanation for the above, and it is the most serious of the five.
+
+**CONFIRMED IN THE WILD, 12 Nov 2026.** This was written up as unreported and theoretical.
+The reporter's own follow-up says otherwise, and it is worth correcting rather than leaving
+the flattering version on the record. @ahmedabbaci states he **never followed and never
+muted** the "Black And White" channel he was being notified about — so the muting gap in
+item 2 does not explain his report — and that the messages **stopped once he logged into
+Ecency**. That is this bug precisely: with no session of his own, the extension fell back
+to whatever `mm_pat` cookie answered on ecency.com and adopted a stranger's session, which
+is why he saw a channel he had never joined. Logging in replaced the cookie with his own
+and the stranger's conversations disappeared.
+
+So item 5 is not a hardening measure found during a hunt — it is the root cause of the
+original report, and item 2 is a real but separate gap. The severity in the AMO reviewer
+note was stated correctly; only its discovery story was wrong.
 
 Ecency chat authenticates with a single `mm_pat` cookie on `ecency.com`. The cookie
 belongs to the **browser** — it is not ours and it is not per-account. Three code paths
@@ -175,6 +211,19 @@ string, 1.16.0 -> 1.17.0. Nothing else changed.
                         notifications, scripting)   — UNCHANGED
   host_permissions: 29                              — UNCHANGED
 
+The AMO listing page for 1.16.0 shows 18 permissions, not 7. Those 18 are the
+7 manifest permissions above plus the 11 match patterns declared in
+content_scripts (<all_urls> and ten Hive frontend origins), which AMO folds
+into a single displayed list. The content_scripts block is unchanged in this
+release, so that displayed count of 18 is unchanged too.
+
+Method, so this is checkable rather than asserted: the manifest was extracted
+from the submitted hivepulse-1.17.0-firefox.zip and diffed against the
+manifest inside the published 1.16.0 package. Exactly one line differs — the
+version string. The same diff on the Chrome packages gives the same single
+line. (Chrome declares one permission more than Firefox, sidePanel; that is a
+long-standing difference between the two manifests, not a change here.)
+
 No new permissions, no new hosts, no new content scripts, no change to the
 background service worker's registration.
 
@@ -253,6 +302,15 @@ archive is **required** because the build is bundled and minified.
 ## Known and accepted
 
 - The 21 web-ext lint warnings are unchanged and explained in Box 2.
+- The source archive carries 52 files the build never reads: the weekly contest
+  entries and archived results, the cover-image scripts, and internal notes
+  (`AGENTS.md`, `PRD.md`, `GEMINI.md`, `REVIEWERS.md`). The archive is
+  reviewer-only rather than public, and it was audited for credentials before
+  submission — none, the sole grep hit being a substring of a `@babel/template`
+  integrity hash. Five earlier releases shipped the same way and passed review,
+  so this is not a blocker. `scripts/make-source-zip.mjs` should still be
+  narrowed to what `npm ci && npm run build:firefox` actually reads; 1.18.0
+  rebuilds the archive anyway and is the place to do it.
 - `sidePanel.open` remains Chrome-only; the Firefox build uses the popup.
 - `compose.ts` and `scripts/lib/seo-score.mjs` are still kept in sync by hand.
   `utils/geoRubric.test.ts` compares the shared regexes, helpers and every

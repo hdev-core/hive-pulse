@@ -37,6 +37,18 @@ const WINDOW_START = Date.parse('2026-11-10T00:00:00Z');
 const WINDOW_END   = Date.parse('2026-11-17T12:00:00Z');   // week 16 closes 12:00 UTC, not 23:59
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 
+// Pool carried in from a round that fell below MIN_ENTRANTS and paid nothing. Set it to
+// the pool that round announced, or 0 on a normal round; withRollover caps it at
+// ROLLOVER_CAP and rescales every slot so the places keep their published proportions.
+//
+// withRollover has been in lib/rank.mjs since week 15, with WEEK 16 AS ITS WORKED
+// EXAMPLE, and this file never called it. Same failure as the note further down about
+// the threshold and tie-splitting shipping in the library but never being wired in here.
+// Week 16 was announced to entrants at 600 HIVE and this judge was about to pay 300:
+// half the pool, in the first round the rollover was ever meant to apply to. The guard
+// in main() is why it cannot be silently forgotten again.
+const CARRIED_FORWARD = 300;             // week 15 drew 4 entrants and paid nothing
+
 // Tiebreak target, from week 11. The engine's own readability check stops caring once a post
 // clears Flesch reading ease 60 - every entry that tied at 100/100 in weeks 9 and 10 had an
 // identical SEO breakdown including a maxed 8/8 readability block. So the tiebreak reads the
@@ -51,7 +63,7 @@ const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 // Scoring engine lives in ./lib/seo-score.mjs — shared with scripts/score-post.mjs so the
 // two tools can never disagree. Keep that file in sync with compose.ts.
 import { analyze, autoDetectKeyword, readability } from './lib/seo-score.mjs';
-import { byRank, easeGap, tierFor, allocatePrizes, MIN_ENTRANTS } from './lib/rank.mjs';
+import { byRank, easeGap, tierFor, withRollover, allocatePrizes, MIN_ENTRANTS, ROLLOVER_CAP } from './lib/rank.mjs';
 import { getPost } from './lib/hive-rpc.mjs';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -214,7 +226,33 @@ const main = async () => {
   // tie-splitting shipped in lib/rank.mjs for week 15 but were never wired in here, so the
   // judge was quietly contradicting the contest it judges.
   const qualified = rows.filter(r => r.qualifies);
-  const tier = tierFor(qualified.length);
+
+  // A previous round that paid nothing MUST leave a carry. Derived, not trusted: the
+  // previous week's archive records who qualified, and fewer than MIN_ENTRANTS qualifying
+  // rows in it means that round paid nothing and its pool rolled into this one.
+  if (weekOfFile && !CARRIED_FORWARD) {
+    const prevFile = `contest-results-week${Number(weekOfFile[1]) - 1}.csv`;
+    if (fsSync.existsSync(prevFile)) {
+      const prevQualified = fsSync.readFileSync(prevFile, 'utf8')
+        .split(String.fromCharCode(10)).slice(1)
+        .filter(l => l.includes(',true,true,')).length;
+      if (prevQualified && prevQualified < MIN_ENTRANTS) {
+        console.error('');
+        console.error(`  REFUSING TO RUN: ${prevFile} records ${prevQualified} qualifying`);
+        console.error(`  entries, below the minimum of ${MIN_ENTRANTS}. That round paid nothing and`);
+        console.error('  its pool rolled into this one - but CARRIED_FORWARD is 0, so this run');
+        console.error('  would pay the base tier and short the round. Set CARRIED_FORWARD to the');
+        console.error('  pool that round announced, or pass --no-rollover if it was genuinely');
+        console.error('  paid out another way.');
+        console.error('');
+        process.exit(1);
+      }
+    }
+  }
+
+  const base  = tierFor(qualified.length);
+  const carry = process.argv.includes('--no-rollover') ? 0 : CARRIED_FORWARD;
+  const tier  = withRollover(base, carry);
   console.log(`\n── Prizes (${qualified.length} qualifying ${qualified.length === 1 ? 'entry' : 'entries'}) ──`);
 
   if (!qualified.length) {
@@ -226,7 +264,11 @@ const main = async () => {
   } else {
     const paid = allocatePrizes(qualified, tier.slots);
     const medals = ['🥇', '🥈', '🥉'];
-    console.log(`  pool ${tier.pool} HIVE · slots ${tier.slots.join(' / ')}`);
+    console.log(`  pool ${tier.pool} HIVE · slots ${tier.slots.join(' / ')}`
+      + (tier.pool !== base.pool
+          ? `   (${base.pool} base + ${Math.min(carry, ROLLOVER_CAP)} carried forward`
+            + `${carry > ROLLOVER_CAP ? `, capped from ${carry}` : ''})`
+          : ''));
     paid.forEach((r, i) => console.log(
       `  ${medals[i] || '  '} ${String(Math.round(r.prize * 100) / 100).padStart(6)} HIVE  @${r.author}/${r.permlink}` +
       `  — SEO ${r.seoPct}% · GEO ${r.geoScore} · combined ${r.combinedExact % 1 ? r.combinedExact.toFixed(1) : r.combined}`));

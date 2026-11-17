@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { byRank, easeGap, EASE_TARGET, tierFor, allocatePrizes, MIN_ENTRANTS, withRollover, ROLLOVER_CAP } from '../scripts/lib/rank.mjs';
+import { readFileSync } from 'node:fs';
 
 /**
  * The comparator that decides who gets paid. It had no test until week 14, when it was
@@ -250,5 +251,47 @@ describe('rollover', () => {
     const paid = allocatePrizes([ent('a',100), ent('b',100), ent('c',100)], t.slots);
     expect(paid.map((r: { prize: number }) => r.prize)).toEqual([200, 200, 200]);
     expect(sum(paid.map((r: { prize: number }) => r.prize))).toBe(600);
+  });
+});
+
+
+/**
+ * The library above was already correct and already tested — including the exact week 16
+ * case, withRollover(tierFor(5), 300) paying 200/200/200. None of that mattered, because
+ * scripts/judge-contest.mjs never imported withRollover. It did
+ *
+ *     const tier = tierFor(qualified.length);
+ *
+ * and handed the bare tier to allocatePrizes, so week 16 — announced to entrants at
+ * 600 HIVE — was about to pay 300. Half the pool, in the very first round the rollover
+ * was written for, with the worked example sitting in rank.mjs naming week 16 by number.
+ *
+ * Testing a library the shipping code does not call proves nothing, so these tests read
+ * the judge's own source. This is the second time a prize rule shipped in lib/rank.mjs
+ * and was never wired into the judge; the first was the threshold and tie-splitting.
+ */
+describe('the judge is actually wired to the prize library', () => {
+  const judge = readFileSync(new URL('../scripts/judge-contest.mjs', import.meta.url), 'utf8');
+
+  it('imports withRollover', () => {
+    expect(judge).toContain('withRollover');
+  });
+
+  it('does not hand a bare tier to allocatePrizes', () => {
+    expect(judge).not.toContain('const tier = tierFor(');
+  });
+
+  it('applies the carry to the tier', () => {
+    expect(judge).toContain('withRollover(base, carry)');
+    expect(judge).toContain('const CARRIED_FORWARD');
+  });
+
+  it('refuses to run when the previous round died and no carry is set', () => {
+    expect(judge).toContain('REFUSING TO RUN');
+    expect(judge).toContain('CARRIED_FORWARD is 0');
+  });
+
+  it('shows how the pool was derived, so a wrong carry is visible in the output', () => {
+    expect(judge).toContain('carried forward');
   });
 });

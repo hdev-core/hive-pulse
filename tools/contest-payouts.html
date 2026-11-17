@@ -120,33 +120,62 @@
    if the stated total does not match the sum of the transfers.
    ══════════════════════════════════════════════════════════════════════════════ */
 const ROUND = {
-  label:  'Week 15',
-  window: '3 - 10 November 2026, closed 12:00 UTC',
-  post:   'https://peakd.com/hive-177727/@hdev/hivepulse-seo-contest-week-14-results-week-15-open',
-  // FOUR valid entrants, one short of the five-entrant threshold that took effect this
-  // round. So NO PRIZE POOL IS PAID and the 300 rolls into week 16, making it 600.
+  label:  'Week 16',
+  window: '10 - 17 November 2026, closed 12:00 UTC',
+  post:   'https://peakd.com/hive-177727/@hdev/hivepulse-seo-contest-week-15-results-week-16-open',
+  // FIVE qualifying entrants, so the threshold is met and the pool pays for the first
+  // time since week 14. Pool is 600 = 300 base tier (5-9 entrants) + 300 carried from
+  // week 15, which drew four and paid nothing. Slots 300 / 200 / 100.
   //
-  // The 50 HIVE X prize is a separate line with its own rule and is still paid. Two
-  // quote-retweets were submitted, both validly timed, but @ekads has no Hive entry this
-  // round - he posted a bare X link - and the published rule says to paste it "in your
-  // entry comment". No entry, no entry comment, so @nabbas_0786 is the only eligible
-  // submission and wins unopposed. No engagement comparison was needed.
+  // @ahmedabbaci, @nursejoe and @nabbas0786 all finished on an EXACT 100 (SEO 100 /
+  // GEO 100). Under the tie rule they share the three slots they span: 600 / 3 = 200
+  // each. @itx.wardah (98) and @fluer (84) are in the field but outside the slots.
   //
-  // Curation is already done: all four entries upvoted 100% and reblogged on 10 Nov while
-  // their payout windows were still open, so those votes actually earned the authors
-  // rewards - the first round where curating on judging day was worth anything.
-  expectedTotal: 50,
-  memoTag: 'HivePulse SEO Contest week 15',
+  // @nabbas0786 also wins the separate 50 HIVE X prize - the only quote-retweet
+  // submitted, and his entry qualifies. It is ONE transfer of 250 to him, not two,
+  // because this console refuses duplicate recipients; see his parts[] below.
+  //
+  // RULING, to be stated openly in the results post: @ahmedabbaci's linked post carried
+  // no #hivepulse tag and scored SEO 60. He had also published a tagged, in-window post
+  // scoring 200/200 that he never linked. Rule 6 as published says 'You may enter more
+  // than one post. Your highest-scoring tagged post counts', so that post was counted
+  // and the field was 5 rather than 4 - the difference between paying 600 and paying
+  // nothing for a second round running.
+  expectedTotal: 650,
+  memoTag: 'HivePulse SEO Contest week 16',
 };
 
-// Already curated by tools/week15-curation.html before this console was used. Left empty
-// so pressing the curation button here cannot double-vote.
-const CURATION = [];
+// NOT fully curated this round. Checked on chain 17 Nov ~14:00 UTC: @hdev had voted
+// @nursejoe, @nabbas0786 and @itx.wardah, but NOT @ahmedabbaci or @fluer.
+//
+// @ahmedabbaci is the urgent one - his winning post had under an hour of payout window
+// left when this was written, and a vote cast after cashout earns the author nothing.
+// That is the week 14 mistake repeating: three of four podium votes that round were
+// worth zero to the authors.
+//
+// All five are listed. This console detects votes already cast on chain and skips them,
+// so re-listing the three already voted cannot double-vote, and the reblogs that are
+// still missing go out in the same transaction.
+const CURATION = [
+  { place:'tied 1st', seo:100, geo:100, author:'ahmedabbaci', permlink:'7-days-time-table-the-biggest-proven-delusion-of-life-' },
+  { place:'5th',      seo:89,  geo:79,  author:'fluer',       permlink:'the-no1-best-way-to-spend-weekends-crochet-for-my-mother' },
+  { place:'tied 1st', seo:100, geo:100, author:'nursejoe',    permlink:'food-poisoning-7-simple-ways-to-prevent-it-stay-healthy' },
+  { place:'tied 1st', seo:100, geo:100, author:'nabbas0786',  permlink:'how-does-homeopathy-help-in-daily-life-4-ways-engurdu' },
+  { place:'4th',      seo:96,  geo:100, author:'itx.wardah',  permlink:'1-of-the-best-well-spent-dayshad-good-time-with-my-sister' },
+];
 
 const PAYMENTS = [
-  { to:'nabbas0786', amount:50,
-    parts:[['X quote-retweet prize - only eligible entry', 50]],
-    memo:'HivePulse SEO Contest week 15: 50 HIVE for the X quote-retweet. No placing prizes were paid this round - four writers entered and the new rule needs five, so the whole 300 pool rolls into week 16, which is now worth 600. Your entry scored a perfect SEO 100 / GEO 100 and finished top of the board; it just did not have a fifth entrant alongside it. One more person next week and that 600 is live. Thank you for promoting the round on X again - you were the only eligible quote-retweet.' },
+  { to:'ahmedabbaci', amount:200,
+    parts:[['Tied 1st - share of slots 1-3', 200]],
+    memo:'HivePulse SEO Contest week 16: 200 HIVE. You finished on an exact SEO 100 / GEO 100, tied with @nursejoe and @nabbas0786, and under the tie rule the three of you share the top three slots - 200 each from a 600 pool. Note which post was judged: your 7 Days Time Table post, which carried the #hivepulse tag and scored 200/200. The post you linked had no #hivepulse tag and scored SEO 60, so rule 6 applied - your highest-scoring tagged post counts. Thank you for the two bug reports as well; both are fixed and live.' },
+
+  { to:'nursejoe', amount:200,
+    parts:[['Tied 1st - share of slots 1-3', 200]],
+    memo:'HivePulse SEO Contest week 16: 200 HIVE. A perfect SEO 100 / GEO 100, tied with @ahmedabbaci and @nabbas0786, so the three of you share the top three slots - 200 each from a 600 pool. The pool was 600 because week 15 fell one entrant short and its 300 rolled forward; this round reached five and it paid.' },
+
+  { to:'nabbas0786', amount:250,
+    parts:[['Tied 1st - share of slots 1-3', 200], ['X quote-retweet prize - only eligible submission', 50]],
+    memo:'HivePulse SEO Contest week 16: 250 HIVE - 200 for the contest and 50 for the X quote-retweet. A perfect SEO 100 / GEO 100, tied with @ahmedabbaci and @nursejoe, so the three of you share the top three slots at 200 each from a 600 pool. The 50 is the X prize: yours was the only eligible quote-retweet again, second round running. Thank you for promoting the round.' },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════════════ */
@@ -236,6 +265,8 @@ function render(){
 }
 
 /* ── on-chain state: has any of this already happened? ── */
+// True once checkState() has finished, so the curate button can refuse to guess.
+let stateChecked = false;
 async function checkState(){
   const me = acct();
   if (!me) return;
@@ -255,11 +286,18 @@ async function checkState(){
     try {
       const votes = await rpc('condenser_api.get_active_votes', [c.author, c.permlink]);
       const voted = (votes||[]).some(v => v.voter === me);
+      // RECORD it. This used to paint the pill and throw the answer away, so the
+      // curate button built a vote op for every post, including ones already voted.
+      // The chain rejects a repeat vote at the same weight and these ops go out as
+      // ONE atomic transaction, so that did not merely waste a vote - it failed the
+      // entire broadcast and nobody got curated at all.
+      c._voted = voted;
       const e = $('cur'+i);
       e.className = 'pill ' + (voted ? 'ok' : 'idle');
       e.textContent = voted ? 'already voted' : 'not voted';
-    } catch(e){ $('cur'+i).textContent = '?'; }
+    } catch(e){ c._voted = null; $('cur'+i).textContent = '?'; }
   }
+  stateChecked = true;
 
   // transfers already sent? scan recent outgoing history
   try {
@@ -315,16 +353,35 @@ $('btnCurate').onclick = async () => {
   if (!(pct > 0 && pct <= 100)) return alert('Vote weight must be between 1 and 100.');
   const weight = Math.round(pct * 100);
 
+  if (!stateChecked)
+    return alert('Press "Re-check on-chain state" first. Without it this cannot tell which posts you have already voted, and a repeat vote fails the whole transaction.');
+
+  const unknown = CURATION.filter(c => c._voted !== true && c._voted !== false);
+  if (unknown.length)
+    return alert('Vote state is unknown for: ' + unknown.map(c => '@'+c.author).join(', ') +
+      '. Re-check on-chain state. Refusing to guess.');
+
   const ops = [];
+  const skipped = [];
   for (const c of CURATION){
-    ops.push(['vote', {voter:me, author:c.author, permlink:c.permlink, weight}]);
+    // Skip the VOTE where one is already on chain: a repeat vote at the same weight is
+    // rejected and would fail this whole atomic transaction. The reblog still goes out,
+    // because a duplicate reblog is a custom_json the frontends ignore, it cannot fail
+    // consensus, and reblogs are not tracked separately here.
+    if (c._voted) skipped.push('@'+c.author);
+    else ops.push(['vote', {voter:me, author:c.author, permlink:c.permlink, weight}]);
     ops.push(['custom_json', {
       required_auths: [], required_posting_auths: [me], id: 'follow',
       json: JSON.stringify(['reblog', {account:me, author:c.author, permlink:c.permlink}])
     }]);
   }
 
-  const summary = CURATION.map(c => `  vote ${pct}% + reblog  @${c.author}/${c.permlink}`).join('\n');
+  if (!ops.length) return alert('Nothing to do - everything is already voted.');
+
+  const summary = CURATION.map(c => c._voted
+    ? `  reblog only (already voted)  @${c.author}/${c.permlink}`
+    : `  vote ${pct}% + reblog  @${c.author}/${c.permlink}`).join('\n')
+    + (skipped.length ? `\n\nVote skipped for ${skipped.join(', ')} — already on chain.` : '');
   if (!confirm(`Broadcast ${ops.length} operations as @${me} with your POSTING key?\n\n${summary}\n\nThis is one atomic transaction.`)) return;
 
   $('btnCurate').disabled = true; pill('curStatus','wait','broadcasting…');

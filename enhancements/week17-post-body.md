@@ -107,7 +107,7 @@ Quote-retweet the Week 17 announcement tweet with your own words about your Hive
 
 **Paste the link in your entry comment** - and you need an entry for it to count.
 
-👉 **This is the tweet to quote:** WEEK17_TWEET_URL_HERE
+👉 **This is the tweet to quote:** https://x.com/HdevCore/status/2122709848081285353
 
 @nabbas0786 won it again this round, unopposed, for the second week running. The prize is 50 HIVE for one quote-retweet, and four of you are leaving that on the table every week.
 

@@ -62,7 +62,7 @@ const CARRIED_FORWARD = 300;             // week 15 drew 4 entrants and paid not
 
 // Scoring engine lives in ./lib/seo-score.mjs — shared with scripts/score-post.mjs so the
 // two tools can never disagree. Keep that file in sync with compose.ts.
-import { analyze, autoDetectKeyword, readability } from './lib/seo-score.mjs';
+import { analyze, autoDetectKeyword, readability, KW_STOP} from './lib/seo-score.mjs';
 import { byRank, easeGap, tierFor, withRollover, allocatePrizes, MIN_ENTRANTS, ROLLOVER_CAP } from './lib/rank.mjs';
 import { getPost } from './lib/hive-rpc.mjs';
 
@@ -90,9 +90,15 @@ const getContent = (author, permlink) => getPost(author, permlink);
 // Fix: score every plausible keyword and keep the best. An entrant can therefore never be
 // ranked below what the tool showed them, and the rule is identical for everyone. Ties
 // prefer the auto-detected keyword so results stay stable run to run.
-const KW_SKIP = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by',
-  'from','my','me','i','is','it','its','this','that','these','those','how','why','what','when',
-  'best','guide','story','about','your','you','we','our','are','was','not','can','will','new']);
+// Was a 45-word list of its own, and that disagreement was a live hazard rather than a
+// tidiness problem: the engine now refuses to score a keyword whose every word is a
+// stopword, and it uses the 163-word KW_STOP for that. A word in KW_STOP but not in this
+// list — "above", "well", "time", "first" and 118 others — could therefore be CHOSEN here
+// and then scored 0/35 by the engine, on a keyword the judge itself picked.
+//
+// @angeluxx's week 6 entry was judged on exactly such a keyword ("above"), so this is not
+// hypothetical. Sharing one set makes the two incapable of disagreeing.
+const KW_SKIP = KW_STOP;
 
 const keywordCandidates = (title, body) => {
   const words = title.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)

@@ -343,6 +343,20 @@ const transitionRatio = (text) => {
   return Math.round((hits / sentences.length) * 100);
 };
 
+// A keyword whose every word is a stopword is not a keyword. "the" sits in every title,
+// slug, subheading, opening and description by construction, so it scored a perfect 35/35
+// and an SEO 100 that the contest would never award: judge-contest.mjs has filtered
+// stopwords out of its own candidates since week 1. @itx.wardah reported seeing 100 in the
+// panel and 96 in the results for exactly this, and on her week 16 entry the difference was
+// 4th place against a three-way tie for first.
+//
+// Rejects only when EVERY word is a stopword, so "best sister" is still a keyword while
+// "the" and "the best" are not.
+const isStopwordKeyword = (kw) => {
+  const words = String(kw).toLowerCase().split(/\s+/).filter(Boolean);
+  return words.length > 0 && words.every(w => KW_STOP.has(w));
+};
+
 const analyzeKeyword = (kw, content, title, metaDesc) => {
   const k = kw.toLowerCase().trim();
   if (!k) return { inTitle: false, frontLoaded: false, inFirst100: false, inHeading: false, inMetaDesc: false, inPermlink: false, density: 0, isLongTail: false };
@@ -505,7 +519,7 @@ const analyze = (rawContent, title, tags, metaDesc, keyword) => {
   const transitionPct = wordCount > 50 ? transitionRatio(plain) : 100;
   const intent = detectIntent(title, content);
   const ctr = titleCtr(title);
-  const hasKw = keyword.trim().length > 0;
+  const hasKw = keyword.trim().length > 0 && !isStopwordKeyword(keyword);
   const contentTags = tags.filter(t => !/^hive-\d+$/.test(t));
 
   let kwScore = 0;
@@ -566,4 +580,5 @@ export {
   stripMd, reSafe, toPermlink, autoDetectKeyword, getImageCount, missingAltImages,
   classifyLinks, headingHierarchy, titleCtr, detectIntent, readability, transitionRatio,
   analyzeKeyword, analyzeGeo, analyze, normalizeEol, headingLevels, scanHeadings, bodyHeadings,
+  KW_STOP, isStopwordKeyword,
 };

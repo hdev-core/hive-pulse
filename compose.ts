@@ -713,6 +713,20 @@ interface KwResult {
   inHeading: boolean; inMetaDesc: boolean; inPermlink: boolean;
   density: number; isLongTail: boolean;
 }
+// A keyword whose every word is a stopword is not a keyword. "the" sits in every title,
+// slug, subheading, opening and description by construction, so it scored a perfect 35/35
+// and an SEO 100 that the contest would never award: judge-contest.mjs has filtered
+// stopwords out of its own candidates since week 1. @itx.wardah reported seeing 100 in the
+// panel and 96 in the results for exactly this, and on her week 16 entry the difference was
+// 4th place against a three-way tie for first.
+//
+// Rejects only when EVERY word is a stopword, so "best sister" is still a keyword while
+// "the" and "the best" are not.
+const isStopwordKeyword = (kw: string): boolean => {
+  const words = String(kw).toLowerCase().split(/\s+/).filter(Boolean);
+  return words.length > 0 && words.every(w => KW_STOP.has(w));
+};
+
 const analyzeKeyword = (kw: string, content: string, title: string, metaDesc: string): KwResult => {
   const k = kw.toLowerCase().trim();
   if (!k) return { inTitle: false, frontLoaded: false, inFirst100: false, inHeading: false, inMetaDesc: false, inPermlink: false, density: 0, isLongTail: false };
@@ -928,14 +942,19 @@ const analyze = (content: string, title: string, tags: string[], metaDesc: strin
   const transitionPct = wordCount > 50 ? transitionRatio(plain) : 100;
   const intent = detectIntent(title, content);
   const ctr = titleCtr(title);
-  const hasKw = keyword.trim().length > 0;
+  const kwIsStopword = isStopwordKeyword(keyword);
+  const hasKw = keyword.trim().length > 0 && !kwIsStopword;
   // The community (hive-XXXXXX) is the posting destination, not a discovery tag —
   // exclude it from the "3–5 tags" recommendation
   const contentTags = tags.filter(t => !/^hive-\d+$/.test(t));
 
   // Keyword — 35
   let kwScore = 0, kwHint = '';
-  if (hasKw) {
+  if (kwIsStopword) {
+    // Say why, rather than silently scoring 0 and letting the author wonder where 35 points
+    // went. This is the message that would have saved @itx.wardah a round.
+    kwHint = `"${keyword}" is a stopword — it cannot be a focus keyword`;
+  } else if (hasKw) {
     kwScore = (kw.inTitle ? 8 : 0) + (kw.frontLoaded ? 4 : 0) + (kw.inFirst100 ? 10 : 0) +
               (kw.inHeading ? 7 : 0) + (kw.inPermlink ? 3 : 0) + (kw.inMetaDesc ? 3 : 0);
     const miss: string[] = [];
@@ -1558,7 +1577,35 @@ if (composePattern) {
 
   const isComposePage = () => composePattern.test(location.pathname);
 
-  const saveKeyword = (kw: string) => { focusKeyword = kw; kwSource = kw.trim() ? 'user' : 'none'; };
+  // A typed keyword used to live only in this closure, so every reload threw it away and
+  // replaced it with an auto-detected one, silently. @itx.wardah reported exactly that:
+  // the keyword "changes automatically with page reload", and the score moves with it.
+  // Keyed on the draft's own URL so two drafts open in two tabs cannot overwrite each
+  // other, and so returning to a post restores what you chose for THAT post.
+  const kwStoreKey = () => `hp-kw:${location.pathname}`;
+
+  const saveKeyword = (kw: string) => {
+    focusKeyword = kw;
+    kwSource = kw.trim() ? 'user' : 'none';
+    // Best effort. Storage can throw in a private window or with site data blocked, and a
+    // keyword that fails to persist must not break the panel that is still showing it.
+    try {
+      if (kw.trim()) chrome?.storage?.local?.set({ [kwStoreKey()]: kw });
+      else chrome?.storage?.local?.remove(kwStoreKey());
+    } catch { /* non-fatal */ }
+  };
+
+  // Restore before the first analysis, so a remembered keyword wins over auto-detection
+  // rather than racing it.
+  const restoreKeyword = (): Promise<void> => new Promise(resolve => {
+    try {
+      chrome?.storage?.local?.get(kwStoreKey(), (got: Record<string, string>) => {
+        const saved = got?.[kwStoreKey()];
+        if (typeof saved === 'string' && saved.trim()) { focusKeyword = saved; kwSource = 'user'; }
+        resolve();
+      });
+    } catch { resolve(); }
+  });
 
   let lastSig = '';
   const contentSig = () =>
@@ -1601,7 +1648,13 @@ if (composePattern) {
     lastInputs = { content, title, tags, metaDesc };
     lastSig = `${title.length}:${content.length}:${tags.join(',')}:${metaDesc.length}`;
     if (title.length < 3 && content.trim().length < 5) { showIdle(); return; }
-    if (kwSource !== 'user' && (title.length > 3 || content.length > 80)) {
+    // Both fields, not either. autoDetectKeyword builds its candidates from the TITLE but
+    // ranks them by how often they occur in the BODY, so running it before the body has
+    // loaded ranks every candidate on the same empty text and picks a different winner.
+    // Measured on @itx.wardah's week 16 post: "sister" with the body loaded, "spent days"
+    // with it empty, "faiza sister" with a truncated title — three answers for one draft,
+    // decided by what the editor happened to have painted when the debounce fired.
+    if (kwSource !== 'user' && title.length > 3 && content.length > 80) {
       const detected = autoDetectKeyword(title, content);
       if (detected) { focusKeyword = detected; kwSource = 'auto'; }
     }
@@ -1620,7 +1673,12 @@ if (composePattern) {
     bootstrapped = true;
     document.addEventListener('input',  schedule);
     document.addEventListener('change', schedule);
-    loadHiveApi().then(loadTrendingTags).then(() => { if (active) schedule(); }).catch(() => {});
+    // Restore a remembered keyword BEFORE the first analysis is scheduled. Doing it after
+    // would let auto-detection claim kwSource first and overwrite the author's choice,
+    // which is the bug this is meant to fix rather than a new race to win.
+    restoreKeyword().finally(() => {
+      loadHiveApi().then(loadTrendingTags).then(() => { if (active) schedule(); }).catch(() => {});
+    });
   };
 
   let mountCount = 0;

@@ -260,7 +260,11 @@ describe('the two engines must not drift', () => {
                         // explicitSummary in compose.ts alone left all 31 parity tests
                         // green while the two engines disagreed by 10 GEO points.
                         'explicitSummary', 'firstPara', 'hookScore01',
-                        'faqMark', 'defs', 'startPron']) {
+                        'faqMark', 'defs', 'startPron',
+                        // Decides whether a keyword scores 35 or 0. If the panel and the
+                        // judge disagreed on it, the panel would promise points the
+                        // contest refuses — which is the bug it was added to fix.
+                        'isStopwordKeyword']) {
       expect(grab(ts, name), `${name} differs between the two engines`).toBe(grab(mjs, name));
     }
     // `specificity` is deliberately NOT pinned: the two differ by a local variable name

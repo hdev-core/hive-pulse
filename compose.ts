@@ -796,7 +796,12 @@ const analyzeGeo = (content: string, intentType: IntentType): GeoResult => {
 
   // Hook / summary near the top
   const head = content.slice(0, 700);
-  const explicitSummary = /\b(tl;?dr|in summary|in short|summary:|key takeaway|overview)\b/i.test(head);
+  // The `summary:` branch used to sit inside the same trailing \b as the others, which made
+  // it unmatchable: \b after a colon needs a word character next, and a colon is always
+  // followed by a space or markdown. So "Summary: ..." and "**Summary:** ..." both missed,
+  // and our own house opener cost every contest post 10 GEO points for three rounds. Split
+  // out so the colon ends the match instead of being asked to begin a word boundary.
+  const explicitSummary = /\b(?:tl;?dr|in summary|in short|key takeaway|overview)\b|\bsummary\s*:/i.test(head);
   const firstPara = content.split(/\n{2,}/).map(p => stripMd(p).trim()).find(p => p.length > 30) || '';
   const fpWords = firstPara.split(/\s+/).filter(Boolean).length;
   // 8-60 words used to take full marks, which is almost any paragraph anyone writes.

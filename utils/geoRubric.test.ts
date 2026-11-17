@@ -251,9 +251,21 @@ describe('the two engines must not drift', () => {
       return norm(src.slice(a, end));
     };
     for (const name of ['NAMED_ENTITY', 'countNames', 'TITLE_SUFFIX',
-                        'Q_THROUGH_BRACKETS', 'bareTitle', 'isQuestionTitle']) {
+                        'Q_THROUGH_BRACKETS', 'bareTitle', 'isQuestionTitle',
+                        // These six live INSIDE analyzeGeo, and nothing was comparing them.
+                        // The threshold test above extracts only numeric `>= x ? y` pairs,
+                        // and the module-scope list above stops at the function boundary —
+                        // so every regex and string test inside the GEO rubric had no sync
+                        // protection at all. Demonstrated, not assumed: reverting
+                        // explicitSummary in compose.ts alone left all 31 parity tests
+                        // green while the two engines disagreed by 10 GEO points.
+                        'explicitSummary', 'firstPara', 'hookScore01',
+                        'faqMark', 'defs', 'startPron']) {
       expect(grab(ts, name), `${name} differs between the two engines`).toBe(grab(mjs, name));
     }
+    // `specificity` is deliberately NOT pinned: the two differ by a local variable name
+    // (pNums vs nums) and are otherwise identical, so pinning the text would fail on two
+    // engines that agree. Its numeric bands are covered by the threshold test above.
   });
 
   // The readability block is pinned WHOLE, between sentinel comments, rather than

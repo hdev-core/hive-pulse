@@ -1,7 +1,7 @@
 # HivePulse SEO Contest - Week 16 Results + Week 17 X Thread
 
 Anchor tweet: https://x.com/HdevCore/status/2122709848081285353
-Hive post   : WEEK17_HIVE_POST_URL_HERE
+Hive post   : https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-16-results-week-17-open
 
 Fill both URLs in below once the post and the anchor tweet are live. Post tweets 2-5 as
 replies to the anchor tweet. **The anchor tweet is the one entrants quote for the 50 HIVE
@@ -82,7 +82,7 @@ Week 17 is open. 300 HIVE at five entrants, 600 at twenty — the pool follows t
 Reading Ease is measured properly from today: line breaks in your editor no longer count as sentences.
 
 Closes 24 Nov, 12:00 UTC. Tag #hivepulse 👇
-WEEK17_HIVE_POST_URL_HERE
+https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-16-results-week-17-open
 
 #Hive #SEO
 ```
@@ -114,5 +114,5 @@ Three entries finished on an identical **perfect 200/200** — @ahmedabbaci, @nu
 
 Nobody has claimed a referral for four rounds running. That's 50 HIVE sitting there every week.
 
-👉 WEEK17_HIVE_POST_URL_HERE
+👉 https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-16-results-week-17-open
 ```

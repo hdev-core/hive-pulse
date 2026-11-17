@@ -16,31 +16,37 @@
 **It is close, not hopeless.** Five percent is a handful of mid-sized stakeholders, or one
 whale, or a few dozen ordinary accounts. It is not a rounding error either.
 
-## Waiting for week 18 is the wrong call, and here is why
+## DECIDED: week 18 only, and only if the check says so
 
-Week 17 closes **24 November**. Week 18 would therefore run 24 Nov → 1 Dec, and its
-announcement publishes on the 24th. **The proposal starts paying on 1 December** — the same
-day week 18 closes. That gives a week-18 ask seven days of runway, and it spends them
-against a proposal that is already below the line.
+I argued for asking immediately as well, on the grounds that week 17 was live with fresh
+traffic and the proposal starts paying on 1 December. **@hdev decided on 17 Nov not to post
+anything this week** — no rush — and to carry the ask in the week 18 post instead, *if it is
+still needed then*.
 
-Meanwhile the week 17 post went live today and has its largest audience in the next 48
-hours, and the X thread is already out.
+So this file is now one thing: a prepared section for the week 18 post, gated on a live
+check. The week 17 comment and reply-tweet drafts below are kept only because the wording
+was worked out and may be reused; **they are not to be posted.**
 
-**So: ask now, and structure it into week 18.** Not one or the other.
+### The gate
 
-### Do this week (no new post required)
+Week 18's announcement publishes on **24 November** and the proposal starts on **1 December**.
+Before writing that post, run:
 
-1. **A comment from @hdev on the live week 17 post.** Normal practice, visible to everyone
-   already reading, and costs nothing. Draft below.
-2. **One reply tweet** on the existing thread. The thread is about the contest paying out;
-   the reply says where that money comes from.
-3. **The Discord announcement** has already gone out — a short follow-up message in the same
-   channel is cheaper than editing it.
+```
+node scripts/check-proposal.mjs
+```
 
-### Then in the week 18 post (published 24 Nov)
+and follow what it says:
 
-Give it a real section, not a footer link. By then the proposal is a week from starting and
-the ask is concrete rather than abstract.
+| Check says | What goes in the post |
+|---|---|
+| **BELOW the line** | The "not funded" section — the proposal needs votes, said plainly |
+| **ABOVE the line** | The "keep it there" section — shorter, no alarm, still links it |
+| Crossed and comfortable | A single sentence and the link is enough; do not manufacture urgency |
+
+**Do not copy the 5.0% figure out of this file.** It was true on 17 Nov and will not be true
+on the 24th. Quoting a stale gap, in either direction, is the exact failure this project
+keeps correcting in its own scoring.
 
 ## The honest framing, and it is already true
 
@@ -72,6 +78,51 @@ These are not optional and they are the difference between an ask and a bribe.
 5. **Link the proposal post, not just the vote button**, so people can read what they are
    funding and disagree with it.
 
+## Draft — section for week 18 if the proposal is ABOVE the line
+
+Shorter, no alarm, and it still tells people where the money comes from. Use this one if
+`check-proposal.mjs` reports above the line.
+
+```markdown
+### Where the prize money comes from
+
+None of this prize money is ours. It comes from the Hive DHF, through our team proposal, which sets aside 18% of its budget for outreach, socials and contest payouts - this contest among them.
+
+That proposal is currently above the return proposal, which means it is funded, and it is funded because people voted for it. Thank you - genuinely, it is the reason there is a pool to win.
+
+If you have not read it, it is worth knowing what you are paying for:
+
+👉 **https://peakd.com/@hdev/hive-dev-proposal-3**
+
+As always, this is separate from the contest. Your vote does not change your score, your placing or your prize - the judge is a script that re-reads your post from the blockchain and has no idea who voted for anything.
+```
+
+---
+
+## Draft — section for week 18 if the proposal is BELOW the line
+
+Place it after the results and before "Week 18 is open", so it sits in the body rather than
+looking like a footer.
+
+```markdown
+### Where the prize money actually comes from
+
+This contest has paid out thousands of HIVE this year and none of it came out of our pockets. It comes from the Hive DHF, through our team proposal, which sets aside 18% of its budget for outreach, socials and contest payouts.
+
+**That proposal is currently below the return proposal**, which in practice means unfunded. It began on 1 December. If it stays under the line the contest shrinks or stops, and so does the work around it - the For You feed that PeakD and HivePulse both serve, the block explorer, the public API nodes other apps run on, and HivePulse itself.
+
+A proposal vote costs nothing. It does not spend your HP, lock it, or touch your curation rewards, and you can withdraw it at any moment. Read it and judge it on its own merits:
+
+👉 **https://peakd.com/@hdev/hive-dev-proposal-3**
+
+**This is separate from the contest and stays separate.** Your vote does not change your score, your placing or your prize - the judge is a script that re-reads your post from the blockchain and has no idea who voted for anything. We are telling you where the money comes from because you are entitled to know.
+```
+
+## NOT FOR POSTING — kept for wording only
+
+@hdev decided against posting these. They are left here because the phrasing may be reused
+in the week 18 section, not because they are pending.
+
 ## Draft — comment on the live week 17 post
 
 ```text
@@ -99,25 +150,6 @@ Not us. The Hive DHF funds it, through our team proposal — which is currently 
 A proposal vote costs nothing and is reversible.
 
 https://peakd.com/@hdev/hive-dev-proposal-3
-```
-
-## Draft — section for the week 18 post
-
-Place it after the results and before "Week 18 is open", so it sits in the body rather than
-looking like a footer.
-
-```markdown
-### Where the prize money actually comes from
-
-This contest has paid out thousands of HIVE this year and none of it came out of our pockets. It comes from the Hive DHF, through our team proposal, which sets aside 18% of its budget for outreach, socials and contest payouts.
-
-**That proposal is currently below the return proposal**, which in practice means unfunded. It began on 1 December. If it stays under the line the contest shrinks or stops, and so does the work around it - the For You feed that PeakD and HivePulse both serve, the block explorer, the public API nodes other apps run on, and HivePulse itself.
-
-A proposal vote costs nothing. It does not spend your HP, lock it, or touch your curation rewards, and you can withdraw it at any moment. Read it and judge it on its own merits:
-
-👉 **https://peakd.com/@hdev/hive-dev-proposal-3**
-
-**This is separate from the contest and stays separate.** Your vote does not change your score, your placing or your prize - the judge is a script that re-reads your post from the blockchain and has no idea who voted for anything. We are telling you where the money comes from because you are entitled to know.
 ```
 
 ## Check before each publication

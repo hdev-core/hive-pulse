@@ -24,6 +24,18 @@ The weekly SEO contest is judged with `scripts/judge-contest.mjs`. Before runnin
 3. **Set `CARRIED_FORWARD`** to the pool a previous round carried in, or 0 on a normal round.
 4. Run `node scripts/judge-contest.mjs entries-weekN.txt` from the repository root.
 5. Review `contest-results.csv`, then archive it as `contest-results-weekN.csv` before the next round.
+6. **Run `node scripts/check-proposal.mjs` before writing the announcement post**, and carry
+   the DHF ask if it is still needed — see below.
+
+**The weekly post carries the DHF proposal ask, conditionally.** The contest prize money
+comes from Hdev DHF proposal #391, whose budget sets aside 18% for "outreach and growth
+(socials, marketing and contest payouts)". Entrants are entitled to know that, so from week
+18 the announcement says so. `scripts/check-proposal.mjs` reports whether the proposal is
+above or below the return proposal, and `enhancements/week18-proposal-plan.md` holds a
+prepared section for each case plus the hard rules for how it is asked — chiefly that a
+vote is never a condition of entry and never touches a score. **Never quote a gap figure
+from the plan file; it moves daily, and a stale number is wrong in whichever direction it
+has moved.**
 
 **Step 3 nearly cost week 16 half its pool.** `withRollover` shipped in `lib/rank.mjs` for
 week 15, was unit-tested on the exact week 16 numbers, and had week 16 named in its own

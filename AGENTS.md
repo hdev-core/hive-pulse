@@ -80,17 +80,21 @@ before it.
 | week 17 | Reading ease counts BLOCKS, not newlines: a wrap inside a paragraph is no longer a sentence end, and neither is a line carrying no words (a horizontal rule in any spelling, an image on its own line, a bare URL, a table separator row). Fenced code is not measured as prose at all. | ease falls on 96 of 99 posts and rises on none, mean 4.16 and up to 16 points; 29 posts cross an SEO readability band; the top band (ease >= 60) goes from 79 of 99 to 51; the tiebreak reorders. |
 | 1.16.0 (week 13) | GEO: positional name counting, three-shape question-title test. | week 12 re-scored would move @nabbas0786 100 -> 71 and swap the podium. Do not. |
 
-**Week 17 opens 17 Nov 2026 12:00 UTC, which is also the moment week 16 CLOSES — and week
-16 is judged after that.** So "effective from week 17" is not a date, it is an ordering:
-week 16 must be judged, published and archived from `develop`, and this change may only
-reach `develop` once `contest-results-week16.csv` exists. **Not from the `v1.17.0` tag** —
-an earlier version of this file said the tag, which is wrong: the tag predates the judging
-window roll-forward and would mark every week-16 entry out of window, voiding the round.
-The tag is the reproducibility anchor for the submitted 1.17.0 package, and the fallback if
-the old engine is ever needed again. The judge imports the engine
-from the working tree, so merging first would silently re-score a round whose entrants were
-told, in `enhancements/week16-post-body.md`, that reading ease is the number HivePulse shows
-them.
+**This ordering is now SATISFIED — kept as the record of why it mattered.** Week 17 opened
+17 Nov 2026 12:00 UTC, the same moment week 16 closed, and week 16 was judged after that:
+judged from `develop` and archived as `contest-results-week16.csv` on 17 Nov, and only then
+was this change merged. So "effective from week 17" was never a date, it was an ordering.
+
+The judge imports the scoring engine from the working tree, so merging first would have
+silently re-scored a round whose entrants were told, in `enhancements/week16-post-body.md`,
+that reading ease is the number HivePulse shows them. It was also **not** judged from the
+`v1.17.0` tag — an earlier version of this file said the tag, which was wrong: the tag
+predates the judging-window roll-forward and would have marked every week-16 entry out of
+window, voiding the round. The tag remains the reproducibility anchor for the submitted
+1.17.0 package and the fallback if the old engine is ever needed again.
+
+**Apply the same ordering to every future rubric change:** judge and archive the open round
+first, merge second.
 
 Weeks 1-16 were judged with every newline counting as a sentence end, which is why their
 archived ease figures sit higher than the current engine produces. That is not an error in

@@ -19,7 +19,7 @@
 </head>
 <body>
 <main class="wrap">
-  <div class="row top"><div><h1>HivePulse Contest Post Composer</h1><p class="sub">Prepare and publish the Week 10 announcement with Hive Keychain.</p></div><span id="kc" class="pill">Checking Keychain...</span></div>
+  <div class="row top"><div><h1>HivePulse Contest Post Composer</h1><p class="sub">Prepare and publish the weekly announcement with Hive Keychain. The round comes from the PRESETS block.</p></div><span id="kc" class="pill">Checking Keychain...</span></div>
   <div class="warn">Nothing is broadcast until you press Publish and confirm the complete operation in Keychain. Serve this page over HTTP; Keychain usually does not inject into <code>file://</code> pages.</div>
   <section class="panel">
     <label>Posting account<input id="account" value="hdev" autocomplete="off"></label>
@@ -57,9 +57,21 @@ const $ = id => document.getElementById(id);
    ══════════════════════════════════════════════════════════════════════════════ */
 // Keep this in step with package.json. It was pinned at 1.14.0 for three releases and
 // mislabelled every post published in that time.
-const APP_VERSION = 'hivepulse/1.16.0';
+const APP_VERSION = 'hivepulse/1.18.0';
 
 const PRESETS = {
+  // Publishing week 16's results and opening week 17. The first round the five-entrant
+  // threshold actually paid out, so the title leads on that rather than on the new pool -
+  // week 17 is 300 at five entrants and a headline number here would be read as the prize.
+  week17: {
+    title:       'HivePulse SEO Contest: Why Week 16 Paid Out 600 HIVE',
+    permlink:    'hivepulse-seo-contest-week-16-results-week-17-open',
+    community:   'hive-177727',
+    tags:        'hivepulse seo contest hive writing',
+    description: 'Week 16 paid 600 HIVE to three writers tied on a perfect 200/200. The results, the ruling we made, the bug we found, and how Reading Ease changes now.',
+    draft:       '../enhancements/week17-post-body.md',
+  },
+
   // Publishing week 15's results and opening week 16. The pool rolled over.
   week16: {
     title:       'HivePulse SEO Contest: Week 16 Is 600 HIVE, Because Nobody Was Paid Last Week',
@@ -123,7 +135,7 @@ const PRESETS = {
 };
 
 // ⬇ THE ONLY LINE TO CHANGE between rounds.
-const ROUND = PRESETS.week16;
+const ROUND = PRESETS.week17;
 
 const DRAFT_URL = ROUND.draft;
 const RPC = 'https://api.hive.blog';
@@ -136,7 +148,10 @@ async function loadDraft(){
     const response = await fetch(DRAFT_URL, {cache:'no-store'});
     if (!response.ok) throw new Error('HTTP '+response.status);
     let draft = await response.text();
-    const bodyStart = draft.indexOf('![HivePulse SEO Contest Week 10 cover:');
+    // Match any round's cover line, not week 10's. A hardcoded week number here silently
+    // stopped matching after week 10, so every later round fell through to the untrimmed
+    // file - harmless only because these drafts happen to start at the image.
+    const bodyStart = draft.indexOf('![HivePulse SEO Contest');
     if (bodyStart >= 0) draft = draft.slice(bodyStart);
     draft = draft.trim();
     $('body').value = draft;

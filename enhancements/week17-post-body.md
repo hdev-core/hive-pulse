@@ -1,4 +1,4 @@
-![HivePulse SEO Contest Week 17 cover: 600 HIVE paid out in week 16 to three writers who tied on a perfect 200/200, and week 17 is open with 300 HIVE at five entrants rising to 600 at twenty](COVER_IMAGE_URL_HERE)
+![HivePulse SEO Contest cover: 600 HIVE, the biggest pool this contest has ever had, unlocked by five entrants, with a 25 HIVE referral bonus paid to both people and 50 HIVE for the most engaged quote-retweet on X](https://usermedia.actifit.io/MWKU05P5X4JUQY3PE6QT1T9LNRK3CS)
 
 **Summary:** Five writers entered week 16, three tied on a perfect 200/200, and **600 HIVE paid out at 200 each**. Below: the ruling we made, a bug that would have paid you half, and how Reading Ease changes today.
 

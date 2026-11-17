@@ -1,28 +1,31 @@
-# Contest week 16 — IN PROGRESS. Round closes 17 November 2026 12:00 UTC.
+# Contest week 16 — FINAL FIELD. Round closed 17 November 2026 12:00 UTC.
 #
-# Collected with scripts/collect-entries.mjs from the thread on
+# Collected with scripts/collect-entries.mjs from
 # @hdev/hivepulse-seo-contest-week-15-results-week-16-open
-# This is a SNAPSHOT, not the final field — re-run the collector immediately before
-# judging. Five qualifying entries unlock the 600 HIVE pool (300 tier + 300 rolled
-# over from week 15). Below five, nothing is paid and the pool holds at 600 for
-# week 17; the rollover is capped at one round, so it does not climb to 900.
+# 5 qualifying entrants — the bar is met, so the 600 HIVE pool pays
+# (300 base tier + 300 rolled over from week 15), split 300 / 200 / 100.
 #
-# As of 12 November: 3 entries, 2 short of the bar. No referrals declared.
-# @nabbas0786 entered since the 11 Nov snapshot.
+# RULING ON @ahmedabbaci, decided by @hdev on 17 Nov 2026 and to be stated
+# openly in the results post:
+#   The post he LINKED (never-do-business-with-family, 13 Nov) fails twice —
+#   it carries no #hivepulse tag and scores SEO 60 against a published bar of
+#   70. But rule 6 as published reads "You may enter more than one post. Your
+#   highest-scoring tagged post counts." His 7-days-time-table post is a root
+#   post, inside the window, tagged #hivepulse, and scores 200/200. Rule 6 is
+#   applied, so that post is his entry and the field is 5 rather than 4.
+#   The strict reading would have put the field at 4, paid nothing for the
+#   second round running, and penalised four entrants who did everything right
+#   for someone else's formatting error.
+#   Rules 4 and 6 contradict each other on this and must be reconciled for
+#   week 17 — this is the second round running where a tagged, in-window,
+#   qualifying post nearly went uncounted (@ekads, week 15).
 #
-# Commented in the thread but NOT entered — no post link, so not entries yet:
-#   @ahmedabbaci  — ** HAS A QUALIFYING POST BUT HAS NOT ENTERED. ** He believes he has.
-#                   @ahmedabbaci/7-days-time-table-the-biggest-proven-delusion-of-life-
-#                   published 2026-11-10T15:21:09, in window, tagged #hivepulse, and it
-#                   scores a perfect 200/200. His only comment on the announcement (15:33,
-#                   12 minutes later) carries no post link, and the rule requires the link
-#                   in the entry comment. Same miss as @ekads in week 15. He told hdev on
-#                   12 Nov that the field is "4 including me" — it is 3, and he is not in
-#                   it. If he comments the link before close, the field is 4.
-#   @pakx
-#   @kryptonita
-#   @ekads        — posted a quote-retweet in week 15 with no entry alongside it;
-#                   was the missing fifth entrant that round.
+# No referrals declared, so none are paid (rule 7 requires naming them in the
+# entry comment). @fluer is a genuinely new entrant — not present in earlier
+# rounds, account 186 days old — and nobody claimed the referral.
+# X prize: @nabbas0786 submitted https://x.com/nabbas_0786/status/2120877144683466794
+@ahmedabbaci/7-days-time-table-the-biggest-proven-delusion-of-life-
+@fluer/the-no1-best-way-to-spend-weekends-crochet-for-my-mother
 @itx.wardah/1-of-the-best-well-spent-dayshad-good-time-with-my-sister
 @nabbas0786/how-does-homeopathy-help-in-daily-life-4-ways-engurdu
 @nursejoe/food-poisoning-7-simple-ways-to-prevent-it-stay-healthy

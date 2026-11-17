@@ -10,7 +10,7 @@ Chrome Extension (Manifest V3) — not a standard web app. The popup and side pa
 - `npm run dev` — Vite dev server (useful for UI work, but Chrome extension APIs require the built extension)
 - `npm run preview` — preview production build locally
 
-- `npm test` — vitest, 188 tests covering the scoring engines, URL helpers, tag scanner, the contest ranking rule, the prize structure and rollover
+- `npm test` — vitest, 204 tests covering the scoring engines, URL helpers, tag scanner, the contest ranking rule, the prize structure and rollover, and that the judge is wired to the prize library
 - `npx tsc --noEmit` — typecheck
 
 No lint or format command. No CI pipeline, so the checks above are run by hand.
@@ -21,14 +21,33 @@ The weekly SEO contest is judged with `scripts/judge-contest.mjs`. Before runnin
 
 1. Put one submitted Hive URL or `@author/permlink` per line in an entries file.
 2. Set `WINDOW_START` and `WINDOW_END` in the script to the contest's published UTC window.
-3. Run `node scripts/judge-contest.mjs entries-weekN.txt` from the repository root.
-4. Review `contest-results.csv`, then archive it as `contest-results-weekN.csv` before the next round.
+3. **Set `CARRIED_FORWARD`** to the pool a previous round carried in, or 0 on a normal round.
+4. Run `node scripts/judge-contest.mjs entries-weekN.txt` from the repository root.
+5. Review `contest-results.csv`, then archive it as `contest-results-weekN.csv` before the next round.
 
-**Week 16 must be judged from `develop`, before PR #18 is merged.** `develop` is the only
-state that has both the rubric week 16 was written under and the correct date window. The
-`v1.17.0` tag is the reproducibility anchor for the submitted 1.17.0 package and the
-fallback if the old engine is ever needed again — it is NOT the thing to judge from, because
-it predates the window roll-forward and would mark every week-16 entry out of window.
+**Step 3 nearly cost week 16 half its pool.** `withRollover` shipped in `lib/rank.mjs` for
+week 15, was unit-tested on the exact week 16 numbers, and had week 16 named in its own
+worked example — and the judge never imported it. Week 16 was announced to entrants at 600
+HIVE and the judge printed 300. This is the SECOND prize rule to ship in the library and
+never reach the judge; the threshold and tie-splitting were the first. A library the
+shipping code does not call proves nothing, so `utils/ranking.test.ts` now reads
+`judge-contest.mjs` itself and fails if it hands a bare tier to `allocatePrizes`.
+The judge also refuses to run when the previous week's archive shows fewer than
+`MIN_ENTRANTS` qualifying rows while `CARRIED_FORWARD` is 0, and it prints the pool
+derivation (`600 = 300 base + 300 carried forward`) so a wrong carry is visible.
+
+**Week 16 was judged from `develop` on 17 Nov 2026 and is archived as
+`contest-results-week16.csv`.** That was the precondition for merging PR #18, and it is
+done, so the readability change may now land and applies from week 17 onward.
+
+Week 16 also set a ruling worth keeping: @ahmedabbaci linked a post carrying no
+`#hivepulse` tag and scoring SEO 60, but had published a tagged, in-window post scoring
+200/200 that he never linked. Rule 6 as published says "You may enter more than one post.
+Your highest-scoring tagged post counts", so the tagged post was counted and the field was
+5 rather than 4 — the difference between paying 600 and paying nothing for a second round
+running. **Rules 4 and 6 contradict each other here and must be reconciled before week 17.**
+This is the second round in a row where a qualifying post nearly went uncounted on a
+submission formality (@ekads, week 15).
 
 Step 2 is now partly enforced rather than merely documented. The script refuses to run when
 `contest-results-weekN.csv` already exists for the week named in the entries filename, and

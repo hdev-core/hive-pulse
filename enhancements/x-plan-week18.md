@@ -1,11 +1,11 @@
 # HivePulse SEO Contest - Week 17 Results + Week 18 X Thread
 
 Anchor tweet: https://x.com/HdevCore/status/2125244065075634221
-Hive post   : WEEK18_HIVE_POST_URL_HERE
+Hive post   : https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-17-results-week-18-open
 
 Post tweet 1 first, fill its URL into both this file and
 `enhancements/week18-post-body.md` (which names it as the tweet to quote for the 50 HIVE
-prize), then post tweets 2-5 as replies to it.
+prize), then post tweets 2-6 as replies to it.
 
 Check lengths with:
 
@@ -22,7 +22,7 @@ X handles are not Hive handles.
 ## Images
 
 - Tweet 1: `enhancements/images/contest-week18-cover.jpg`
-- Tweets 2-5: text only. X shows a thread's first image prominently and repeating it
+- Tweets 2-6: text only. X shows a thread's first image prominently and repeating it
   further down reads as filler.
 
 ## 1/
@@ -77,9 +77,20 @@ Week 18 is open. 300 HIVE at five entrants, 600 at twenty.
 New this week: bring someone in and you BOTH get 25 HIVE, with no account-age limit. A brand new Hive account counts — that is the point.
 
 Closes 1 Dec, 12:00 UTC. Tag #hivepulse 👇
-WEEK18_HIVE_POST_URL_HERE
+https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-17-results-week-18-open
 
 #Hive #SEO
+```
+
+## 6/
+
+```tweet
+Last one, and it is not about the contest.
+
+HivePulse is a small piece of what our team builds on Hive. 434 merged MRs last year: the For You feed PeakD serves, hivescan.info, two public API nodes anyone can use.
+
+Our DHF proposal funds that work 👇
+https://peakd.com/me/proposals/391
 ```
 
 ---
@@ -107,5 +118,9 @@ Here is the thing worth seeing: **every single entry scored GEO 100.** The AI-re
 
 **Week 18 closes 1 December, 12:00 UTC.** 300 HIVE at five entrants rising to 600 at twenty · 25 each way for a referral, no account-age limit · 50 for the best quote-RT.
 
-👉 WEEK18_HIVE_POST_URL_HERE
+👉 https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-17-results-week-18-open
+
+**And one thing that is not about the contest.** HivePulse is a small piece of what our team builds on Hive — 434 merged merge requests last year, the For You feed PeakD serves its readers, hivescan.info, two public HAF API nodes anyone can use. Our DHF proposal is how that work gets paid for, and it is on the ballot now. A vote costs nothing, touches neither your HP nor your curation, and can be withdrawn any time.
+
+🗳️ **Vote proposal 391:** [PeakD](https://peakd.com/me/proposals/391) · [Ecency](https://ecency.com/proposals/391) · [Hive wallet](https://wallet.hive.blog/proposals) · [HiveSigner](https://hivesigner.com/sign/update_proposal_votes?proposal_ids=%5B%22391%22%5D&approve=true)
 ```

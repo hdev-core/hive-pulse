@@ -120,76 +120,38 @@
    if the stated total does not match the sum of the transfers.
    ══════════════════════════════════════════════════════════════════════════════ */
 const ROUND = {
-  label:  'Week 17',
-  window: '17 - 24 November 2026, closed 12:00 UTC',
+  label:  'Week 17 - correction for our release timing',
+  window: 'one-off, 24 November 2026',
   post:   'https://actifit.io/hive-177727/@hdev/hivepulse-seo-contest-week-16-results-week-17-open',
-  // FIVE qualifying entrants, so the threshold is met. Week 16 paid its full pool, so
-  // NOTHING carries forward: the base tier for 5-9 entrants is 300, split 150 / 100 / 50.
+  // NOT a re-score, and nobody gives anything back. The week 17 placings and payouts STAND.
   //
-  // @vaneex, @nabbas0786 and @nursejoe finished on an EXACT 100 and share the three slots
-  // they span: 300 / 3 = 100 each. @fluer and @itx.wardah finished on 99.5.
+  // The week 17 post (live 15:21 UTC, 17 Nov) told entrants, in its rules:
+  //   'Reading Ease is the whole number HivePulse shows you, and from today it is the same
+  //    number your published post receives.'
+  // That was false for anyone writing that day. 1.18.0, which carried the new readability
+  // rule, was committed at 18:21 UTC and approved on AMO at 18:36 UTC; no browser had it
+  // when the post went live, and the post never said an update was needed.
   //
-  // REFERRALS - the first since week 10, and both name @itx.wardah:
-  //   @vaneex  declared 'Referred/Nominated by @itx.wardah' in his entry comment.
-  //   @fluer   declared late, in week 17, for a referral belonging to week 16. Accepted
-  //            because the rule had not been claimed in seven rounds and nobody could
-  //            reasonably have known how strictly we would read it. From week 18 the
-  //            declaration belongs in that round's entry comment.
-  // The published 30-day account-age requirement is WAIVED for @vaneex (9 days old) and
-  // removed from the rules from week 18 - it blocked exactly the new writers the rule
-  // exists to attract. Say so in the results post; a rule changed quietly is not changed.
-  //
-  // @nabbas0786 also takes the separate 50 HIVE X prize, unopposed for the third week.
-  // His 100 + 50 is ONE transfer of 150 because this console refuses duplicate recipients.
-  expectedTotal: 450,
-  memoTag: 'HivePulse SEO Contest week 17',
+  // @itx.wardah published 17:29 UTC and @fluer 19:07 UTC. On the 1.17.0 engine their
+  // panels ran, both scored ease 60 / SEO 100 - exactly what they were shown. The judge
+  // used 1.18.0 and gave them 99.5, off the podium. On the engine they had, the round was a
+  // five-way tie at 100, which pays 60 each. This pays each of them that 60, from us, as a
+  // correction for a promise we published and broke. Labelled as such everywhere.
+  expectedTotal: 120,
+  memoTag: 'HivePulse correction week 17',
 };
 
-// Checked on chain 24 Nov: @hdev had already voted @vaneex, @nabbas0786, @fluer and
-// @itx.wardah. Only @nursejoe is missing, and that post has ~148h of payout window left,
-// so there is no deadline pressure this week.
-//
-// All five are listed anyway. The console detects votes already cast and skips them, so
-// re-listing the four cannot double-vote them, and it means every reblog goes out.
-const CURATION = [
-  { place:'tied 1st', seo:100, geo:100, author:'vaneex',     permlink:'1-best-but-a-hectic-day-tom-and-jerry-are-my-favorite' },
-  { place:'tied 1st', seo:100, geo:100, author:'nabbas0786', permlink:'how-my-11-am-alarms-turn-into-5-more-minutes-trap-eng' },
-  { place:'tied 1st', seo:100, geo:100, author:'nursejoe',   permlink:'why-cleaning-your-ear-the-wrong-way-can-cause-problems-5' },
-  { place:'4th',      seo:99,  geo:100, author:'fluer',      permlink:'my-best-top-3-favourite-chocolate-dessertschocolatelover' },
-  { place:'5th',      seo:99,  geo:100, author:'itx.wardah', permlink:'whats-in-my-plate-today-1-of-the-best-meal-for-sure' },
-];
+// No curation attached to a correction.
+const CURATION = [];
 
 const PAYMENTS = [
-  { to:'vaneex', amount:125,
-    parts:[['Tied 1st - share of slots 1-3', 100], ['Referral - referred by @itx.wardah', 25]],
-    memo:'HivePulse SEO Contest week 17: 125 HIVE - 100 for first place and 25 as a referral bonus. You entered on your third day on Hive and scored a perfect SEO 100 / GEO 100, tied with @nabbas0786 and @nursejoe, so the three of you share the top three slots at 100 each. The 25 is because you named @itx.wardah as the person who brought you - she receives 25 as well. Note that our published rule asked for a 30-day-old account and yours is 9 days old; we have waived that and removed the requirement from week 18, because a rule that turns away brand new Hive writers was working against its own purpose. Congratulations, and welcome.' },
+  { to:'itx.wardah', amount:60,
+    parts:[['Correction - week 17 readability rule shipped after you posted', 60]],
+    memo:'HivePulse: 60 HIVE, a correction - you were right. Our week 17 post said: "Reading Ease is the whole number HivePulse shows you, and from today it is the same number your published post receives." That was not true when you posted. You published at 17:29 UTC on 17 November; the update carrying the new readability rule did not reach any store until 18:36 UTC, and we never told anyone to update. The version you had scored your post ease 60 and SEO 100, exactly as you saw, and you checked it carefully. On that version all five entries tied at 100, which pays 60 each. This is that 60, from us. The placings stand and nobody gives anything back - this corrects our mistake, not your score. Thank you for pushing on it.' },
 
-  { to:'nabbas0786', amount:150,
-    parts:[['Tied 1st - share of slots 1-3', 100], ['X quote-retweet prize - only eligible submission', 50]],
-    memo:'HivePulse SEO Contest week 17: 150 HIVE - 100 for the contest and 50 for the X quote-retweet. A perfect SEO 100 / GEO 100, tied with @vaneex and @nursejoe, so the three of you share the top three slots at 100 each from a 300 pool. The pool is 300 rather than 600 because week 16 paid its full pool and nothing rolled over. The 50 is the X prize: yours was the only eligible quote-retweet for the third week running. Thank you for promoting the round.' },
-
-  { to:'nursejoe', amount:100,
-    parts:[['Tied 1st - share of slots 1-3', 100]],
-    memo:'HivePulse SEO Contest week 17: 100 HIVE. A perfect SEO 100 / GEO 100, tied with @vaneex and @nabbas0786, so the three of you share the top three slots at 100 each. Worth knowing how close this round was: every single entry scored GEO 100, so readability alone separated the field. You, @vaneex and @nabbas0786 landed on reading ease 60; the other two came in at 58 and 57 and that one point was the podium.' },
-
-  // SENT 2026-11-24T14:44:21 WITH AN ERROR IN THE MEMO, left verbatim below because this
-  // file is the record of what actually went on chain and editing it would hide that.
-  //
-  // The memo tells her she "still take[s] the largest payment of the round". She took 50.
-  // @nabbas0786 took 150, @vaneex 125, @nursejoe 100. Hers was the second SMALLEST. The
-  // amount is right and every other payment is right; only the sentence is false, and it
-  // is permanent. The same false line was caught and removed from the week 18 post, the X
-  // thread and the Discord text before any of them published.
-  //
-  // The true version, used everywhere else: she finished fifth, a position that pays
-  // nothing, and was paid anyway because she brought two of the five entrants.
-  { to:'itx.wardah', amount:50,
-    parts:[['Referral - brought @vaneex', 25], ['Referral - brought @fluer', 25]],
-    memo:'HivePulse SEO Contest week 17: 50 HIVE in referral bonuses, for bringing @vaneex and @fluer into this contest. You finished fifth on the board and still take the largest payment of the round, which is the right way round - the hard part of this contest was never the writing. These are the first referrals paid since week 10. Thank you also for the keyword bug report; all three defects are fixed and live in 1.18.0.' },
-
-  { to:'fluer', amount:25,
-    parts:[['Referral - referred by @itx.wardah', 25]],
-    memo:'HivePulse SEO Contest week 17: 25 HIVE referral bonus, for being brought in by @itx.wardah - she receives 25 as well. You declared it this week for a referral that belonged to week 16, and we are accepting it: the rule had gone unclaimed for seven rounds and nobody could reasonably have known how strictly we would read it. From week 18 the declaration belongs in that round entry comment. Your entry this week finished on 99.5, half a point off a three-way tie for first.' },
+  { to:'fluer', amount:60,
+    parts:[['Correction - week 17 readability rule shipped after you posted', 60]],
+    memo:'HivePulse: 60 HIVE, a correction for our mistake. Our week 17 post said: "Reading Ease is the whole number HivePulse shows you, and from today it is the same number your published post receives." That was not true on the day you posted. You published at 19:07 UTC on 17 November, before the update carrying the new readability rule could have reached your browser, and we never told anyone to update. On the version you had, your post scored ease 60 and SEO 100. On that version all five entries tied at 100, which pays 60 each. This is that 60, from us. The placings stand and nobody gives anything back - this corrects our mistake, not your score.' },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════════════ */

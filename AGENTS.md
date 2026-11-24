@@ -110,6 +110,30 @@ window, voiding the round. The tag remains the reproducibility anchor for the su
 **Apply the same ordering to every future rubric change:** judge and archive the open round
 first, merge second.
 
+**And a scoring change applies only from the first round that OPENS AFTER the new version
+is live in both stores — never from the round it ships in.** Week 17 broke this, and it cost
+two entrants the podium. The week 17 post went live 15:21 UTC on 17 Nov and told entrants
+"Reading Ease is the whole number HivePulse shows you, and from today it is the same number
+your published post receives." 1.18.0 was committed at 18:21 and approved on AMO at 18:36,
+so no browser had it when that sentence was published, and the post never said an update was
+needed. @itx.wardah posted at 17:29 and @fluer at 19:07; both panels ran 1.17.0 and showed
+SEO 100, which is what the post had promised they would get. The judge used 1.18.0 and gave
+them 99.5. On the engine they had, the round was a five-way tie at 60 each. They were paid
+that 60 each as a discretionary correction, and the placings stood.
+
+In practice:
+
+1. Ship the release and confirm it is live in BOTH stores before the round that uses the
+   new rubric opens: AMO's `current_version` at
+   `https://addons.mozilla.org/api/v5/addons/addon/hivepulse/`, and the "Version" field on
+   `https://chromewebstore.google.com/detail/hivepulse/hakcpohpejoejmlhiphpkjobpjeckdlg`.
+2. The announcement for that round must say the update is required, which version, and that
+   browsers update on their own schedule. "From today" is a promise about software; do not
+   make it about software that is not yet installable.
+3. Never write that the panel number and the judged number are the same unless the round's
+   whole window falls after the release reached both stores. Entrants read that literally,
+   and they are right to.
+
 Weeks 1-16 were judged with every newline counting as a sentence end, which is why their
 archived ease figures sit higher than the current engine produces. That is not an error in
 the archive. Like-for-like on the same posts, the readability rule alone changes the paid

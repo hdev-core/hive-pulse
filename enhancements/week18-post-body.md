@@ -61,11 +61,9 @@ She reported that her focus keyword changed when she reloaded the editor, and th
 
 **We paid @itx.wardah 100 HIVE for the report.** To be exact: a bounty for finding the bugs, not a change to her week 16 placing, which stands. Re-scoring a paid round would be unfair to the four people judged alongside her — the mistake that cost @nursejoe third place in week 14 and we are not repeating it. We would rather pay openly for a good bug report than fix it quietly and say nothing.
 
-### One thing which is not a bug, and one piece of advice to ignore
+### One thing which is not a bug
 
 **The judge cannot see the keyword you chose.** Only your post reaches the blockchain — your editor settings do not. So the judge picks the best keyword derivable from your title, and will never pick a stopword for you. **Panel and result can therefore differ slightly even when everything works.**
-
-And a correction, kindly meant. @ahmedabbaci told @vaneex in the thread to check the extension version before every post, because an older version would "degrade" the entry. **Judging does not work that way.** Every entry is re-scored from the blockchain, with the same engine, at the same moment, after the round closes. Whichever version of HivePulse you had installed changes what the panel *showed you* while writing, and has no effect whatsoever on your result. You are all scored identically. Nobody needs to watch our version numbers.
 
 ## Week 18 is open - 300 HIVE, rising to 600
 

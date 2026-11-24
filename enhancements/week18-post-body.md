@@ -1,4 +1,4 @@
-![HivePulse SEO Contest Week 18 cover: week 17 paid 300 HIVE to three writers tied on a perfect 200/200, referrals were paid for the first time since week 10, and week 18 is open with 300 HIVE at five entrants rising to 600 at twenty](COVER_IMAGE_URL_HERE)
+![HivePulse SEO Contest Week 18 cover: half a point decided week 17 because every entry scored GEO 100, so reading ease alone separated the field; 450 HIVE paid with three writers tied on a perfect 200/200, and week 18 is open with 300 HIVE at five entrants rising to 600 at twenty](https://usermedia.actifit.io/MWUTXETKGUH1OYQEIFB2K0D7XG8LE7)
 
 **Summary:** Five writers entered week 17 and three tied on a perfect 200/200, so **300 HIVE paid out at 100 each**. Referrals were paid for the first time since week 10, we dropped the rule that nearly blocked one of them, and we fixed three bugs one of you found.
 

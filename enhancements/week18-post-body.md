@@ -101,17 +101,23 @@ Quote-retweet the Week 18 announcement tweet with your own words about your Hive
 
 @nabbas0786 takes it again this round, unopposed for the third week running. The prize is 50 HIVE for one quote-retweet, and four of you are leaving that on the table every week.
 
-### Where the prize money comes from
+### Where the prize money comes from right now: us
 
-None of this is ours. The money comes from the Hive DHF, through our team proposal, which sets aside 18% of its budget for outreach, socials and contest payouts - this contest among them.
+We would rather say this plainly than let anyone assume otherwise.
 
-Our proposal currently sits **above** the return proposal, which means the proposal is funded, and funded because people voted for it. Thank you - genuinely, it is the reason there is a pool to win at all. The margin is not large and it starts paying on 1 December, so keep an eye on the margin rather than assuming.
+**Our DHF proposal expired on 1 November, and the next one does not start until 1 December.** So for the past month this contest has been funded entirely out of our own pocket. **1,250 HIVE since the proposal lapsed** - last week's 600, this week's 450, and the bug bounty in between. The Hive DHF has paid us nothing since 31 October.
 
-If you have not read it, it is worth knowing what you are paying for:
+None of that is a complaint, and none of it is an appeal for sympathy. We kept the contest running at full size through a month with no funding, because shrinking it would have been the easy choice and the wrong one.
+
+**But the proposal that covers it is on the ballot now, and it starts paying on 1 December.** The proposal sits a little above the return proposal today, so it would be funded if nothing moves - and the margin is small enough to move. Among other things the budget sets aside 18% for exactly this: outreach, socials and contest payouts.
+
+A proposal vote costs you nothing. A vote does not spend your HP, lock it, or touch your curation rewards, and you can withdraw one at any moment. Most people who never vote on proposals assume otherwise, which is part of why proposals sit below the line.
+
+Read the proposal and judge it on its own merits - public is the whole point:
 
 👉 **https://peakd.com/@hdev/hive-dev-proposal-3**
 
-As always, this is separate from the contest. Your vote does not change your score, your placing or your prize - the judge is a script that re-reads your post from the blockchain and has no idea who voted for anything.
+**This is separate from the contest and stays separate.** Your vote does not change your score, your placing or your prize. The judge is a script that re-reads your post from the blockchain and has no idea who voted for anything. We are telling you where the money comes from because you are entitled to know, not to buy anything.
 
 ### What this is, in case you are new here
 

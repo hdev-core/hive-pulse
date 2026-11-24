@@ -48,19 +48,35 @@ and follow what it says:
 on the 24th. Quoting a stale gap, in either direction, is the exact failure this project
 keeps correcting in its own scoring.
 
-## The honest framing, and it is already true
+## The honest framing — CORRECTED 24 Nov, the earlier one was false
 
-The proposal's own budget table says:
+This file previously said:
 
-> | Outreach and growth (socials, marketing and contest payouts) | 18% | 51 HBD/day |
+> **The 600 HIVE paid out last week came from there.** The contest is not free, it is
+> funded, and this is the thing that funds it.
 
-**The 600 HIVE paid out last week came from there.** That is the whole argument and it needs
-no spin: the contest is not free, it is funded, and this is the thing that funds it. The
-proposal also lists "keep running its weekly contests" under upcoming work.
+**That was wrong, and it nearly went out in the week 18 post.** Read off chain on 24 Nov:
 
-Entrants deserve to know where their prize money comes from. Telling them is transparency,
-not salesmanship.
+| | |
+|---|---|
+| Proposal #360, the funded one | **expired 1 November 2026** |
+| Last DHF payment to `@hdev.fund` | **31 October 2026** |
+| Proposal #391 | status **`inactive`**, starts **1 December**, has paid **nothing** |
+| Paid by @hdev from its own funds since 1 Nov | **1,250 HIVE** |
 
+So the DHF is funding none of this. It has funded none of it since 31 October, and the
+contest ran at full size through that month anyway — week 16's 600, week 17's 450 and a
+100 HIVE bug bounty in between.
+
+**The true position is a stronger ask than the false one.** "The DHF pays for this" invites
+a shrug. "We have paid 1,250 HIVE ourselves since the proposal lapsed, and the one that
+covers it starts on 1 December" is a reason to go and vote.
+
+**Where the error came from, so it is not repeated:** the proposal post's budget table sets
+aside 18% for "outreach and growth (socials, marketing and contest payouts)", and that was
+read as a present-tense fact. It describes what #391 WILL fund once it starts. Vote standing
+and payment status are different questions, and `scripts/check-proposal.mjs` now answers
+both — it prints "NOT PAYING ANYTHING YET" for a proposal that has not started.
 ## Hard rules for how this is asked
 
 These are not optional and they are the difference between an ask and a bribe.

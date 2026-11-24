@@ -61,9 +61,29 @@ const main = async () => {
               `   (${(Math.abs(gap) / Number(ret.total_votes) * 100).toFixed(1)}%)`);
   console.log(`  rank             ${String(rank).padStart(12)} of ${proposals.length} votable\n`);
 
+  // "Above the line" and "being paid" are DIFFERENT THINGS, and conflating them put a false
+  // sentence into a draft post: it told entrants the DHF was funding their prizes while
+  // proposal #391 was still `inactive` with a December start, the previous proposal had
+  // expired on 1 November, and @hdev had paid 1,250 HIVE out of pocket in between. Vote
+  // standing says what WOULD happen; the start date says whether anything IS happening.
+  const started = Date.parse(me.start_date + 'Z') <= Date.now();
+  const ended = Date.parse(me.end_date + 'Z') <= Date.now();
+  const paying = started && !ended && above;
+
   console.log(above
-    ? '  >>> ABOVE THE LINE — currently funded. Say "keep it above the line", not "it is unfunded".'
-    : '  >>> BELOW THE LINE — currently NOT funded.');
+    ? '  >>> ABOVE THE LINE on votes — it would be funded.'
+    : '  >>> BELOW THE LINE on votes — it would NOT be funded.');
+
+  if (!started) {
+    console.log(`  >>> NOT PAYING ANYTHING YET — status "${me.status}", starts ${me.start_date.slice(0, 10)}.`);
+    console.log('      Do NOT write that the DHF funds the contest. It does not, yet.');
+  } else if (ended) {
+    console.log(`  >>> EXPIRED ${me.end_date.slice(0, 10)} — paying nothing.`);
+  } else if (paying) {
+    console.log('  >>> LIVE AND ABOVE THE LINE — actually receiving payments.');
+  } else {
+    console.log('  >>> LIVE BUT BELOW THE LINE — receiving nothing while it stays there.');
+  }
   console.log('      Re-run this before quoting the figure anywhere; it moves daily.\n');
 };
 

@@ -129,3 +129,5 @@ Read it and judge it on the work - public is the whole point:
 **HivePulse is a free browser extension** that scores a Hive post for Google and for AI assistants before you publish it. No paywall, no token, nothing to buy.
 
 **We run this contest for two reasons, both true.** Hive's writing is close to invisible to Google and to ChatGPT, and we want more of it optimised. And every round tells us where our own scoring is wrong. Week 17 told us three things: our analyzer was accepting a focus keyword the contest would never accept, our referral rule was built to exclude the newest writers, and our own tool for reading your comments missed both referral claims and reported there were none. We found all three, fixed all three, and are telling you about all three - because a scoring tool that hides its own mistakes is not worth installing.
+
+Subscribe to [Hdev Contests](https://peakd.com/c/hive-177727/created) so each round reaches you. Questions and discussion are welcome in [Discord](https://discord.gg/wnpR8Rafcf), and HivePulse is also on [X](https://x.com/HdevCore).

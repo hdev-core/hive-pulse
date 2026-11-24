@@ -101,23 +101,28 @@ Quote-retweet the Week 18 announcement tweet with your own words about your Hive
 
 @nabbas0786 takes it again this round, unopposed for the third week running. The prize is 50 HIVE for one quote-retweet, and four of you are leaving that on the table every week.
 
-### Where the prize money comes from right now: us
+### If this contest has been useful to you, here is what would help us most
 
-We would rather say this plainly than let anyone assume otherwise.
+HivePulse is one small piece of what our team builds on Hive. Over the last year we merged **434 merge requests across ten Hive repositories**, almost none of it visible from a contest post:
 
-**Our DHF proposal expired on 1 November, and the next one does not start until 1 December.** So for the past month this contest has been funded entirely out of our own pocket. **1,250 HIVE since the proposal lapsed** - last week's 600, this week's 450, and the bug bounty in between. The Hive DHF has paid us nothing since 31 October.
+- **haf_fyp**, a personalised For You feed, now live and serving its ranking to **PeakD, Waggle and HivePulse**, with Denser planning to follow
+- **[hivescan.info](https://hivescan.info)**, the block explorer, rebuilt with a modular dashboard, Keychain and HiveSigner sign-in, and a full analytics section
+- **haf_stats**, a new network-analytics app behind those dashboards - daily active users, stake concentration, Resource Credit footprints per account and per dApp
+- Core backend work in **HAF, Hivemind, Balance Tracker, HiveSense** and the HAF API node tooling other developers build on
+- **Two public HAF API nodes** we run and keep running, free for anyone to use
+- And the apps: **HivePulse**, Waggle, Hive Runner, Actifit, Vylor
 
-None of that is a complaint, and none of it is an appeal for sympathy. We kept the contest running at full size through a month with no funding, because shrinking it would have been the easy choice and the wrong one.
+All of that is public, all of it is free to use, and none of it asks you for a token.
 
-**But the proposal that covers it is on the ballot now, and it starts paying on 1 December.** The proposal sits a little above the return proposal today, so it would be funded if nothing moves - and the margin is small enough to move. Among other things the budget sets aside 18% for exactly this: outreach, socials and contest payouts.
+**Our DHF proposal is how that work gets paid for, and it is on the ballot right now.** If HivePulse has saved you a bad title, or the For You feed has put your post in front of somebody, or you have ever looked something up on hivescan.info, supporting the proposal is the single most useful thing you can do for us.
 
-A proposal vote costs you nothing. A vote does not spend your HP, lock it, or touch your curation rewards, and you can withdraw one at any moment. Most people who never vote on proposals assume otherwise, which is part of why proposals sit below the line.
+A proposal vote costs you nothing. A vote does not spend your HP, lock it, or touch your curation rewards, and you can withdraw one at any moment. Most people who never vote on proposals assume otherwise, which is part of why good proposals sit below the line.
 
-Read the proposal and judge it on its own merits - public is the whole point:
+Read it and judge it on the work - public is the whole point:
 
 👉 **https://peakd.com/@hdev/hive-dev-proposal-3**
 
-**This is separate from the contest and stays separate.** Your vote does not change your score, your placing or your prize. The judge is a script that re-reads your post from the blockchain and has no idea who voted for anything. We are telling you where the money comes from because you are entitled to know, not to buy anything.
+**This is separate from the contest and stays separate.** Your vote does not change your score, your placing or your prize. The judge is a script that re-reads your post from the blockchain and has no idea who voted for anything. We are asking because the work is ours and we think it stands up, not because anything here depends on it.
 
 ### What this is, in case you are new here
 

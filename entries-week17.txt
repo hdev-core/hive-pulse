@@ -1,0 +1,27 @@
+# Contest week 17 — FINAL FIELD. Round closed 24 November 2026 12:00 UTC.
+#
+# Collected with scripts/collect-entries.mjs from
+# @hdev/hivepulse-seo-contest-week-16-results-week-17-open
+#
+# 5 qualifying entrants, so the threshold is met. Week 16 paid its full pool, so
+# NOTHING is carried forward: CARRIED_FORWARD is 0 and a field of 5-9 pays the
+# base 300, split 150 / 100 / 50.
+#
+# All five verified on chain before judging: root posts, inside the window,
+# tagged #hivepulse, and none of them already paid in week 16. That last check
+# matters because week 17's window opens 17 Nov 00:00 while week 16's closed
+# 17 Nov 12:00 — the two overlap by twelve hours. No entry fell in the overlap
+# (the earliest here is 17:29 on the 17th), so nothing is at risk of being
+# awarded twice.
+#
+# No referrals declared, so none are paid.
+#
+# @vaneex is NEW to the contest and the account is only 9 days old. There is no
+# published minimum account age for entering — the 30-day rule applies only to
+# the referred person in a referral claim — so the entry stands. Worth a human
+# originality pass all the same.
+@fluer/my-best-top-3-favourite-chocolate-dessertschocolatelover
+@itx.wardah/whats-in-my-plate-today-1-of-the-best-meal-for-sure
+@nabbas0786/how-my-11-am-alarms-turn-into-5-more-minutes-trap-eng
+@nursejoe/why-cleaning-your-ear-the-wrong-way-can-cause-problems-5
+@vaneex/1-best-but-a-hectic-day-tom-and-jerry-are-my-favorite

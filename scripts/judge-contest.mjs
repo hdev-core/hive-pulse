@@ -33,8 +33,8 @@
 // with week 1, too early to count for week 2. Starting the window on announcement day closes
 // that gap: anyone who reads the post and publishes the same day is in. Cross-check against the
 // previous round's archived CSV so a post can't be awarded twice.
-const WINDOW_START = Date.parse('2026-11-10T00:00:00Z');
-const WINDOW_END   = Date.parse('2026-11-17T12:00:00Z');   // week 16 closes 12:00 UTC, not 23:59
+const WINDOW_START = Date.parse('2026-11-17T00:00:00Z');
+const WINDOW_END   = Date.parse('2026-11-24T12:00:00Z');   // week 17 closes 12:00 UTC, not 23:59
 const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 
 // Pool carried in from a round that fell below MIN_ENTRANTS and paid nothing. Set it to
@@ -47,7 +47,7 @@ const MIN_SEO_QUALIFY = 70;              // headline SEO score entrants must hit
 // Week 16 was announced to entrants at 600 HIVE and this judge was about to pay 300:
 // half the pool, in the first round the rollover was ever meant to apply to. The guard
 // in main() is why it cannot be silently forgotten again.
-const CARRIED_FORWARD = 300;             // week 15 drew 4 entrants and paid nothing
+const CARRIED_FORWARD = 0;               // week 16 reached five entrants and paid its full 600
 
 // Tiebreak target, from week 11. The engine's own readability check stops caring once a post
 // clears Flesch reading ease 60 - every entry that tied at 100/100 in weeks 9 and 10 had an

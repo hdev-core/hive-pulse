@@ -1,6 +1,6 @@
-![HivePulse SEO Contest Week 18 cover: week 17 paid 300 HIVE to three writers tied on a perfect 200/200, the first referrals in the contest's history were paid, and week 18 is open with 300 HIVE at five entrants rising to 600 at twenty](COVER_IMAGE_URL_HERE)
+![HivePulse SEO Contest Week 18 cover: week 17 paid 300 HIVE to three writers tied on a perfect 200/200, referrals were paid for the first time since week 10, and week 18 is open with 300 HIVE at five entrants rising to 600 at twenty](COVER_IMAGE_URL_HERE)
 
-**Summary:** Five writers entered week 17 and three tied on a perfect 200/200, so **300 HIVE paid out at 100 each**. We also paid the first referrals this contest has ever had, dropped the rule that nearly blocked them, and fixed three bugs one of you found.
+**Summary:** Five writers entered week 17 and three tied on a perfect 200/200, so **300 HIVE paid out at 100 each**. Referrals were paid for the first time since week 10, we dropped the rule that nearly blocked one of them, and we fixed three bugs one of you found.
 
 ## HivePulse SEO Contest week 17 results
 
@@ -26,9 +26,11 @@ The change we announced last week did exactly what we said it would, in its firs
 
 **So the advice is concrete this week: shorter sentences.** Reading ease is the one number still doing real work, and the cheapest to move.
 
-## The first referrals this contest has ever paid
+## Referrals are back, after seven quiet rounds
 
-The referral rule has existed for seventeen rounds and **nobody had ever claimed it**. Two people claimed it this week, and both name the same person.
+Referrals used to be the engine of this contest. Weeks 5, 6, 8, 9 and 10 paid **16 referral bonuses between them, 400 HIVE in total** - week 6 alone paid six, and @nabbas0786 took 75 HIVE that round for bringing three writers in.
+
+Then they stopped. **Not one referral was claimed in weeks 11 through 16**, seven rounds, and the field shrank over exactly the same stretch. Two people claimed one this week, and both name the same person.
 
 | Claim | Paid |
 |---|---|
@@ -36,6 +38,8 @@ The referral rule has existed for seventeen rounds and **nobody had ever claimed
 | @fluer — "last week I forgot to mention my nominee, who is @itx.wardah" | **25 HIVE** to @fluer, **25 HIVE** to @itx.wardah |
 
 **@itx.wardah has brought two writers into this contest** and takes **50 HIVE** for it. She finished fifth on the board this week and still walks away with the largest payment of the round, which is the right way round: the hard part of this contest was never the writing.
+
+And look at what happened the last time people were claiming these. The rounds that paid referrals are the rounds this contest was growing. The seven that paid none are the stretch it shrank, until week 15 drew four entrants and paid nobody at all.
 
 ### We are dropping the 30-day account rule
 

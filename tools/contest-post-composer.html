@@ -60,6 +60,18 @@ const $ = id => document.getElementById(id);
 const APP_VERSION = 'hivepulse/1.18.0';
 
 const PRESETS = {
+  // Publishing week 17's results and opening week 18. First round judged on the 1.18.0
+  // rubric, and it decided the podium: every entry scored GEO 100, so readability alone
+  // separated the field and half a point put two writers off the board.
+  week18: {
+    title:       'HivePulse SEO Contest: Half a Point Decided Week 17',
+    permlink:    'hivepulse-seo-contest-week-17-results-week-18-open',
+    community:   'hive-177727',
+    tags:        'hivepulse seo contest hive writing',
+    description: 'Week 17 paid 300 HIVE to three writers tied on 200/200, and readability alone separated them. Referrals return after seven quiet rounds.',
+    draft:       '../enhancements/week18-post-body.md',
+  },
+
   // Publishing week 16's results and opening week 17. The first round the five-entrant
   // threshold actually paid out, so the title leads on that rather than on the new pool -
   // week 17 is 300 at five entrants and a headline number here would be read as the prize.
@@ -135,7 +147,7 @@ const PRESETS = {
 };
 
 // ⬇ THE ONLY LINE TO CHANGE between rounds.
-const ROUND = PRESETS.week17;
+const ROUND = PRESETS.week18;
 
 const DRAFT_URL = ROUND.draft;
 const RPC = 'https://api.hive.blog';

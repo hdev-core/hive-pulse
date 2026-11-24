@@ -38,8 +38,22 @@ const rpc = async (method, params) => {
 const BOTS = /^(hivebuzz|pizzabot|poshtoken|ecency|hivebits|actifit|dustsweeper|steemitboard|hiveonboard|peakd)$|bot$/i;
 const isBot = (name) => BOTS.test(name);
 
-// referred / refered / referrad / reffered …, with or without the @
-const REFERRAL = /\bre+f+e+r+[ae]?d\s+by\s*@?([a-z0-9][a-z0-9.\-]{1,15})\b/i;
+// referred / refered / referrad / reffered …, with or without the @.
+//
+// Week 17 cost two referrals, 100 HIVE between them, because this required the verb and
+// "by" to be ADJACENT and the verb to be a spelling of "referred":
+//   @vaneex  "Referred/Nominated by @itx.wardah"  -- "/Nominated " sat between them
+//   @fluer   "my nomineee who is @itx.wardah"     -- no "by", and "nominee" is not "referred"
+// Both are plain declarations any human reads instantly. So: allow the other verbs people
+// actually use, and allow a short run of words before "by".
+const REFERRAL = /\b(?:re+f+e+r+[ae]?d|nominated|invited|introduced|recommended|brought)\b[^@\n]{0,40}?\bby\s*@?([a-z0-9][a-z0-9.\-]{1,15})\b/i;
+
+// Second tier, and the more useful half. Widening the pattern above far enough to catch
+// "my nominee who is @x" would start matching ordinary sentences and pay people by
+// accident, which is worse than missing one. So anything that merely SMELLS of a referral
+// and names somebody is printed for a human to read, never counted automatically.
+const REFERRAL_HINT = /\b(?:refer|nomin|invit|introduc|recommend|brought|bring)\w*/i;
+const MENTION = /@([a-z0-9][a-z0-9.\-]{1,15})\b/i;
 const LINK = /@([a-z0-9][a-z0-9.\-]{1,15})\/([a-z0-9-]{6,})/gi;
 
 const [author, permlink] = process.argv.slice(2);
@@ -52,14 +66,23 @@ const thread = await rpc('bridge.get_discussion', { author, permlink, observer: 
 const root = `${author}/${permlink}`;
 const entries = new Map();   // author -> Set(permlink)
 const referrals = [];
+const maybeReferrals = [];
 const skipped = [];
 
 for (const [key, c] of Object.entries(thread)) {
   if (key === root || c.author === author || isBot(c.author)) continue;
 
-  const ref = REFERRAL.exec(c.body || '');
+  const body = c.body || '';
+  const ref = REFERRAL.exec(body);
   // "don't type referred by me next time" is advice, not a declaration.
-  if (ref && !/^me$/i.test(ref[1])) referrals.push({ by: c.author, referrer: ref[1].toLowerCase(), when: c.created });
+  if (ref && !/^me$/i.test(ref[1])) {
+    referrals.push({ by: c.author, referrer: ref[1].toLowerCase(), when: c.created });
+  } else if (REFERRAL_HINT.test(body) && MENTION.test(body)) {
+    maybeReferrals.push({
+      by: c.author, when: c.created,
+      quote: body.replace(/\s+/g, ' ').trim().slice(0, 170),
+    });
+  }
 
   for (const m of (c.body || '').matchAll(LINK)) {
     const a = m[1].toLowerCase(), p = m[2].toLowerCase();
@@ -91,6 +114,16 @@ if (referrals.length) {
   for (const r of referrals) console.log(`#   @${r.by} referred by @${r.referrer}  (${r.when.slice(0, 16)})`);
 } else {
   console.log('#\n# No referrals declared.');
+}
+if (maybeReferrals.length) {
+  console.log('#\n# POSSIBLE REFERRALS — NOT COUNTED, READ THESE YOURSELF:');
+  console.log('#   These mention a referral-ish word and name somebody, but do not match the');
+  console.log('#   declaration pattern. A real one was missed this way in week 17 and nearly');
+  console.log('#   went unpaid, so they are surfaced rather than dropped silently.');
+  for (const r of maybeReferrals) {
+    console.log(`#   @${r.by}  (${r.when.slice(0, 16)})`);
+    console.log(`#      "${r.quote}"`);
+  }
 }
 if (skipped.length) {
   console.log('#\n# NOT COUNTED (check these by eye):');

@@ -86,6 +86,7 @@ She reported that her focus keyword changed when she reloaded the editor, and th
 5. **Comment below with your post link.** The post you link is your entry. **If you link the wrong one, reply to your own comment with the correct link before the round closes and we will judge that instead** - the last correction before the deadline counts.
 6. **You may enter more than one post.** Link each one. Your highest-scoring tagged entry is the one that counts.
 7. **If someone brought you here, say so in your entry comment and name them.** When your entry qualifies, **both of you receive 25 HIVE**. The person referred must be new to this contest. **There is no longer any account-age requirement** - a brand new Hive account counts, and counting them is the point.
+8. **Optional, and it costs you nothing: cross-post your entry into [Hdev Contests](https://peakd.com/c/hive-177727/created).** Keep publishing where you always do - your own community, your own readers, your own curation. A cross-post is a second copy that points back at the original, so you lose nothing and the contest gets a home. **Link the ORIGINAL post in your entry comment, never the cross-post** - a cross-post body is almost empty, so the judge would score the stub and you would lose the round over it.
 
 The minimum qualifying score is **SEO 70**. Any language is welcome. Every entry is re-scored from the blockchain after the round closes.
 

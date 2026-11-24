@@ -121,7 +121,14 @@ A proposal vote costs you nothing. A vote does not spend your HP, lock it, or to
 
 Read it and judge it on the work - public is the whole point:
 
-👉 **https://peakd.com/@hdev/hive-dev-proposal-3**
+👉 **[Hdev team DHF proposal #3](https://peakd.com/@hdev/hive-dev-proposal-3)**
+
+And if it earns your vote, here is the one-click version - proposal **391**:
+
+- [**Vote on PeakD**](https://peakd.com/me/proposals/391)
+- [**Vote on Ecency**](https://ecency.com/proposals/391)
+- [**Vote on the Hive wallet**](https://wallet.hive.blog/proposals)
+- [**Vote via HiveSigner**](https://hivesigner.com/sign/update_proposal_votes?proposal_ids=%5B%22391%22%5D&approve=true)
 
 **This is separate from the contest and stays separate.** Your vote does not change your score, your placing or your prize. The judge is a script that re-reads your post from the blockchain and has no idea who voted for anything. We are asking because the work is ours and we think it stands up, not because anything here depends on it.
 

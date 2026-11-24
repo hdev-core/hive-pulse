@@ -27,17 +27,13 @@ entrants, and to anyone deciding whether to trust what the next post says.
 ### Draft section
 
 ```markdown
-### A promise we broke in week 17, and what we did about it
+### A correction from week 17
 
-Our week 17 post said: "Reading Ease is the whole number HivePulse shows you, and from today it is the same number your published post receives."
+Our week 17 post said the Reading Ease HivePulse shows you is the number your published post receives, "from today". On the first day that was not true: the update carrying the new rule reached the stores a few hours after the post went live.
 
-That was not true on the day we wrote it. The update that carried the new readability rule did not reach any store until three hours after that post went live, and we never told anyone they needed it. So anyone who wrote on the first day was shown one number by the extension and judged on another.
+@itx.wardah and @fluer both posted that afternoon. Their installed version scored them 100; the judge used the new one and gave them 99.5. On their version all five entries tied at 100, which pays 60 each, so **we paid each of them 60 HIVE**. The week 17 placings stand.
 
-Two people lost the podium to it. @itx.wardah and @fluer both posted on 17 November, and the HivePulse they had installed scored their posts a perfect 100 - correctly, for that version. The judge used the new version and gave them 99.5. On the version they actually had, all five entrants tied at 100.
-
-**We paid each of them 60 HIVE, what a five-way tie would have paid.** The week 17 placings stand and nobody gave anything back - the three who won did nothing wrong, and neither did these two. The mistake was ours. @itx.wardah found it, and she had checked her score two or three times before publishing.
-
-**What changes:** a scoring change now applies only from the first round that opens after the update is live in both stores, and the post announcing it will say the update is required. We will not promise again that the panel and the result agree before you can actually install the version that makes it true.
+From now on a scoring change starts only once the update is live in both stores, and the post announcing it will tell you to update.
 ```
 
 ## 2. The DHF proposal

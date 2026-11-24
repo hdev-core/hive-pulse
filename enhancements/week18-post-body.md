@@ -37,7 +37,7 @@ Then they stopped. **Not one referral was claimed in weeks 11 through 16**, seve
 | @vaneex — "Referred/Nominated by @itx.wardah" | **25 HIVE** to @vaneex, **25 HIVE** to @itx.wardah |
 | @fluer — "last week I forgot to mention my nominee, who is @itx.wardah" | **25 HIVE** to @fluer, **25 HIVE** to @itx.wardah |
 
-**@itx.wardah has brought two writers into this contest** and takes **50 HIVE** for it. She finished fifth on the board this week and still walks away with the largest payment of the round, which is the right way round: the hard part of this contest was never the writing.
+**@itx.wardah has brought two writers into this contest** and takes **50 HIVE** for it. She finished fifth on the board - a position that normally pays nothing at all - and was paid anyway, twice over, for the two people she brought. The hard part of this contest was never the writing.
 
 And look at what happened the last time people were claiming these. The rounds that paid referrals are the rounds this contest was growing. The seven that paid none are the stretch it shrank, until week 15 drew four entrants and paid nobody at all.
 
@@ -97,7 +97,7 @@ Quote-retweet the Week 18 announcement tweet with your own words about your Hive
 
 **Paste the link in your entry comment** - and you need an entry for it to count.
 
-👉 **This is the tweet to quote:** WEEK18_TWEET_URL_HERE
+👉 **This is the tweet to quote:** https://x.com/HdevCore/status/2125244065075634221
 
 @nabbas0786 takes it again this round, unopposed for the third week running. The prize is 50 HIVE for one quote-retweet, and four of you are leaving that on the table every week.
 

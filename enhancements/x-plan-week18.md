@@ -1,6 +1,6 @@
 # HivePulse SEO Contest - Week 17 Results + Week 18 X Thread
 
-Anchor tweet: WEEK18_TWEET_URL_HERE
+Anchor tweet: https://x.com/HdevCore/status/2125244065075634221
 Hive post   : WEEK18_HIVE_POST_URL_HERE
 
 Post tweet 1 first, fill its URL into both this file and
@@ -52,9 +52,9 @@ Two more finished on 99.5. One point of reading ease was the whole difference.
 ## 3/
 
 ```tweet
-The biggest payment of the round went to someone who finished FIFTH.
+Two of the five writers in that contest were brought in by another entrant.
 
-itx.wardah brought two new writers into the contest and took 50 HIVE in referral bonuses for it.
+itx.wardah finished FIFTH — a position that pays nothing — and still took 50 HIVE, because she brought both of them.
 
 The hard part of this contest was never the writing. It was finding people.
 ```
@@ -99,7 +99,7 @@ Here is the thing worth seeing: **every single entry scored GEO 100.** The AI-re
 
 **@vaneex won on a first-ever entry, three days after joining Hive.** That only happened because somebody brought him here.
 
-**Referrals are back after seven quiet rounds.** Weeks 5, 6, 8, 9 and 10 paid 16 referral bonuses between them — then nobody claimed one in weeks 11 through 16, and the field shrank over exactly that stretch until week 15 drew four entrants and paid nobody at all. This week @itx.wardah claimed two, for bringing @vaneex and @fluer, and takes **50 HIVE** — the largest payment of the round, while finishing fifth on the board. That is the right way round.
+**Referrals are back after seven quiet rounds.** Weeks 5, 6, 8, 9 and 10 paid 16 referral bonuses between them — then nobody claimed one in weeks 11 through 16, and the field shrank over exactly that stretch until week 15 drew four entrants and paid nobody at all. This week @itx.wardah claimed two, for bringing @vaneex and @fluer, and takes **50 HIVE**. She finished fifth on the board — a position that pays nothing — and was paid anyway, because she brought two of the five writers who made the round happen at all.
 
 **We also dropped the 30-day account rule.** It said a referred person needed an account at least 30 days old, and @vaneex's is 9 days old — so the rule as written would have blocked the exact thing it was invented to encourage. From week 18 there is no account-age limit at all. The person still has to be new to this contest, and their entry still has to qualify.
 
